@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Administrativo;
 use App\Models\AlunoMigrado;
 use App\Models\EngajamentoPorUnidadeSenac;

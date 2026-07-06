@@ -1,0 +1,156 @@
+.auth-layout {
+	min-height: 100vh;
+	background: #efefef;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 16px;
+}
+
+.auth-login-page {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.auth-login-card {
+	width: min(100%, 1000px);
+	min-height: 470px;
+	background: #fff;
+	overflow: hidden;
+	border-radius: 0;
+}
+
+.auth-login-aside {
+	background: #1677ff;
+	min-height: 250px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.auth-login-aside-inner {
+	max-width: 320px;
+}
+
+.auth-login-title {
+	font-size: clamp(2rem, 3vw, 2.7rem);
+	line-height: 1.05;
+	font-weight: 700;
+}
+
+.auth-login-subtitle {
+	font-size: 0.98rem;
+	line-height: 1.35;
+	opacity: 0.95;
+}
+
+.auth-login-content {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 56px;
+}
+
+.auth-login-form {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.auth-login-form-inner {
+	width: 100%;
+	max-width: 340px;
+}
+
+.auth-login-input {
+	height: 40px;
+	border: 0;
+	border-radius: 10px;
+	background: #e9e9e9;
+	box-shadow: none;
+	padding: 0 16px;
+	font-size: 0.96rem;
+}
+
+.auth-login-input::placeholder {
+	color: #5e5e5e;
+	opacity: 1;
+}
+
+.auth-login-input:focus {
+	background: #e9e9e9;
+	box-shadow: none;
+	outline: none;
+}
+
+.auth-login-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.auth-login-check .form-check-input {
+	width: 0.95rem;
+	height: 0.95rem;
+	border-radius: 0;
+	margin-top: 0.18rem;
+	border-color: #d0d0d0;
+}
+
+.auth-login-check .form-check-label {
+	font-size: 0.94rem;
+	color: #2f2f2f;
+}
+
+.auth-login-button {
+	min-width: 82px;
+	height: 26px;
+	padding: 0 1rem;
+	border-radius: 0;
+	font-size: 0.9rem;
+	font-weight: 700;
+	margin-left: auto;
+}
+
+@media (max-width: 991.98px) {
+	.auth-layout {
+		padding: 22px 14px;
+	}
+
+	.auth-login-card {
+		min-height: auto;
+	}
+
+	.auth-login-aside {
+		min-height: 220px;
+	}
+
+	.auth-login-content {
+		padding: 40px 24px 44px;
+	}
+
+	.auth-login-form-inner {
+		max-width: 420px;
+	}
+
+	.auth-login-button {
+		margin-left: 0;
+	}
+}
+
+@media (max-width: 575.98px) {
+	.auth-login-content {
+		padding: 32px 18px 36px;
+	}
+
+	.auth-login-actions {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.auth-login-button {
+		width: 100%;
+	}
+}

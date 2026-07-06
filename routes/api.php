@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CandidatoController;
 use App\Http\Controllers\Api\EmpresaController;
 use App\Http\Controllers\Api\VagaController;
@@ -13,6 +14,12 @@ use App\Http\Controllers\Api\PerfilCandidatoController;
 | API Routes - Sistema de Empregabilidade SENAC DF
 |--------------------------------------------------------------------------
 */
+
+Route::prefix('auth')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+    Route::get('me', [AuthController::class, 'me']);
+    Route::post('logout', [AuthController::class, 'logout']);
+});
 
 // ── Candidatos ───────────────────────────────────────────────────
 Route::apiResource('candidatos', CandidatoController::class)->parameters([
