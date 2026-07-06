@@ -1,0 +1,56 @@
+import api from './api';
+
+/**
+ * Chamadas de API usadas pelo painel administrativo (SENAC).
+ */
+export default {
+    // Dashboard
+    getDashboard() {
+        return api.get('/administrativo/dashboard');
+    },
+
+    // Gestão de alunos (candidatos)
+    listarAlunos(params = {}) {
+        return api.get('/candidatos', { params });
+    },
+
+    verAluno(matricula) {
+        return api.get(`/candidatos/${matricula}`);
+    },
+
+    sincronizarAlunos(dados) {
+        return api.post('/administrativo/sincronizar-alunos', dados);
+    },
+
+    // Gestão de empresas
+    listarEmpresas(params = {}) {
+        return api.get('/empresas', { params });
+    },
+
+    verEmpresa(cnpj) {
+        return api.get(`/empresas/${encodeURIComponent(cnpj)}`);
+    },
+
+    // Vagas
+    listarVagas(params = {}) {
+        return api.get('/vagas', { params });
+    },
+
+    // Engajamento por unidade
+    listarEngajamento() {
+        return api.get('/administrativo/engajamento');
+    },
+
+    criarEngajamento(dados) {
+        return api.post('/administrativo/engajamento', dados);
+    },
+
+    atualizarEngajamento(unidade, dados) {
+        return api.put(`/administrativo/engajamento/${encodeURIComponent(unidade)}`, dados);
+    },
+
+    // Relatórios
+    getRelatorioEngajamento(params = {}) {
+        return api.get('/administrativo/relatorios/engajamento', { params });
+    },
+};
