@@ -20,6 +20,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // Collapse, Offcanvas, Tooltip...
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
+// Ícones usados nos painéis (sidebar, cards de indicador, etc.)
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
 // CSS próprio da aplicação
 import '../css/app.css';
 

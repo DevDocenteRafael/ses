@@ -42,7 +42,7 @@ class Pessoa extends Authenticatable
 
     public function empresa()
     {
-        return $this->hasOne(Empresa::class, 'pessoa_id_pessoa', 'id_pessoa');
+        return $this->hasOne(Empresa::class, 'id_pessoa', 'id_pessoa');
     }
 
     public function administrativo()

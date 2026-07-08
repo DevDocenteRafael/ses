@@ -17,6 +17,7 @@
     "dependencies": {
         "@vitejs/plugin-vue": "^6.0.7",
         "bootstrap": "^5.3.8",
+        "bootstrap-icons": "^1.11.3",
         "pinia": "^2.2.6",
         "vue": "^3.5.38",
         "vue-router": "^4.4.5"
