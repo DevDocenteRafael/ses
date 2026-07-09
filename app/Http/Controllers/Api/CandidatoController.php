@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Candidato;
+use App\Models\Convite;
 use App\Models\Pessoa;
+use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -71,9 +73,10 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Exibe um candidato específico.
+     * Exibe um candidato específico. Se quem pede for uma empresa (não o
+     * próprio candidato), registra uma visualização de perfil (FR9).
      */
-    public function show(int $matricula): JsonResponse
+    public function show(Request $request, int $matricula): JsonResponse
     {
         $candidato = Candidato::with([
             'pessoa',
@@ -82,16 +85,35 @@ class CandidatoController extends Controller
             'preferenciasDeTrabalho',
             'dadosAcademicos',
             'convites.vaga',
+            'empresas',
         ])->findOrFail($matricula);
+
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if ($solicitante && $solicitante->tipo() === 'empresa' && $solicitante->empresa) {
+            VisualizacaoPerfil::create([
+                'candidato_matricula' => $matricula,
+                'empresa_cnpj'        => $solicitante->empresa->cnpj,
+                'visualizado_em'      => now(),
+            ]);
+        }
 
         return response()->json($candidato);
     }
 
     /**
-     * Atualiza dados do candidato.
+     * Atualiza dados do candidato (somente o próprio candidato ou administrativo).
      */
     public function update(Request $request, int $matricula): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['candidato', 'administrativo'], true)) {
+            abort(403, 'Voce nao tem permissao para atualizar este candidato.');
+        }
+        if ($solicitante->tipo() === 'candidato') {
+            $this->garantirCandidatoDono($request, $matricula);
+        }
+
         $candidato = Candidato::findOrFail($matricula);
 
         $validated = $request->validate([
@@ -128,11 +150,73 @@ class CandidatoController extends Controller
     /**
      * Remove um candidato.
      */
-    public function destroy(int $matricula): JsonResponse
+    public function destroy(Request $request, int $matricula): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas o administrativo pode remover candidatos.');
+        }
+
         $candidato = Candidato::findOrFail($matricula);
         $candidato->delete();
 
         return response()->json(['message' => 'Candidato removido com sucesso.']);
+    }
+
+    /**
+     * Indicadores do painel do aluno (FR9): visualizações, convites
+     * pendentes, completude do perfil e últimas visualizações.
+     */
+    public function dashboard(Request $request, int $matricula): JsonResponse
+    {
+        $this->garantirCandidatoDono($request, $matricula);
+
+        $candidato = Candidato::with([
+            'linkExterno',
+            'informacoesProfissionais',
+            'preferenciasDeTrabalho',
+            'dadosAcademicos',
+        ])->findOrFail($matricula);
+
+        $convitesPendentes = Convite::where('candidatos_matricula', $matricula)
+            ->where('status', Convite::STATUS_PENDENTE)
+            ->count();
+
+        $visualizacoes = VisualizacaoPerfil::where('candidato_matricula', $matricula);
+
+        $ultimasVisualizacoes = (clone $visualizacoes)
+            ->with('empresa')
+            ->latest('visualizado_em')
+            ->take(5)
+            ->get()
+            ->map(fn ($v) => [
+                'empresa' => $v->empresa->razao_social ?? 'Empresa',
+                'tempo'   => $v->visualizado_em->diffForHumans(),
+            ]);
+
+        return response()->json([
+            'visualizacoes'        => $visualizacoes->count(),
+            'convitesPendentes'    => $convitesPendentes,
+            'perfilCompleto'       => $this->calcularPerfilCompleto($candidato),
+            'ultimasVisualizacoes' => $ultimasVisualizacoes,
+        ]);
+    }
+
+    private function calcularPerfilCompleto(Candidato $candidato): int
+    {
+        $itens = [
+            (bool) $candidato->dadosAcademicos()->exists(),
+            (bool) $candidato->linkExterno?->linkedin,
+            (bool) $candidato->linkExterno?->portfolio,
+            (bool) $candidato->linkExterno?->github,
+            (bool) $candidato->informacoesProfissionais?->sobre_mim,
+            (bool) $candidato->informacoesProfissionais?->cargo_de_interesse,
+            ! empty($candidato->informacoesProfissionais?->habilidades),
+            (bool) $candidato->preferenciasDeTrabalho,
+        ];
+
+        $preenchidos = count(array_filter($itens));
+
+        return (int) round(($preenchidos / count($itens)) * 100);
     }
 }

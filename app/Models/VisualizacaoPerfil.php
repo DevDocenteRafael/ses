@@ -4,24 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class InformacoesProfissionais extends Model
+class VisualizacaoPerfil extends Model
 {
-    protected $table = 'informacoes_profissionais';
+    protected $table = 'visualizacoes_perfil';
 
     protected $fillable = [
-        'sobre_mim',
-        'cargo_de_interesse',
-        'area_de_atuacao',
-        'habilidades',
         'candidato_matricula',
+        'empresa_cnpj',
+        'visualizado_em',
     ];
 
     protected $casts = [
-        'habilidades' => 'array',
+        'visualizado_em' => 'datetime',
     ];
 
     public function candidato()
     {
         return $this->belongsTo(Candidato::class, 'candidato_matricula', 'matricula');
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_cnpj', 'cnpj');
     }
 }

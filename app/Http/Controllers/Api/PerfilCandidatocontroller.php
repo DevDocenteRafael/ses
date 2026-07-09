@@ -16,6 +16,8 @@ class PerfilCandidatoController extends Controller
 
     public function storeLink(Request $request, int $matricula): JsonResponse
     {
+        $this->garantirCandidatoDono($request, $matricula);
+
         $validated = $request->validate([
             'linkedin'  => 'nullable|url|max:100',
             'portfolio' => 'nullable|url|max:100',
@@ -34,11 +36,14 @@ class PerfilCandidatoController extends Controller
 
     public function storeInfoProfissional(Request $request, int $matricula): JsonResponse
     {
+        $this->garantirCandidatoDono($request, $matricula);
+
         $validated = $request->validate([
             'sobre_mim'          => 'nullable|string|max:200',
             'cargo_de_interesse' => 'nullable|string|max:45',
             'area_de_atuacao'    => 'required|string|max:45',
-            'habilidades_tags'   => 'nullable|integer',
+            'habilidades'        => 'nullable|array',
+            'habilidades.*'      => 'string|max:45',
         ]);
 
         $info = InformacoesProfissionais::updateOrCreate(
@@ -53,11 +58,13 @@ class PerfilCandidatoController extends Controller
 
     public function storePreferencias(Request $request, int $matricula): JsonResponse
     {
+        $this->garantirCandidatoDono($request, $matricula);
+
         $validated = $request->validate([
-            'tipo_de_contratacao'       => 'nullable|integer',
-            'disponibilidade_de_horario' => 'required|date_format:H:i',
-            'regiao_administrativa'     => 'required|string|max:100',
-            'pretensao_salarial'        => 'nullable|integer',
+            'tipo_de_contratacao'        => 'nullable|integer|min:0',
+            'disponibilidade_de_horario' => 'nullable|string|max:30',
+            'regiao_administrativa'      => 'required|string|max:100',
+            'pretensao_salarial'         => 'nullable|numeric|min:0',
         ]);
 
         $pref = PreferenciasDeTrabalho::updateOrCreate(
@@ -69,9 +76,13 @@ class PerfilCandidatoController extends Controller
     }
 
     // ── Dados Acadêmicos ─────────────────────────────────────────
+    // Nota: sincronizados via API do SIG (FR4) — mantido aqui apenas
+    // como fallback manual, não é o fluxo principal de preenchimento.
 
     public function storeDadosAcademicos(Request $request, int $matricula): JsonResponse
     {
+        $this->garantirCandidatoDono($request, $matricula);
+
         $validated = $request->validate([
             'instituicao'      => 'required|string|max:100',
             'curso'            => 'required|string|max:45',

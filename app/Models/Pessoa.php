@@ -34,6 +34,22 @@ class Pessoa extends Authenticatable
         return $this->senha;
     }
 
+    /**
+     * Resolve o papel da pessoa no sistema ('administrativo' | 'empresa' | 'candidato').
+     */
+    public function tipo(): string
+    {
+        if ($this->administrativo) {
+            return 'administrativo';
+        }
+
+        if ($this->empresa) {
+            return 'empresa';
+        }
+
+        return 'candidato';
+    }
+
     // Relacionamentos
     public function candidato()
     {

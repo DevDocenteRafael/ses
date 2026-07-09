@@ -73,24 +73,6 @@ class AuthController extends Controller
         ]);
     }
 
-    private function pessoaAutenticada(Request $request): ?Pessoa
-    {
-        $token = $this->tokenFromRequest($request);
-
-        if (! $token) {
-            return null;
-        }
-
-        $pessoaId = Cache::get($this->cacheKey($token));
-
-        if (! $pessoaId) {
-            return null;
-        }
-
-        return Pessoa::with(['administrativo', 'empresa', 'candidato'])
-            ->find($pessoaId);
-    }
-
     private function tokenFromRequest(Request $request): ?string
     {
         $header = $request->bearerToken();

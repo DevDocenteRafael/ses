@@ -4,6 +4,11 @@ import api from './api';
  * Chamadas de API usadas pelo painel do aluno/candidato.
  */
 export default {
+    // Painel (indicadores, convites pendentes, últimas visualizações)
+    dashboard(matricula) {
+        return api.get(`/candidatos/${matricula}/dashboard`);
+    },
+
     // Perfil básico
     verPerfil(matricula) {
         return api.get(`/candidatos/${matricula}`);
@@ -35,8 +40,8 @@ export default {
     },
 
     // Convites recebidos
-    listarConvites(matricula) {
-        return api.get('/convites', { params: { candidatos_matricula: matricula } });
+    listarConvites(matricula, filtros = {}) {
+        return api.get('/convites', { params: { candidatos_matricula: matricula, ...filtros } });
     },
 
     responderConvite(id, status) {

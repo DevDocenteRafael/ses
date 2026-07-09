@@ -52,6 +52,11 @@ class Candidato extends Model
         return $this->hasMany(Convite::class, 'candidatos_matricula', 'matricula');
     }
 
+    public function visualizacoes()
+    {
+        return $this->hasMany(VisualizacaoPerfil::class, 'candidato_matricula', 'matricula');
+    }
+
     public function empresas()
     {
         return $this->belongsToMany(
@@ -61,6 +66,6 @@ class Candidato extends Model
             'empresa_cnpj',
             'matricula',
             'cnpj'
-        );
+        )->withTimestamps();
     }
 }

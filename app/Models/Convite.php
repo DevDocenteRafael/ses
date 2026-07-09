@@ -8,6 +8,11 @@ class Convite extends Model
 {
     protected $table = 'convites';
 
+    public const STATUS_PENDENTE = 0;
+    public const STATUS_ACEITO = 1;
+    public const STATUS_RECUSADO = 2;
+    public const STATUS_ARQUIVADO = 3;
+
     protected $fillable = [
         'descricao',
         'data_envio',
@@ -18,7 +23,7 @@ class Convite extends Model
     ];
 
     protected $casts = [
-        'status'     => 'boolean',
+        'status'     => 'integer',
         'data_envio' => 'datetime',
     ];
 

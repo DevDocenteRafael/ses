@@ -15,43 +15,50 @@ use App\Http\Controllers\Api\PerfilCandidatoController;
 |--------------------------------------------------------------------------
 */
 
+// ── Autenticação (públicas) ──────────────────────────────────────
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
-    Route::get('me', [AuthController::class, 'me']);
     Route::post('logout', [AuthController::class, 'logout']);
 });
 
-// ── Candidatos ───────────────────────────────────────────────────
-Route::apiResource('candidatos', CandidatoController::class)->parameters([
-    'candidatos' => 'matricula',
-]);
+// ── Demais rotas exigem token válido ─────────────────────────────
+Route::middleware('auth.token')->group(function () {
 
-// Perfil do candidato
-Route::prefix('candidatos/{matricula}/perfil')->group(function () {
-    Route::post('links',        [PerfilCandidatoController::class, 'storeLink']);
-    Route::post('profissional', [PerfilCandidatoController::class, 'storeInfoProfissional']);
-    Route::post('preferencias', [PerfilCandidatoController::class, 'storePreferencias']);
-    Route::post('academico',    [PerfilCandidatoController::class, 'storeDadosAcademicos']);
-});
-Route::delete('academico/{id}', [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
+    Route::get('auth/me', [AuthController::class, 'me']);
 
-// ── Empresas ─────────────────────────────────────────────────────
-Route::apiResource('empresas', EmpresaController::class)->parameters([
-    'empresas' => 'cnpj',
-]);
+    // Candidatos
+    Route::apiResource('candidatos', CandidatoController::class)->parameters([
+        'candidatos' => 'matricula',
+    ]);
+    Route::get('candidatos/{matricula}/dashboard', [CandidatoController::class, 'dashboard']);
 
-// ── Vagas ────────────────────────────────────────────────────────
-Route::apiResource('vagas', VagaController::class);
+    // Perfil do candidato
+    Route::prefix('candidatos/{matricula}/perfil')->group(function () {
+        Route::post('links',        [PerfilCandidatoController::class, 'storeLink']);
+        Route::post('profissional', [PerfilCandidatoController::class, 'storeInfoProfissional']);
+        Route::post('preferencias', [PerfilCandidatoController::class, 'storePreferencias']);
+        Route::post('academico',    [PerfilCandidatoController::class, 'storeDadosAcademicos']);
+    });
+    Route::delete('academico/{id}', [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
 
-// ── Convites ─────────────────────────────────────────────────────
-Route::apiResource('convites', ConviteController::class);
+    // Empresas
+    Route::apiResource('empresas', EmpresaController::class)->parameters([
+        'empresas' => 'cnpj',
+    ]);
 
-// ── Administrativo ───────────────────────────────────────────────
-Route::prefix('administrativo')->group(function () {
-    Route::get('/',                          [AdministrativoController::class, 'index']);
-    Route::get('{pessoaId}',                 [AdministrativoController::class, 'show']);
-    Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
-    Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
-    Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
-    Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);
+    // Vagas
+    Route::apiResource('vagas', VagaController::class);
+
+    // Convites
+    Route::apiResource('convites', ConviteController::class);
+
+    // Administrativo
+    Route::prefix('administrativo')->group(function () {
+        Route::get('/',                          [AdministrativoController::class, 'index']);
+        Route::get('{pessoaId}',                 [AdministrativoController::class, 'show']);
+        Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
+        Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
+        Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
+        Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);
+    });
 });
