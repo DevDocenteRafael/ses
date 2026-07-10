@@ -5,11 +5,26 @@ export const useAlunoStore = defineStore('aluno', {
     state: () => ({
         perfil: null,
         convites: [],
+        dashboard: null,
         carregando: false,
         erro: null,
     }),
 
     actions: {
+        async carregarDashboard(matricula) {
+            this.carregando = true;
+            this.erro = null;
+            try {
+                const { data } = await alunoService.dashboard(matricula);
+                this.dashboard = data;
+                return data;
+            } catch (e) {
+                this.erro = e.response?.data?.message || 'Erro ao carregar indicadores do painel.';
+            } finally {
+                this.carregando = false;
+            }
+        },
+
         async carregarPerfil(matricula) {
             this.carregando = true;
             this.erro = null;
