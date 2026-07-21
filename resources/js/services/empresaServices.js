@@ -52,6 +52,10 @@ export default {
         return api.put(`/convites/${id}`, dados);
     },
 
+    excluirConvite(id) {
+        return api.delete(`/convites/${id}`);
+    },
+
     // Favoritos (candidatos salvos pela empresa)
     listarFavoritos() {
         return api.get('/empresas/favoritos');

@@ -120,4 +120,36 @@ class EmpresaController extends Controller
 
         return response()->json(['message' => 'Empresa removida com sucesso.']);
     }
+
+    // ── Favoritos (candidatos salvos pela empresa) ───────────────
+    // Usa a tabela pivô `empresa_has_candidatos` (relação Empresa::candidatos()).
+
+    public function favoritos(Request $request): JsonResponse
+    {
+        $empresa = $this->empresaAutenticada($request);
+
+        $favoritos = $empresa->candidatos()
+            ->with(['pessoa', 'informacoesProfissionais', 'preferenciasDeTrabalho', 'dadosAcademicos'])
+            ->get();
+
+        return response()->json($favoritos);
+    }
+
+    public function favoritar(Request $request, int $matricula): JsonResponse
+    {
+        $empresa = $this->empresaAutenticada($request);
+
+        $empresa->candidatos()->syncWithoutDetaching([$matricula]);
+
+        return response()->json(['message' => 'Candidato favoritado com sucesso.'], 201);
+    }
+
+    public function desfavoritar(Request $request, int $matricula): JsonResponse
+    {
+        $empresa = $this->empresaAutenticada($request);
+
+        $empresa->candidatos()->detach($matricula);
+
+        return response()->json(['message' => 'Candidato removido dos favoritos.']);
+    }
 }

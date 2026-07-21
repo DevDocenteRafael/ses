@@ -27,4 +27,19 @@ abstract class Controller
             abort(403, 'Voce nao tem permissao para acessar este recurso.');
         }
     }
+
+    /**
+     * Retorna a Empresa da pessoa autenticada, ou aborta com 403 se
+     * quem está logado não for uma empresa.
+     */
+    protected function empresaAutenticada(Request $request): \App\Models\Empresa
+    {
+        $pessoa = $this->pessoaAutenticada($request);
+
+        if (! $pessoa || ! $pessoa->empresa) {
+            abort(403, 'Apenas empresas podem acessar este recurso.');
+        }
+
+        return $pessoa->empresa;
+    }
 }

@@ -42,6 +42,10 @@ Route::middleware('auth.token')->group(function () {
     Route::delete('academico/{id}', [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
 
     // Empresas
+    Route::get('empresas/favoritos', [EmpresaController::class, 'favoritos']);
+    Route::post('empresas/favoritos/{matricula}', [EmpresaController::class, 'favoritar']);
+    Route::delete('empresas/favoritos/{matricula}', [EmpresaController::class, 'desfavoritar']);
+
     Route::apiResource('empresas', EmpresaController::class)->parameters([
         'empresas' => 'cnpj',
     ]);
