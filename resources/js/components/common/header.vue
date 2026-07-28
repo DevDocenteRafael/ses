@@ -5,16 +5,20 @@
             <p v-if="subtitulo" class="text-secondary small mb-0">{{ subtitulo }}</p>
         </div>
 
-        <div v-if="auth.pessoa" class="d-flex align-items-center gap-3">
-            <div class="text-end d-none d-sm-block">
-                <p class="fw-semibold mb-0">{{ auth.pessoa.nome }}</p>
-                <p class="text-secondary small mb-0">{{ cargoLabel }}</p>
+        <div class="d-flex align-items-center gap-3">
+            <slot name="acoes" />
+
+            <div v-if="auth.pessoa" class="d-flex align-items-center gap-3">
+                <div class="text-end d-none d-sm-block">
+                    <p class="fw-semibold mb-0">{{ auth.pessoa.nome }}</p>
+                    <p class="text-secondary small mb-0">{{ cargoLabel }}</p>
+                </div>
+                <span
+                    class="ses-avatar rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
+                >
+                    {{ iniciais }}
+                </span>
             </div>
-            <span
-                class="ses-avatar rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
-            >
-                {{ iniciais }}
-            </span>
         </div>
     </header>
 </template>

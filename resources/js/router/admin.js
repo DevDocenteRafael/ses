@@ -32,6 +32,11 @@ export default [
                 name: 'admin.relatorios',
                 component: () => import('../modules/admin/views/RelatoriosView.vue'),
             },
+            {
+                path: 'configuracoes',
+                name: 'admin.configuracoes',
+                component: () => import('../modules/admin/views/ConfiguracoesView.vue'),
+            },
         ],
     },
 ];

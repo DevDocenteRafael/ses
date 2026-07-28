@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import '../../../../css/modules/auth/login.css';
+import '../../../../css/modules/auth/cadastro.css';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -111,6 +112,13 @@ async function enviarLogin() {
 									</button>
 								</div>
 							</form>
+
+							<p class="text-center small mt-4 mb-0">
+								Não tem conta?
+								<router-link :to="{ name: 'cadastro-aluno' }" class="auth-cadastro-footer-link">Sou aluno</router-link>
+								·
+								<router-link :to="{ name: 'cadastro-empresa' }" class="auth-cadastro-footer-link">Sou empresa</router-link>
+							</p>
 						</div>
 					</div>
 				</section>

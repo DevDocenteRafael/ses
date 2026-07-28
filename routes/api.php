@@ -21,15 +21,22 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
 });
 
+// ── Criação de conta (públicas) ───────────────────────────────────
+// Precisam ficar fora do grupo autenticado: um usuário novo ainda não
+// tem token para se cadastrar. `->except(['store'])` abaixo remove o
+// POST duplicado do apiResource protegido.
+Route::post('candidatos', [CandidatoController::class, 'store']);
+Route::post('empresas',   [EmpresaController::class, 'store']);
+
 // ── Demais rotas exigem token válido ─────────────────────────────
 Route::middleware('auth.token')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
 
     // Candidatos
-    Route::apiResource('candidatos', CandidatoController::class)->parameters([
-        'candidatos' => 'matricula',
-    ]);
+    Route::apiResource('candidatos', CandidatoController::class)
+        ->except(['store'])
+        ->parameters(['candidatos' => 'matricula']);
     Route::get('candidatos/{matricula}/dashboard', [CandidatoController::class, 'dashboard']);
 
     // Perfil do candidato
@@ -46,9 +53,9 @@ Route::middleware('auth.token')->group(function () {
     Route::post('empresas/favoritos/{matricula}', [EmpresaController::class, 'favoritar']);
     Route::delete('empresas/favoritos/{matricula}', [EmpresaController::class, 'desfavoritar']);
 
-    Route::apiResource('empresas', EmpresaController::class)->parameters([
-        'empresas' => 'cnpj',
-    ]);
+    Route::apiResource('empresas', EmpresaController::class)
+        ->except(['store'])
+        ->parameters(['empresas' => 'cnpj']);
 
     // Vagas
     Route::apiResource('vagas', VagaController::class);

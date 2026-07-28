@@ -4,6 +4,11 @@ import api from './api';
  * Chamadas de API usadas pelo painel do aluno/candidato.
  */
 export default {
+    // Criação de conta (pública — ver routes/api.php)
+    cadastrar(dados) {
+        return api.post('/candidatos', dados);
+    },
+
     // Painel (indicadores, convites pendentes, últimas visualizações)
     dashboard(matricula) {
         return api.get(`/candidatos/${matricula}/dashboard`);

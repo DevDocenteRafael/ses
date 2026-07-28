@@ -6,12 +6,50 @@ export const useAdminStore = defineStore('admin', {
         alunos: [],
         empresas: [],
         vagas: [],
+        convites: [],
         engajamento: [],
         carregando: false,
         erro: null,
+
+        // TODO(back-end): a tabela `empresa` ainda não tem uma coluna de
+        // aprovação de cadastro. Enquanto essa migração não existe, guardamos
+        // aqui (em memória, não persiste) quais CNPJs foram marcados como
+        // "pendente" pela equipe do SENAC, para a tela de Gestão de Empresas
+        // funcionar como no protótipo.
+        statusEmpresas: {},
     }),
 
+    getters: {
+        empresasPendentes: (state) => state.empresas.filter(
+            (e) => state.statusEmpresas[e.cnpj] === 'pendente',
+        ),
+        empresasAprovadas: (state) => state.empresas.filter(
+            (e) => state.statusEmpresas[e.cnpj] !== 'pendente',
+        ),
+    },
+
     actions: {
+        async carregarConvites(params = {}) {
+            this.carregando = true;
+            this.erro = null;
+            try {
+                const { data } = await adminService.listarConvites(params);
+                this.convites = data;
+            } catch (e) {
+                this.erro = e.response?.data?.message || 'Erro ao carregar convites.';
+            } finally {
+                this.carregando = false;
+            }
+        },
+
+        marcarEmpresaPendente(cnpj) {
+            this.statusEmpresas = { ...this.statusEmpresas, [cnpj]: 'pendente' };
+        },
+
+        marcarEmpresaAprovada(cnpj) {
+            this.statusEmpresas = { ...this.statusEmpresas, [cnpj]: 'aprovada' };
+        },
+
         async carregarAlunos(params = {}) {
             this.carregando = true;
             this.erro = null;

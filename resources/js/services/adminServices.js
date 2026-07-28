@@ -36,6 +36,11 @@ export default {
         return api.get('/vagas', { params });
     },
 
+    // Convites (usados no dashboard para indicadores de contato/contratação)
+    listarConvites(params = {}) {
+        return api.get('/convites', { params });
+    },
+
     // Engajamento por unidade
     listarEngajamento() {
         return api.get('/administrativo/engajamento');
