@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Busca de Talentos - Portal Senac</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .filter-sidebar {
+      width: 50%;
+      height: calc(100vh - 72px);
+      overflow-y: auto;
+      position: sticky;
+      top: 72px;
+    }
+
+    .candidate-card {
+      border-left: 5px solid transparent;
+    }
+
+    .candidate-card.high-score {
+      border-left-color: var(--senac-orange);
+    }
+  </style>
+</head>
+
+<body class="bg-light">
+
+  <div class="d-flex">
+    <!-- Sidebar -->
+    <!-- <div class="sidebar d-none d-lg-block" id="sidebar" style="width: 280px;">
+      <button class="sidebar-toggle" id="toggleSidebar">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      <div class="px-4 mb-5 text-center">
+        <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+          style="height: 40px; filter: brightness(0) invert(1);">
+      </div>
+      <nav class="nav flex-column">
+        <a class="nav-link active" href="empresa-busca.html">
+          <i data-lucide="search"></i> <span class="sidebar-text">Buscar Talentos</span>
+        </a>
+        <div class="mt-auto p-4">
+          <a class="nav-link text-white-50" href="#" id="logoutBtn">
+            <i data-lucide="log-out"></i> <span class="sidebar-text">Sair</span>
+          </a>
+        </div>
+      </nav>
+    </div> -->
+
+    <!-- Main Content Area -->
+    <div class="flex-grow-1">
+      <!-- Header (Replacing Navbar functionality) -->
+      <header class="border-bottom p-3 d-flex justify-content-between align-items-center px-4" style="background-color: var(--senac-blue);">
+        <div class="d-flex align-items-center gap-2">
+          <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+            style="height: 40px; filter: brightness(0) invert(1);">
+          <span class="text-white-50 mx-2">|</span>
+          <h5 class="mb-0 fw-bold text-white d-inline-block">Portal da Empresa</h5>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <div class="text-end d-none d-sm-block">
+            <div class="fw-bold small text-white">Roberto Santos</div>
+            <small class="text-white-50 extra-small">Tech Solutions DF</small>
+          </div>
+          <img src="https://ui-avatars.com/api/?name=Roberto+Santos&background=f39200&color=fff" class="rounded-circle"
+            style="width: 32px; border: 2px solid rgba(255,255,255,0.2);">
+          <a href="#" id="logoutBtn" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+            <span>Sair</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="d-flex">
+        <!-- Filters Sidebar -->
+        <aside class="filter-sidebar bg-white border-end p-4 d-none d-lg-block">
+          <h5 class="mb-4">Filtros Inteligentes</h5>
+
+          <!-- Basic Filters -->
+          <div class="mb-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Filtros Principais</label>
+            <div class="mb-2">
+              <label class="form-label extra-small text-muted mb-1">Segmento</label>
+              <select class="form-select form-select-sm" id="filterSegment">
+                <option value="">Todos os Segmentos</option>
+                <option value="beleza-e-cuidado-pessoal" selected="selected">Beleza e Cuidado Pessoal</option>
+                <option value="economia-criativa-e-design">Economia Criativa e Design</option>
+                <option value="gastronomia-e-turismo">Gastronomia e Turismo</option>
+                <option value="gestao-de-empresas-e-negocios">Gestão,Comércio e Moda</option>
+                <option value="moda-e-costura">Moda e Costura</option>
+                <option value="saude-massagem-e-estetica">Saúde, Massagem e Estética</option>
+                <option value="seguranca-no-trabalho">Segurança no Trabalho</option>
+                <option value="tecnologia-e-games">Tecnologia e Economia Criativa</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label extra-small text-muted mb-1">Tipo de Curso</label>
+              <select class="form-select form-select-sm" id="filterCourseType">
+                <option value="">Todos os Tipos</option>
+                <option value="livres">Cursos Livres</option>
+                <option value="extensao">Certificação em TI</option>
+                <option value="tecnico">Técnico</option>
+                <option value="graduacao">Graduação</option>
+                <option value="pos-graduacao">Pós-graduação</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Professional Filters -->
+          <div class="mb-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Contratação (FR18)</label>
+            <div class="form-check small mb-1">
+              <input class="form-check-input" type="checkbox" id="fCLT" checked>
+              <label class="form-check-label" for="fCLT">CLT / Efetivo</label>
+            </div>
+            <div class="form-check small mb-1">
+              <input class="form-check-input" type="checkbox" id="fEstagio" checked>
+              <label class="form-check-label" for="fEstagio">Estágio</label>
+            </div>
+            <div class="form-check small mb-1">
+              <input class="form-check-input" type="checkbox" id="fAprendiz">
+              <label class="form-check-label" for="fAprendiz">Jovem Aprendiz</label>
+            </div>
+          </div>
+
+          <!-- Availability -->
+          <div class="mb-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Disponibilidade (FR17)</label>
+            <select class="form-select form-select-sm">
+              <option selected>Qualquer Horário</option>
+              <option>Manhã</option>
+              <option>Tarde</option>
+              <option>Noite</option>
+            </select>
+          </div>
+
+          <!-- Skills -->
+          <div class="mb-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Habilidades Técnicas (FR16)</label>
+            <input type="text" class="form-control form-control-sm mb-2" placeholder="Digite uma competência...">
+            <div class="d-flex flex-wrap gap-1">
+              <span class="badge bg-light text-dark border p-1" style="font-size: 10px;">JavaScript x</span>
+              <span class="badge bg-light text-dark border p-1" style="font-size: 10px;">HTML x</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-100" onclick="alert('Busca atualizada!')">Aplicar Filtros</button>
+          <button class="btn btn-link btn-sm w-100 mt-2 text-muted">Limpar Tudo</button>
+        </aside>
+
+        <!-- Main Results Area -->
+        <main class="flex-grow-1 p-4">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0">Resultados da Busca <span class="badge bg-secondary ms-2" style="font-size: 12px;"
+                id="resultCount">0 candidatos</span></h4>
+          </div>
+
+          <div id="resultsList" class="row g-3">
+            <!-- Dynamically populated -->
+          </div>
+      </div> <!-- End results d-flex -->
+    </div> <!-- End flex-grow-1 -->
+  </div> <!-- End main layout d-flex -->
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/mockData.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCandidates();
+
+      // Set up search logging on clicking "Aplicar Filtros"
+      const applyFiltersBtn = document.querySelector('aside button.btn-primary');
+      if (applyFiltersBtn) {
+        applyFiltersBtn.removeAttribute('onclick');
+        applyFiltersBtn.addEventListener('click', () => {
+          applyFiltersAndLog();
+        });
+      }
+    });
+
+    function applyFiltersAndLog() {
+      const segment = document.getElementById('filterSegment').value;
+      const courseType = document.getElementById('filterCourseType').value;
+
+      // Save filters in localStorage for Admin Dashboard analytics
+      let searchLogs = JSON.parse(localStorage.getItem('searchedFilters') || '[]');
+      searchLogs.push({
+        timestamp: new Date().toISOString(),
+        segment: segment || 'Todos os Segmentos',
+        courseType: courseType || 'Todos os Tipos'
+      });
+      localStorage.setItem('searchedFilters', JSON.stringify(searchLogs));
+
+      renderCandidates(segment, courseType);
+      alert('Busca atualizada!');
+    }
+
+    function renderCandidates(filterSegment = '', filterCourseType = '') {
+      const resultsList = document.getElementById('resultsList');
+      const resultCount = document.getElementById('resultCount');
+
+      const students = MockAPI.getStudents().filter(s => s.accessStatus !== 'Bloqueado');
+
+      // Filter mapping
+      const segmentMap = {
+        1: "tecnologia-e-games",
+        2: "gastronomia-e-turismo",
+        3: "gestao-de-empresas-e-negocios"
+      };
+
+      const courseTypeMap = {
+        1: "tecnico",
+        2: "livres",
+        3: "tecnico"
+      };
+
+      const filtered = students.filter(student => {
+        if (filterSegment && segmentMap[student.id] !== filterSegment) {
+          return false;
+        }
+        if (filterCourseType && courseTypeMap[student.id] !== filterCourseType) {
+          return false;
+        }
+        return true;
+      });
+
+      resultsList.innerHTML = '';
+      resultCount.innerText = `${filtered.length} candidato${filtered.length !== 1 ? 's' : ''}`;
+
+      if (filtered.length === 0) {
+        resultsList.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <p class="text-muted">Nenhum candidato encontrado com os filtros selecionados.</p>
+                    </div>
+                `;
+        return;
+      }
+
+      filtered.forEach(student => {
+        const cardCol = document.createElement('div');
+        cardCol.className = 'col-12';
+        cardCol.innerHTML = `
+                    <div class="card candidate-card border-0 shadow-sm animate-fade-in">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=004587&color=fff" class="rounded-3" style="width: 80px;">
+                                </div>
+                                <div class="col">
+                                    <h5 class="mb-1">${student.name}</h5>
+                                    <p class="mb-2 text-muted small"><i data-lucide="graduation-cap" class="d-inline" style="width: 14px;"></i> ${student.course} | ${student.unit}</p>
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        ${student.skills.map(skill => `<span class="badge bg-light text-primary border">${skill}</span>`).join('')}
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <small class="text-muted"><i data-lucide="map-pin" class="d-inline" style="width: 14px;"></i> ${student.city}, DF</small>
+                                        <small class="text-muted"><i data-lucide="clock" class="d-inline" style="width: 14px;"></i> Disponível: ${student.availability}</small>
+                                    </div>
+                                </div>
+                                <div class="col-auto border-start ps-4">
+                                    <a href="empresa-candidato.html?id=${student.id}" class="btn btn-primary d-block">Ver Perfil Completo</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        resultsList.appendChild(cardCol);
+      });
+
+      lucide.createIcons();
+    }
+  </script>
+</body>
+
+</html>

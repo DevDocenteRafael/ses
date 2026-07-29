@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Senac DF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-light">
+
+    <div class="d-flex">
+        <!-- Sidebar Admin -->
+        <div class="sidebar d-none d-lg-block" id="sidebar" style="width: 280px;">
+            <button class="sidebar-toggle" id="toggleSidebar">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="px-4 mb-5 text-center">
+                <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+                    style="height: 40px; filter: brightness(0) invert(1);">
+            </div>
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="admin-dashboard.html">
+                    <i data-lucide="pie-chart"></i> <span class="sidebar-text">Relatórios Geral</span>
+                </a>
+                <a class="nav-link" href="admin-empresas.html">
+                    <i data-lucide="building"></i> <span class="sidebar-text">Gestão de Empresas</span>
+                </a>
+                <a class="nav-link" href="admin-alunos.html">
+                    <i data-lucide="users"></i> <span class="sidebar-text">Gestão dos Candidatos</span>
+                </a>
+                <div class="mt-auto p-4">
+                    <a class="nav-link text-white-50" href="#" id="logoutBtn">
+                        <i data-lucide="log-out"></i> <span class="sidebar-text">Sair</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 p-4 p-md-5">
+            <header class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-4">
+                <div>
+                    <h2 class="h3 mb-1">Indicadores de Empregabilidade</h2>
+                    <p class="text-muted">Acompanhamento estratégico do Portal Senac (FR38)</p>
+                </div>
+                <div class="d-flex align-items-center gap-3 text-secondary">
+                    <small>Coordenação Central - Senac DF</small>
+                    <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center"
+                        style="width: 40px; height: 40px;">C</div>
+                </div>
+            </header>
+
+            <!-- KPI Cards -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <small class="text-muted fw-bold">Perfis Ativos</small>
+                        <h2 class="mb-0 text-primary">1.245</h2>
+                        <small class="text-success"><i data-lucide="arrow-up" style="width:12px"></i> 5% vs mês
+                            anterior</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <small class="text-muted fw-bold">Acessos de Candidatos</small>
+                        <h2 class="mb-0 text-primary" id="candidateAccessesCount">843</h2>
+                        <small class="text-secondary">Últimos 30 dias</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm p-3">
+                        <small class="text-muted fw-bold">Empresas Ativas</small>
+                        <h2 class="mb-0 text-primary">78</h2>
+                        <small class="text-success"><i data-lucide="trending-up" style="width:12px"></i> 90% de
+                            engajamento</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0">Acessos por Área de Interesse</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="accessAreaChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0">Engajamento de Empresas (Histórico)</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="companyEngagementChart" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0">Filtros Mais Acessados pelas Empresas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Filtro / Categoria</th>
+                                            <th>Valor Filtrado</th>
+                                            <th>Total de Buscas</th>
+                                            <th>Última Pesquisa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="filterLogsTable">
+                                        <!-- Will be populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/main.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // 1. Accessed Candidates by Area Chart (Doughnut)
+        const ctxArea = document.getElementById('accessAreaChart').getContext('2d');
+        new Chart(ctxArea, {
+            type: 'doughnut',
+            data: {
+                labels: ['Tecnologia e Economia Criativa', 'Gastronomia e Turismo', 'Gestão, Comércio e Moda', 'Saúde, Massagem e Estética', 'Outros'],
+                datasets: [{
+                    data: [420, 215, 110, 80, 18],
+                    backgroundColor: ['#004587', '#f39200', '#28a745', '#17a2b8', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // 2. Company Engagement History Chart (Line)
+        const ctxEngagement = document.getElementById('companyEngagementChart').getContext('2d');
+        new Chart(ctxEngagement, {
+            type: 'line',
+            data: {
+                labels: ['Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'],
+                datasets: [{
+                    label: 'Buscas Realizadas',
+                    data: [280, 390, 480, 650, 790, 940],
+                    borderColor: '#004587',
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 69, 135, 0.05)'
+                }, {
+                    label: 'Visualizações de Perfil',
+                    data: [150, 220, 290, 410, 520, 680],
+                    borderColor: '#f39200',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // 3. Populate Most Accessed Filters from localStorage
+        const filterLogsTable = document.getElementById('filterLogsTable');
+        const searchLogs = JSON.parse(localStorage.getItem('searchedFilters') || '[]');
+
+        // Count frequencies of filters
+        const countMap = {};
+        searchLogs.forEach(log => {
+            const keySegment = `Segmento: ${log.segment}`;
+            countMap[keySegment] = (countMap[keySegment] || 0) + 1;
+
+            const keyType = `Tipo de Curso: ${log.courseType}`;
+            countMap[keyType] = (countMap[keyType] || 0) + 1;
+        });
+
+        // Add some standard mock data as baseline if empty or to complement
+        const baselineFilters = [
+            { category: "Segmento", value: "Tecnologia e Economia Criativa", count: 48, last: "Hoje" },
+            { category: "Tipo de Curso", value: "Técnico", count: 35, last: "Hoje" },
+            { category: "Segmento", value: "Gastronomia e Turismo", count: 22, last: "Ontem" },
+            { category: "Tipo de Curso", value: "Cursos Livres", count: 18, last: "Ontem" }
+        ];
+
+        // Merge baseline and actual logged filters
+        const displayData = [];
+        const seen = new Set();
+
+        searchLogs.slice().reverse().forEach(log => {
+            if (log.segment && log.segment !== 'Todos os Segmentos' && !seen.has(`Segmento-${log.segment}`)) {
+                seen.add(`Segmento-${log.segment}`);
+                displayData.push({
+                    category: "Segmento",
+                    value: log.segment,
+                    count: 1 + (countMap[`Segmento: ${log.segment}`] || 0),
+                    last: "Agora mesmo"
+                });
+            }
+            if (log.courseType && log.courseType !== 'Todos os Tipos' && !seen.has(`Tipo-${log.courseType}`)) {
+                seen.add(`Tipo-${log.courseType}`);
+                displayData.push({
+                    category: "Tipo de Curso",
+                    value: log.courseType,
+                    count: 1 + (countMap[`Tipo de Curso: ${log.courseType}`] || 0),
+                    last: "Agora mesmo"
+                });
+            }
+        });
+
+        baselineFilters.forEach(item => {
+            const comboKey = `${item.category}-${item.value}`;
+            if (!seen.has(comboKey)) {
+                seen.add(comboKey);
+                displayData.push(item);
+            }
+        });
+
+        // Render rows
+        filterLogsTable.innerHTML = '';
+        displayData.slice(0, 5).forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="fw-bold text-secondary">${item.category}</td>
+                <td><span class="badge bg-light text-primary border">${item.value}</span></td>
+                <td>${item.count} pesquisas</td>
+                <td class="text-muted small">${item.last}</td>
+            `;
+            filterLogsTable.appendChild(row);
+        });
+    </script>
+</body>
+
+</html>

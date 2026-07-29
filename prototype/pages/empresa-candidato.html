@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil do Candidato - Portal Senac</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="bg-light">
+
+    <!-- Navbar -->
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <!-- <div class="sidebar d-none d-lg-block" id="sidebar" style="width: 280px;">
+            <button class="sidebar-toggle" id="toggleSidebar">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="px-4 mb-5 text-center">
+                <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+                    style="height: 40px; filter: brightness(0) invert(1);">
+            </div>
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="empresa-busca.html">
+                    <i data-lucide="search"></i> <span class="sidebar-text">Buscar Talentos</span>
+                </a>
+                <div class="mt-auto p-4">
+                    <a class="nav-link text-white-50" href="#" id="logoutBtn">
+                        <i data-lucide="log-out"></i> <span class="sidebar-text">Sair</span>
+                    </a>
+                </div>
+            </nav>
+        </div> -->
+
+        <!-- Main Content area -->
+        <div class="flex-grow-1">
+            <!-- Header -->
+            <header class="border-bottom p-3 d-flex justify-content-between align-items-center px-4"
+                style="background-color: var(--senac-blue);">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+                        style="height: 40px; filter: brightness(0) invert(1);">
+                    <span class="text-white-50 mx-2">|</span>
+                    <h5 class="mb-0 fw-bold text-white d-inline-block">Portal da Empresa</h5>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end d-none d-sm-block">
+                        <div class="fw-bold small text-white">Roberto Santos</div>
+                        <small class="text-white-50 extra-small">Tech Solutions DF</small>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Roberto+Santos&background=f39200&color=fff"
+                        class="rounded-circle" style="width: 32px; border: 2px solid rgba(255,255,255,0.2);">
+                    <a href="#" id="logoutBtn" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2">
+                        <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+                        <span>Sair</span>
+                    </a>
+                </div>
+            </header>
+
+            <div class="bg-white border-bottom p-3 d-flex justify-content-between align-items-center px-4 mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <a href="empresa-busca.html" class="text-decoration-none text-muted small"><i
+                            data-lucide="arrow-left" style="width: 16px;"></i> Voltar</a>
+                    <span class="text-muted mx-2">/</span>
+                    <h5 class="mb-0 fw-bold text-primary">Perfil do Candidato</h5>
+                </div>
+            </div>
+
+            <div class="container-fluid px-4 pb-5">
+                <div class="row g-4">
+                    <!-- Main Profile Info -->
+                    <div class="col-lg-8">
+                        <div class="card border-0 shadow-sm mb-4">
+                            <div class="card-body p-4 p-md-5">
+                                <div class="d-flex align-items-start gap-4 mb-4 flex-wrap flex-md-nowrap">
+                                    <img id="candidateAvatar"
+                                        src="https://ui-avatars.com/api/?name=Lucas+Silva&background=004587&color=fff&size=128"
+                                        class="rounded-4 shadow" style="width: 128px; height: 128px;">
+                                    <div>
+                                        <h1 class="h2 mb-2" id="candidateName">Lucas Silva</h1>
+                                        <p class="text-muted lead mb-3" id="candidateTitle">Técnico em Informática |
+                                            Senac Taguatinga</p>
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            <span class="badge bg-secondary" id="candidateStatusBadge">Em busca de
+                                                Estágio</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3 text-muted small">
+                                            <span id="candidateLocation"><i data-lucide="map-pin" class="d-inline"
+                                                    style="width: 14px;"></i> Ceilândia, DF</span>
+                                            <span id="candidateUpdate"><i data-lucide="calendar" class="d-inline"
+                                                    style="width: 14px;"></i> Última atualização: 10/03/26</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h5 class="mb-3 border-bottom pb-2">Sobre o Candidato</h5>
+                                <p class="text-muted mb-4" id="candidateAbout">Estudante dedicado do curso Técnico em
+                                    Informática no Senac Taguatinga. Possuo sólidos conhecimentos em lógica de
+                                    programação, desenvolvimento web básico (HTML, CSS, JS) e suporte ao usuário. Busco
+                                    minha primeira oportunidade no mercado de TI para aplicar meus conhecimentos
+                                    técnicos e evoluir profissionalmente.</p>
+
+                                <h5 class="mb-3 border-bottom pb-2">Habilidades Técnicas</h5>
+                                <div class="mb-4">
+                                    <ul class="list-unstyled" id="candidateSkills">
+                                        <li class="mb-2"><i data-lucide="check" class="text-success me-2"
+                                                style="width: 16px;"></i> JavaScript (ES6+)</li>
+                                        <li class="mb-2"><i data-lucide="check" class="text-success me-2"
+                                                style="width: 16px;"></i> HTML5 & CSS3</li>
+                                        <li class="mb-2"><i data-lucide="check" class="text-success me-2"
+                                                style="width: 16px;"></i> React / Bootstrap</li>
+                                    </ul>
+                                </div>
+
+                                <h5 class="mb-3 border-bottom pb-2">Preferências de Trabalho</h5>
+                                <div class="row g-4">
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Contratação</small>
+                                        <span class="fw-bold" id="candidatePrefType">Estágio</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Disponibilidade</small>
+                                        <span class="fw-bold" id="candidatePrefAvailability">Tarde / Noite</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Pretensão</small>
+                                        <span class="fw-bold" id="candidatePrefSalary">R$ 1.200,00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions Sidebar -->
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm sticky-top" style="top: 90px;">
+                            <div class="card-body p-4">
+                                <h5 class="mb-4">Informações de Contato</h5>
+                                <div class="mb-3">
+                                    <label class="small text-muted d-block mb-1">E-mail de Contato</label>
+                                    <a href="mailto:lucas.silva@aluno.df.senac.br"
+                                        class="fw-bold text-decoration-none text-primary"
+                                        id="candidateEmail">lucas.silva@aluno.df.senac.br</a>
+                                </div>
+                                <div class="mb-0">
+                                    <label class="small text-muted d-block mb-1">Telefone / WhatsApp</label>
+                                    <span class="fw-bold text-dark" id="candidatePhone">(61) 99876-5432</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End flex-grow-1 -->
+    </div> <!-- End main layout d-flex -->
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/mockData.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const studentId = params.get('id') || '1'; // default to Lucas Silva
+            const student = MockAPI.getStudentById(studentId);
+
+            if (student) {
+                // Update text fields
+                document.getElementById('candidateName').innerText = student.name;
+                document.getElementById('candidateTitle').innerText = `${student.course} | ${student.unit}`;
+                document.getElementById('candidateAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=004587&color=fff&size=128`;
+                document.getElementById('candidateLocation').innerHTML = `<i data-lucide="map-pin" class="d-inline" style="width: 14px;"></i> ${student.city}, DF`;
+                document.getElementById('candidateUpdate').innerHTML = `<i data-lucide="calendar" class="d-inline" style="width: 14px;"></i> Última atualização: ${student.lastUpdate}`;
+
+                // Set badge status based on course/status
+                document.getElementById('candidateStatusBadge').innerText = student.status === 'Concluído' ? 'Formado' : 'Em andamento';
+
+                // Contact Details
+                document.getElementById('candidateEmail').innerText = student.email;
+                document.getElementById('candidateEmail').href = `mailto:${student.email}`;
+                document.getElementById('candidatePhone').innerText = student.phone;
+
+                // Info block
+                const aboutText = student.id == 1 ?
+                    "Estudante dedicado do curso Técnico em Informática no Senac Taguatinga. Possuo sólidos conhecimentos em lógica de programação, desenvolvimento web básico (HTML, CSS, JS) e suporte ao usuário. Busco minha primeira oportunidade no mercado de TI para aplicar meus conhecimentos técnicos e evoluir profissionalmente." :
+                    student.id == 2 ?
+                        "Apaixonada pela arte da gastronomia, com foco em técnicas clássicas e contemporâneas. Busco integrar equipes de alta performance para aprimorar minhas habilidades culinárias e de organização em ambientes dinâmicos." :
+                        "Jovem comprometida com o aprendizado corporativo, atuando com excelência em suporte administrativo, atendimento qualificado e organização de fluxos documentais.";
+
+                document.getElementById('candidateAbout').innerText = aboutText;
+
+                // Skills list
+                const skillsList = document.getElementById('candidateSkills');
+                skillsList.innerHTML = student.skills.map(skill => `
+                    <li class="mb-2"><i data-lucide="check" class="text-success me-2" style="width: 16px;"></i> ${skill}</li>
+                `).join('');
+
+                // Preferences
+                document.getElementById('candidatePrefType').innerText = student.type;
+                document.getElementById('candidatePrefAvailability').innerText = student.availability;
+                document.getElementById('candidatePrefSalary').innerText = student.id == 1 ? "R$ 1.200,00" : student.id == 2 ? "R$ 2.500,00" : "R$ 800,00";
+
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+
+</html>

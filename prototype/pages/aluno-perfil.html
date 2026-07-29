@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - Portal Senac</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        /* ---- Experiências e Cursos Externos ---- */
+        .exp-card {
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 16px;
+            background: #fff;
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+        .exp-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+        .exp-card .exp-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .exp-card:hover .exp-actions {
+            opacity: 1;
+        }
+        .exp-card .exp-badge {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            background: var(--senac-blue, #003da5);
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        .exp-card .exp-badge.atual {
+            background: #198754;
+        }
+        .exp-card h6 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .exp-card .exp-empresa {
+            font-size: 13px;
+            color: #495057;
+            font-weight: 500;
+        }
+        .exp-card .exp-periodo {
+            font-size: 12px;
+            color: #868e96;
+        }
+        .exp-card .exp-desc {
+            font-size: 13px;
+            color: #495057;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        /* Cursos externos na sidebar */
+        .curso-externo-item {
+            border-left: 3px solid var(--senac-blue, #003da5);
+            padding-left: 10px;
+            margin-bottom: 14px;
+            position: relative;
+        }
+        .curso-externo-item .ce-actions {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .curso-externo-item:hover .ce-actions {
+            opacity: 1;
+        }
+        .curso-externo-item span.fw-bold {
+            font-size: 13px;
+        }
+        .curso-externo-item small {
+            font-size: 11px;
+        }
+
+        /* Section add button */
+        .section-add-btn {
+            font-size: 13px;
+            border-style: dashed;
+        }
+        .section-add-btn:hover {
+            border-style: solid;
+        }
+
+        /* Modal tweaks */
+        .modal-header {
+            background: var(--senac-blue, #003da5);
+            color: #fff;
+        }
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+        #empregoAtualCheck:checked ~ label {
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <!-- Main Content -->
+        <div class="flex-grow-1 p-4 p-md-5">
+            <header class="border-bottom p-3 d-flex justify-content-between align-items-center px-4 mb-2"
+                style="background-color: var(--senac-blue);">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+                        style="height: 40px; filter: brightness(0) invert(1);">
+                    <span class="text-white-50 mx-2">|</span>
+                    <div class="d-flex flex-column">
+                        <h5 class="mb-0 fw-bold text-white">
+                            Meu Perfil Profissional
+                        </h5>
+                        <small class="text-white-50 extra-small">
+                            Mantenha seus dados atualizados para atrair mais empresas.
+                        </small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-end d-none d-sm-block">
+                        <div class="fw-bold small text-white">Roberto Santos</div>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Roberto+Santos&background=f39200&color=fff"
+                        class="rounded-circle" style="width: 32px; border: 2px solid rgba(255,255,255,0.2);">
+                    <a href="#" id="logoutBtn" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2">
+                        <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+                        <span>Sair</span>
+                    </a>
+                </div>
+            </header>
+            <div class="row g-4">
+                <!-- ===================== COLUNA ESQUERDA ===================== -->
+                <div class="col-lg-4">
+                    <!-- Dados Acadêmicos (Read Only) -->
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Dados Acadêmicos (SIG)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="small text-muted d-block">Instituição</label>
+                                <span class="fw-bold">Senac Distrito Federal</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted d-block">Curso</label>
+                                <span class="fw-bold">Técnico em Informática</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted d-block">Unidade</label>
+                                <span class="fw-bold">Senac Taguatinga</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="small text-muted d-block">Ano de Conclusão</label>
+                                <span class="fw-bold">2025</span>
+                            </div>
+                            <div class="alert alert-light border-0 small mb-0">
+                                <i data-lucide="info" class="d-inline" style="width: 14px;"></i> Dados sincronizados via
+                                API SIG (FR4).
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cursos Realizados no SENAC (read-only) -->
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Cursos Realizados no SENAC</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3 border-bottom pb-2">
+                                <span class="fw-bold d-block text-secondary">Lógica de Programação</span>
+                                <small class="text-muted">Senac Taguatinga | Concluído em 2024 | 40h</small>
+                            </div>
+                            <div class="mb-3 border-bottom pb-2">
+                                <span class="fw-bold d-block text-secondary">Desenvolvimento Web Básico</span>
+                                <small class="text-muted">Senac Taguatinga | Concluído em 2024 | 60h</small>
+                            </div>
+                            <div class="mb-0">
+                                <span class="fw-bold d-block text-secondary">Banco de Dados SQL</span>
+                                <small class="text-muted">Senac Taguatinga | Concluído em 2024 | 40h</small>
+                            </div>
+                            <div class="alert alert-warning border-0 small mb-0 mt-3">
+                                <i data-lucide="lock" class="d-inline" style="width: 14px;"></i> Esta seção não permite
+                                edição ou remoção de cursos.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Cursos Externos (editáveis) ===== -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Cursos Externos</h5>
+                            <button class="btn btn-sm btn-primary d-flex align-items-center gap-1"
+                                id="btnAbrirModalCurso" data-bs-toggle="modal" data-bs-target="#modalCurso"
+                                onclick="abrirModalCurso()">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div class="card-body" id="listaCursosExternos">
+                            <!-- Exemplo pré-carregado -->
+                            <div class="curso-externo-item" data-id="ce1">
+                                <div class="ce-actions">
+                                    <button class="btn btn-sm btn-outline-secondary p-1" title="Editar"
+                                        onclick="editarCursoExterno('ce1')">
+                                        <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger p-1" title="Remover"
+                                        onclick="removerCursoExterno('ce1')">
+                                        <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                    </button>
+                                </div>
+                                <span class="fw-bold d-block text-secondary">Inglês Intermediário</span>
+                                <small class="text-muted">CNA | Concluído em 2023 | 120h</small>
+                            </div>
+                            <div class="curso-externo-item" data-id="ce2">
+                                <div class="ce-actions">
+                                    <button class="btn btn-sm btn-outline-secondary p-1" title="Editar"
+                                        onclick="editarCursoExterno('ce2')">
+                                        <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger p-1" title="Remover"
+                                        onclick="removerCursoExterno('ce2')">
+                                        <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                                    </button>
+                                </div>
+                                <span class="fw-bold d-block text-secondary">Excel Avançado</span>
+                                <small class="text-muted">Microlins | Concluído em 2024 | 40h</small>
+                            </div>
+                            <p class="text-muted small text-center mb-0 mt-2" id="emptyMsgCursos" style="display:none;">
+                                Nenhum curso externo cadastrado.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===================== COLUNA DIREITA ===================== -->
+                <div class="col-lg-8">
+                    <!-- Informações Profissionais -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Informações Profissionais (FR5)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Sobre Mim</label>
+                                    <textarea class="form-control" rows="4"
+                                        placeholder="Fale um pouco sobre sua trajetória, objetivos e o que você domina..."></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Cargo de Interesse</label>
+                                    <input type="text" class="form-control"
+                                        placeholder="Ex: Desenvolvedor Front-end Junior">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Área de Atuação</label>
+                                    <select class="form-select">
+                                        <option selected>Tecnologia da Informação</option>
+                                        <option>Gastronomia</option>
+                                        <option>Administração</option>
+                                        <option>Saúde</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Habilidades (Tags)</label>
+                                    <div class="d-flex flex-wrap gap-2 mb-2" id="skillsContainer">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary p-2">JavaScript <i
+                                                data-lucide="x" class="ms-1" style="width: 12px; cursor: pointer;"
+                                                onclick="this.parentElement.remove()"></i></span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary p-2">HTML/CSS <i
+                                                data-lucide="x" class="ms-1" style="width: 12px; cursor: pointer;"
+                                                onclick="this.parentElement.remove()"></i></span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary p-2">Pacote Office <i
+                                                data-lucide="x" class="ms-1" style="width: 12px; cursor: pointer;"
+                                                onclick="this.parentElement.remove()"></i></span>
+                                        <button class="btn btn-sm btn-outline-primary rounded-circle" id="addSkillBtn"
+                                            style="width: 32px; height: 32px; padding: 0;">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preferências de Trabalho -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Preferências de Trabalho (FR6)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Tipo de Contratação</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="checkCLT" checked>
+                                            <label class="form-check-label small" for="checkCLT">CLT</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="checkEstagio" checked>
+                                            <label class="form-check-label small" for="checkEstagio">Estágio</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="checkAprendiz">
+                                            <label class="form-check-label small" for="checkAprendiz">Jovem
+                                                Aprendiz</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Disponibilidade de Horário</label>
+                                    <select class="form-select">
+                                        <option>Manhã</option>
+                                        <option>Tarde</option>
+                                        <option>Noite</option>
+                                        <option selected>Tarde/Noite</option>
+                                        <option>Integral</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Região Administrativa (RA)</label>
+                                    <input type="text" class="form-control" value="Ceilândia">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Pretensão Salarial (Opcional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">R$</span>
+                                        <input type="text" class="form-control" placeholder="0,00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Links Externos -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Links Externos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label small">LinkedIn</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i data-lucide="linkedin"
+                                            style="width: 16px;"></i></span>
+                                    <input type="text" class="form-control border-start-0"
+                                        placeholder="linkedin.com/in/seuuser">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small">Portfólio</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i data-lucide="globe"
+                                            style="width: 16px;"></i></span>
+                                    <input type="text" class="form-control border-start-0"
+                                        placeholder="https://meuportfolio.com">
+                                </div>
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label small">GitHub</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i data-lucide="github"
+                                            style="width: 16px;"></i></span>
+                                    <input type="text" class="form-control border-start-0"
+                                        placeholder="github.com/seuuser">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Experiências Profissionais (editáveis) ===== -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 h6 text-uppercase text-muted">Experiências Profissionais</h5>
+                            <button class="btn btn-sm btn-primary d-flex align-items-center gap-1"
+                                id="btnAbrirModalExp" data-bs-toggle="modal" data-bs-target="#modalExperiencia"
+                                onclick="abrirModalExperiencia()">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                                <span>Adicionar</span>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex flex-column gap-3" id="listaExperiencias">
+                                <!-- Exemplo pré-carregado -->
+                                <div class="exp-card" data-id="exp1">
+                                    <div class="exp-actions">
+                                        <button class="btn btn-sm btn-outline-secondary p-1" title="Editar"
+                                            onclick="editarExperiencia('exp1')">
+                                            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger p-1" title="Remover"
+                                            onclick="removerExperiencia('exp1')">
+                                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                        </button>
+                                    </div>
+                                    <span class="exp-badge">Estágio</span>
+                                    <h6>Desenvolvedor Web Estagiário</h6>
+                                    <div class="exp-empresa">TechSolutions LTDA</div>
+                                    <div class="exp-periodo">
+                                        <i data-lucide="calendar" style="width:12px;height:12px;"></i>
+                                        Mar 2024 – Dez 2024 · 10 meses · Brasília, DF
+                                    </div>
+                                    <div class="exp-desc">
+                                        Atuei no desenvolvimento e manutenção de interfaces web utilizando HTML, CSS e
+                                        JavaScript. Trabalhei com o time de produto para implementar novas funcionalidades
+                                        e correção de bugs.
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-muted small text-center mb-0 mt-3" id="emptyMsgExp" style="display:none;">
+                                Nenhuma experiência profissional cadastrada.
+                            </p>
+                            <div class="mt-3 text-center">
+                                <button class="btn btn-sm btn-outline-primary section-add-btn"
+                                    data-bs-toggle="modal" data-bs-target="#modalExperiencia"
+                                    onclick="abrirModalExperiencia()">
+                                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                                    Adicionar outra experiência
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-2 mb-4">
+                        <button class="btn btn-primary" onclick="alert('Perfil atualizado com sucesso!')">
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL: Experiência Profissional                            -->
+    <!-- ========================================================= -->
+    <div class="modal fade" id="modalExperiencia" tabindex="-1" aria-labelledby="modalExpLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalExpLabel">
+                        <i data-lucide="briefcase" style="width:18px;height:18px;"></i>
+                        <span id="modalExpTitulo">Adicionar Experiência Profissional</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="expEditId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Cargo / Função <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="expCargo"
+                                placeholder="Ex: Desenvolvedor Front-end">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Empresa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="expEmpresa"
+                                placeholder="Ex: TechSolutions LTDA">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tipo de Vínculo</label>
+                            <select class="form-select" id="expTipo">
+                                <option value="CLT">CLT</option>
+                                <option value="Estágio">Estágio</option>
+                                <option value="Jovem Aprendiz">Jovem Aprendiz</option>
+                                <option value="Freelance">Freelance</option>
+                                <option value="Voluntário">Voluntário</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Local (Cidade, UF)</label>
+                            <input type="text" class="form-control" id="expLocal"
+                                placeholder="Ex: Brasília, DF">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Mês/Ano de Início <span class="text-danger">*</span></label>
+                            <input type="month" class="form-control" id="expInicio">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" id="labelExpFim">Mês/Ano de Término <span class="text-danger">*</span></label>
+                            <input type="month" class="form-control" id="expFim">
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="expAtual"
+                                    onchange="toggleExpAtual(this)">
+                                <label class="form-check-label small" for="expAtual">Trabalho aqui atualmente</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Descrição das Atividades</label>
+                            <textarea class="form-control" id="expDescricao" rows="4"
+                                placeholder="Descreva suas principais responsabilidades e conquistas neste cargo..."></textarea>
+                            <div class="form-text">Dica: use verbos de ação (desenvolvi, implementei, gerenciei…)</div>
+                        </div>
+                    </div>
+                    <div id="expValidacaoMsg" class="alert alert-danger mt-3 mb-0 d-none small"></div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarExp" onclick="salvarExperiencia()">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i>
+                        Salvar Experiência
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL: Curso Externo                                       -->
+    <!-- ========================================================= -->
+    <div class="modal fade" id="modalCurso" tabindex="-1" aria-labelledby="modalCursoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalCursoLabel">
+                        <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i>
+                        <span id="modalCursoTitulo">Adicionar Curso Externo</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="cursoEditId">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nome do Curso <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="cursoNome"
+                                placeholder="Ex: Inglês Intermediário">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Instituição <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="cursoInstituicao"
+                                placeholder="Ex: CNA, Microlins…">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Carga Horária</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="cursoHoras" placeholder="Ex: 40" min="1">
+                                <span class="input-group-text">h</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Situação</label>
+                            <select class="form-select" id="cursoSituacao">
+                                <option value="Concluído">Concluído</option>
+                                <option value="Em andamento">Em andamento</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" id="labelCursoAno">Ano de Conclusão</label>
+                            <input type="number" class="form-control" id="cursoAno"
+                                placeholder="Ex: 2024" min="1990" max="2099">
+                        </div>
+                    </div>
+                    <div id="cursoValidacaoMsg" class="alert alert-danger mt-3 mb-0 d-none small"></div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarCurso" onclick="salvarCursoExterno()">
+                        <i data-lucide="save" style="width:14px;height:14px;"></i>
+                        Salvar Curso
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+        // =========================================================
+        // Dados em memória (simula persistência local)
+        // =========================================================
+        let experiencias = [
+            {
+                id: 'exp1',
+                cargo: 'Desenvolvedor Web Estagiário',
+                empresa: 'TechSolutions LTDA',
+                tipo: 'Estágio',
+                local: 'Brasília, DF',
+                inicio: '2024-03',
+                fim: '2024-12',
+                atual: false,
+                descricao: 'Atuei no desenvolvimento e manutenção de interfaces web utilizando HTML, CSS e JavaScript. Trabalhei com o time de produto para implementar novas funcionalidades e correção de bugs.'
+            }
+        ];
+
+        let cursosExternos = [
+            { id: 'ce1', nome: 'Inglês Intermediário', instituicao: 'CNA', horas: 120, situacao: 'Concluído', ano: 2023 },
+            { id: 'ce2', nome: 'Excel Avançado', instituicao: 'Microlins', horas: 40, situacao: 'Concluído', ano: 2024 }
+        ];
+
+        // =========================================================
+        // Utilitários
+        // =========================================================
+        function formatarMesAno(mesAno) {
+            if (!mesAno) return '';
+            const [ano, mes] = mesAno.split('-');
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            return `${meses[parseInt(mes) - 1]} ${ano}`;
+        }
+
+        function calcularDuracao(inicio, fim, atual) {
+            if (!inicio) return '';
+            const ini = new Date(inicio + '-01');
+            const ter = atual ? new Date() : (fim ? new Date(fim + '-01') : new Date());
+            let meses = (ter.getFullYear() - ini.getFullYear()) * 12 + (ter.getMonth() - ini.getMonth());
+            if (meses < 1) meses = 1;
+            if (meses < 12) return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+            const anos = Math.floor(meses / 12);
+            const m = meses % 12;
+            return `${anos} ${anos === 1 ? 'ano' : 'anos'}${m > 0 ? ` e ${m} ${m === 1 ? 'mês' : 'meses'}` : ''}`;
+        }
+
+        function gerarId() {
+            return 'id_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        }
+
+        // =========================================================
+        // EXPERIÊNCIAS PROFISSIONAIS
+        // =========================================================
+        function renderizarExperiencias() {
+            const container = document.getElementById('listaExperiencias');
+            const emptyMsg = document.getElementById('emptyMsgExp');
+            container.innerHTML = '';
+
+            if (experiencias.length === 0) {
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+
+            experiencias.forEach(exp => {
+                const duracao = calcularDuracao(exp.inicio, exp.fim, exp.atual);
+                const periodoStr = `${formatarMesAno(exp.inicio)} – ${exp.atual ? 'Presente' : formatarMesAno(exp.fim)}${duracao ? ' · ' + duracao : ''}${exp.local ? ' · ' + exp.local : ''}`;
+                const badgeClass = exp.atual ? 'exp-badge atual' : 'exp-badge';
+                const card = document.createElement('div');
+                card.className = 'exp-card';
+                card.dataset.id = exp.id;
+                card.innerHTML = `
+                    <div class="exp-actions">
+                        <button class="btn btn-sm btn-outline-secondary p-1" title="Editar" onclick="editarExperiencia('${exp.id}')">
+                            <i data-lucide="pencil" style="width:13px;height:13px;"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger p-1" title="Remover" onclick="removerExperiencia('${exp.id}')">
+                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        </button>
+                    </div>
+                    <span class="${badgeClass}">${exp.tipo}</span>
+                    <h6>${exp.cargo}</h6>
+                    <div class="exp-empresa">${exp.empresa}</div>
+                    <div class="exp-periodo">
+                        <i data-lucide="calendar" style="width:12px;height:12px;"></i>
+                        ${periodoStr}
+                    </div>
+                    ${exp.descricao ? `<div class="exp-desc">${exp.descricao}</div>` : ''}
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function abrirModalExperiencia(id) {
+            document.getElementById('modalExpTitulo').textContent = id ? 'Editar Experiência Profissional' : 'Adicionar Experiência Profissional';
+            document.getElementById('expValidacaoMsg').classList.add('d-none');
+            if (id) {
+                const exp = experiencias.find(e => e.id === id);
+                document.getElementById('expEditId').value = exp.id;
+                document.getElementById('expCargo').value = exp.cargo;
+                document.getElementById('expEmpresa').value = exp.empresa;
+                document.getElementById('expTipo').value = exp.tipo;
+                document.getElementById('expLocal').value = exp.local || '';
+                document.getElementById('expInicio').value = exp.inicio;
+                document.getElementById('expFim').value = exp.fim || '';
+                document.getElementById('expAtual').checked = exp.atual;
+                document.getElementById('expFim').disabled = exp.atual;
+                document.getElementById('expDescricao').value = exp.descricao || '';
+            } else {
+                document.getElementById('expEditId').value = '';
+                document.getElementById('expCargo').value = '';
+                document.getElementById('expEmpresa').value = '';
+                document.getElementById('expTipo').value = 'Estágio';
+                document.getElementById('expLocal').value = '';
+                document.getElementById('expInicio').value = '';
+                document.getElementById('expFim').value = '';
+                document.getElementById('expAtual').checked = false;
+                document.getElementById('expFim').disabled = false;
+                document.getElementById('expDescricao').value = '';
+            }
+        }
+
+        function editarExperiencia(id) {
+            abrirModalExperiencia(id);
+            const modal = new bootstrap.Modal(document.getElementById('modalExperiencia'));
+            modal.show();
+        }
+
+        function removerExperiencia(id) {
+            if (!confirm('Deseja remover esta experiência profissional?')) return;
+            experiencias = experiencias.filter(e => e.id !== id);
+            renderizarExperiencias();
+        }
+
+        function toggleExpAtual(checkbox) {
+            document.getElementById('expFim').disabled = checkbox.checked;
+            if (checkbox.checked) document.getElementById('expFim').value = '';
+        }
+
+        function salvarExperiencia() {
+            const cargo = document.getElementById('expCargo').value.trim();
+            const empresa = document.getElementById('expEmpresa').value.trim();
+            const inicio = document.getElementById('expInicio').value;
+            const atual = document.getElementById('expAtual').checked;
+            const fim = document.getElementById('expFim').value;
+
+            const msg = document.getElementById('expValidacaoMsg');
+            if (!cargo || !empresa || !inicio) {
+                msg.textContent = 'Preencha os campos obrigatórios: Cargo, Empresa e Mês/Ano de Início.';
+                msg.classList.remove('d-none');
+                return;
+            }
+            if (!atual && !fim) {
+                msg.textContent = 'Informe o Mês/Ano de Término ou marque "Trabalho aqui atualmente".';
+                msg.classList.remove('d-none');
+                return;
+            }
+            msg.classList.add('d-none');
+
+            const editId = document.getElementById('expEditId').value;
+            const dados = {
+                cargo,
+                empresa,
+                tipo: document.getElementById('expTipo').value,
+                local: document.getElementById('expLocal').value.trim(),
+                inicio,
+                fim: atual ? '' : fim,
+                atual,
+                descricao: document.getElementById('expDescricao').value.trim()
+            };
+
+            if (editId) {
+                const idx = experiencias.findIndex(e => e.id === editId);
+                experiencias[idx] = { id: editId, ...dados };
+            } else {
+                experiencias.push({ id: gerarId(), ...dados });
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('modalExperiencia')).hide();
+            renderizarExperiencias();
+        }
+
+        // =========================================================
+        // CURSOS EXTERNOS
+        // =========================================================
+        function renderizarCursosExternos() {
+            const container = document.getElementById('listaCursosExternos');
+            const emptyMsg = document.getElementById('emptyMsgCursos');
+            container.innerHTML = '';
+
+            if (cursosExternos.length === 0) {
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+
+            cursosExternos.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'curso-externo-item';
+                item.dataset.id = c.id;
+                const detalhe = [c.instituicao, `${c.situacao}${c.ano && c.situacao === 'Concluído' ? ' em ' + c.ano : ''}`, c.horas ? c.horas + 'h' : ''].filter(Boolean).join(' | ');
+                item.innerHTML = `
+                    <div class="ce-actions">
+                        <button class="btn btn-sm btn-outline-secondary p-1" title="Editar" onclick="editarCursoExterno('${c.id}')">
+                            <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger p-1" title="Remover" onclick="removerCursoExterno('${c.id}')">
+                            <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                        </button>
+                    </div>
+                    <span class="fw-bold d-block text-secondary">${c.nome}</span>
+                    <small class="text-muted">${detalhe}</small>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function abrirModalCurso(id) {
+            document.getElementById('modalCursoTitulo').textContent = id ? 'Editar Curso Externo' : 'Adicionar Curso Externo';
+            document.getElementById('cursoValidacaoMsg').classList.add('d-none');
+            if (id) {
+                const c = cursosExternos.find(x => x.id === id);
+                document.getElementById('cursoEditId').value = c.id;
+                document.getElementById('cursoNome').value = c.nome;
+                document.getElementById('cursoInstituicao').value = c.instituicao;
+                document.getElementById('cursoHoras').value = c.horas || '';
+                document.getElementById('cursoSituacao').value = c.situacao;
+                document.getElementById('cursoAno').value = c.ano || '';
+            } else {
+                document.getElementById('cursoEditId').value = '';
+                document.getElementById('cursoNome').value = '';
+                document.getElementById('cursoInstituicao').value = '';
+                document.getElementById('cursoHoras').value = '';
+                document.getElementById('cursoSituacao').value = 'Concluído';
+                document.getElementById('cursoAno').value = '';
+            }
+        }
+
+        function editarCursoExterno(id) {
+            abrirModalCurso(id);
+            const modal = new bootstrap.Modal(document.getElementById('modalCurso'));
+            modal.show();
+        }
+
+        function removerCursoExterno(id) {
+            if (!confirm('Deseja remover este curso?')) return;
+            cursosExternos = cursosExternos.filter(c => c.id !== id);
+            renderizarCursosExternos();
+        }
+
+        function salvarCursoExterno() {
+            const nome = document.getElementById('cursoNome').value.trim();
+            const instituicao = document.getElementById('cursoInstituicao').value.trim();
+            const msg = document.getElementById('cursoValidacaoMsg');
+
+            if (!nome || !instituicao) {
+                msg.textContent = 'Preencha os campos obrigatórios: Nome do Curso e Instituição.';
+                msg.classList.remove('d-none');
+                return;
+            }
+            msg.classList.add('d-none');
+
+            const editId = document.getElementById('cursoEditId').value;
+            const dados = {
+                nome,
+                instituicao,
+                horas: parseInt(document.getElementById('cursoHoras').value) || null,
+                situacao: document.getElementById('cursoSituacao').value,
+                ano: parseInt(document.getElementById('cursoAno').value) || null
+            };
+
+            if (editId) {
+                const idx = cursosExternos.findIndex(c => c.id === editId);
+                cursosExternos[idx] = { id: editId, ...dados };
+            } else {
+                cursosExternos.push({ id: gerarId(), ...dados });
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('modalCurso')).hide();
+            renderizarCursosExternos();
+        }
+
+        // =========================================================
+        // INICIALIZAÇÃO
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', function () {
+            // Renderizar seções dinâmicas (sem re-renderizar o que está no HTML pré-carregado)
+            // Em produção, chamar renderizar* sempre para sincronizar com dados do backend
+            lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>

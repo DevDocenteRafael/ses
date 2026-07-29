@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão dos Candidatos - Senac DF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body class="bg-light">
+
+    <div class="d-flex">
+        <!-- Sidebar Admin -->
+        <div class="sidebar d-none d-lg-block" id="sidebar" style="width: 280px;">
+            <button class="sidebar-toggle" id="toggleSidebar">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="px-4 mb-5 text-center">
+                <img src="https://www.df.senac.br/wp-content/uploads/2023/12/logo-senac-300x163.png" alt="Senac"
+                    style="height: 40px; filter: brightness(0) invert(1);">
+            </div>
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="admin-dashboard.html">
+                    <i data-lucide="pie-chart"></i> <span class="sidebar-text">Relatórios Geral</span>
+                </a>
+                <a class="nav-link" href="admin-empresas.html">
+                    <i data-lucide="building"></i> <span class="sidebar-text">Gestão de Empresas</span>
+                </a>
+                <a class="nav-link" href="admin-alunos.html">
+                    <i data-lucide="users"></i> <span class="sidebar-text">Gestão dos Candidatos</span>
+                </a>
+                <div class="mt-auto p-4">
+                    <a class="nav-link text-white-50" href="#" id="logoutBtn">
+                        <i data-lucide="log-out"></i> <span class="sidebar-text">Sair</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 p-4 p-md-5">
+            <header class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 class="h3 mb-1">Gestão dos Candidatos</h2>
+                    <p class="text-muted">Controle de acesso e sincronização de candidatos (FR37)</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary"
+                        onclick="alert('Sincronização de candidatos com o SIG iniciada...')">
+                        <i data-lucide="refresh-cw" class="me-2" style="width:16px"></i> Sincronizar SIG
+                    </button>
+                </div>
+            </header>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Candidatos Cadastrados</h5>
+                    <div class="d-flex gap-2" style="max-width: 350px;">
+                        <input type="text" id="searchInput" class="form-control form-control-sm"
+                            placeholder="Filtrar por nome ou CPF">
+                        <button class="btn btn-primary btn-sm" id="searchBtn"><i data-lucide="search"
+                                style="width:14px"></i></button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Candidato</th>
+                                <th>CPF</th>
+                                <th>Curso / Unidade</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/mockData.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderStudents();
+
+            // Search handlers
+            document.getElementById('searchInput').addEventListener('input', () => {
+                renderStudents();
+            });
+            document.getElementById('searchBtn').addEventListener('click', () => {
+                renderStudents();
+            });
+        });
+
+        function renderStudents() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const tableBody = document.getElementById('studentTableBody');
+            const students = MockAPI.getStudents();
+
+            const filtered = students.filter(s => {
+                return s.name.toLowerCase().includes(query) || s.cpf.includes(query);
+            });
+
+            tableBody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">Nenhum candidato encontrado.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(student => {
+                const tr = document.createElement('tr');
+
+                const isLiberado = student.accessStatus === 'Liberado';
+                const statusBadge = isLiberado ?
+                    `<span class="badge bg-success bg-opacity-10 text-success">Liberado</span>` :
+                    `<span class="badge bg-danger bg-opacity-10 text-danger">Bloqueado</span>`;
+
+                const actionButton = isLiberado ?
+                    `<button class="btn btn-sm btn-outline-danger" onclick="toggleAccess(${student.id}, 'Bloqueado')">Bloquear Acesso</button>` :
+                    `<button class="btn btn-sm btn-success" onclick="toggleAccess(${student.id}, 'Liberado')">Liberar Acesso</button>`;
+
+                tr.innerHTML = `
+                    <td class="ps-4">
+                        <div class="fw-bold">${student.name}</div>
+                        <small class="text-muted">E-mail: ${student.email}</small>
+                    </td>
+                    <td>${student.cpf}</td>
+                    <td>
+                        <div class="small fw-bold">${student.course}</div>
+                        <div class="small text-muted">${student.unit}</div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end pe-4">
+                        ${actionButton}
+                    </td>
+                `;
+
+                tableBody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function toggleAccess(id, newStatus) {
+            const actionVerb = newStatus === 'Liberado' ? 'liberar' : 'bloquear';
+            if (confirm(`Deseja ${actionVerb} o acesso deste candidato?`)) {
+                MockAPI.updateStudent(id, { accessStatus: newStatus });
+                renderStudents();
+                alert(`Acesso do candidato atualizado para ${newStatus} com sucesso!`);
+            }
+        }
+    </script>
+</body>
+
+</html>

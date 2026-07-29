@@ -1,0 +1,230 @@
+:root {
+    --senac-blue: #004587;
+    --senac-blue-dark: #003366;
+    --senac-orange: #f39200;
+    --senac-orange-dark: #d68100;
+    --bg-light: #f8f9fa;
+    --text-dark: #212529;
+    --white: #ffffff;
+    --border-color: #dee2e6;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    overflow-x: hidden;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5 {
+    font-weight: 700;
+    color: var(--senac-blue);
+}
+
+.extra-small {
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+
+
+/* Custom Buttons */
+.btn-primary {
+    background-color: var(--senac-blue);
+    border-color: var(--senac-blue);
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--senac-blue-dark);
+    border-color: var(--senac-blue-dark);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: var(--senac-orange);
+    border-color: var(--senac-orange);
+    color: var(--white);
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: var(--senac-orange-dark);
+    border-color: var(--senac-orange-dark);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+.btn-outline-primary {
+    color: var(--senac-blue);
+    border-color: var(--senac-blue);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--senac-blue);
+    color: var(--white);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--senac-blue) 0%, #0066cc 100%);
+    color: var(--white);
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    bottom: -50px;
+    right: -50px;
+    width: 300px;
+    height: 300px;
+    background: var(--senac-orange);
+    border-radius: 50%;
+    opacity: 0.1;
+    z-index: 0;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* Forms */
+.form-control,
+.form-select {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--senac-blue);
+    box-shadow: 0 0 0 0.25rem rgba(0, 69, 135, 0.15);
+}
+
+/* Layout Utilities */
+.section-padding {
+    padding: 80px 0;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Sidebar & Navbar Customizations */
+.navbar-brand img {
+    height: 40px;
+}
+
+.sidebar {
+    height: 100vh;
+    background: var(--senac-blue);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 2rem;
+    transition: var(--transition);
+    position: relative;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    width: 80px !important;
+}
+
+.sidebar.collapsed .sidebar-text,
+.sidebar.collapsed .badge {
+    display: none;
+}
+
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 0.8rem;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    border-left: 4px solid var(--senac-orange);
+}
+
+.sidebar-toggle {
+    position: absolute;
+    right: -15px;
+    top: 20px;
+    width: 30px;
+    height: 30px;
+    background: var(--senac-orange);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+}
+
+/* Dashboard Stats */
+.stat-card {
+    border-left: 4px solid var(--senac-blue);
+}
+
+.stat-card.orange {
+    border-left-color: var(--senac-orange);
+}
+
+/* Utility Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease forwards;
+}
