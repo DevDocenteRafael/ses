@@ -4,13 +4,11 @@ import { useAuthStore } from '../store/auth';
 import authRoutes from './auth';
 import adminRoutes from './admin';
 import empresaRoutes from './empresa';
-import alunoRoutes from './aluno';
 
 // Layouts (componentes "casca" que envolvem as views de cada área)
 const AuthLayout = () => import('../layouts/AuthLayout.vue');
 const AdminLayout = () => import('../layouts/AdminLayout.vue');
 const EmpresaLayout = () => import('../layouts/EmpresaLayout.vue');
-const AlunoLayout = () => import('../layouts/AlunoLayout.vue');
 
 /**
  * Cada grupo de rotas (admin/empresa/aluno) é "encaixado" dentro do
@@ -40,10 +38,11 @@ const routes = [
         meta: empresaRoutes[0].meta,
     },
     {
-        path: '/aluno',
-        component: AlunoLayout,
-        children: alunoRoutes[0].children,
-        meta: alunoRoutes[0].meta,
+        // Única página do aluno após o login (sem Dashboard/Convites).
+        path: '/aluno/perfil',
+        name: 'aluno.perfil',
+        component: () => import('../modules/aluno/views/MeuPerfilView.vue'),
+        meta: { requiresAuth: true, role: 'candidato' },
     },
     {
         // Qualquer rota não mapeada cai aqui
@@ -74,7 +73,7 @@ router.beforeEach((to, from, next) => {
     const painelPorTipo = {
         administrativo: '/admin',
         empresa: '/empresa',
-        candidato: '/aluno',
+        candidato: '/aluno/perfil',
     };
 
     if (to.meta.guestOnly && auth.estaAutenticado) {

@@ -19,7 +19,7 @@ const formulario = reactive({
 const painelPorTipo = {
 	administrativo: '/admin',
 	empresa: '/empresa',
-	candidato: '/aluno',
+	candidato: '/aluno/perfil',
 };
 
 function obterMensagemErro(error) {

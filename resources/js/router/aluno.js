@@ -13,11 +13,6 @@ export default [
                 component: () => import('../modules/aluno/views/DashboardView.vue'),
             },
             {
-                path: 'perfil',
-                name: 'aluno.perfil',
-                component: () => import('../modules/aluno/views/MeuPerfilView.vue'),
-            },
-            {
                 path: 'curriculo',
                 name: 'aluno.curriculo',
                 component: () => import('../modules/aluno/views/CurriculoView.vue'),

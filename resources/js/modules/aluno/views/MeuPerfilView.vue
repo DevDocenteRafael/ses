@@ -1,25 +1,40 @@
 <template>
-    <div class="container-fluid p-4">
-        <div class="d-flex align-items-start justify-content-between mb-4">
-            <div>
-                <h1 class="h3 fw-bold mb-1">Meu Perfil Profissional</h1>
-                <p class="text-secondary mb-0">Mantenha seus dados atualizados para atrair mais empresas.</p>
+    <div>
+        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold fs-5">Senac</span>
+                <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
+                <div>
+                    <h1 class="h5 fw-bold mb-0">Meu Perfil Profissional</h1>
+                    <p class="small mb-0 opacity-75">Mantenha seus dados atualizados para atrair mais empresas.</p>
+                </div>
             </div>
-            <button type="button" class="btn btn-primary" :disabled="salvando || carregando" @click="salvar">
-                <span v-if="salvando" class="spinner-border spinner-border-sm me-1"></span>
-                Salvar Alterações
-            </button>
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="text-end d-none d-sm-block">
+                    <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
+                </div>
+                <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                      style="width: 38px; height: 38px;">
+                    {{ iniciais }}
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-light ms-2" @click="sair">
+                    <i class="bi bi-box-arrow-left me-1"></i> Sair
+                </button>
+            </div>
+        </header>
+
+        <div class="container-fluid p-4">
+        <div v-if="mensagem" class="alert" :class="mensagem.tipo === 'erro' ? 'alert-danger' : 'alert-success'">
+            {{ mensagem.texto }}
         </div>
+
 
         <div v-if="carregando" class="text-center text-secondary py-5">
             <span class="spinner-border spinner-border-sm me-2"></span> Carregando perfil...
         </div>
 
         <template v-else>
-            <div v-if="mensagem" class="alert" :class="mensagem.tipo === 'erro' ? 'alert-danger' : 'alert-success'">
-                {{ mensagem.texto }}
-            </div>
-
             <div class="row g-3">
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm mb-3">
@@ -357,16 +372,43 @@
                     </div>
                 </div>
             </div>
+
+            <div class="d-flex justify-content-end mt-3">
+                <button type="button" class="btn btn-primary" :disabled="salvando" @click="salvar">
+                    <span v-if="salvando" class="spinner-border spinner-border-sm me-1"></span>
+                    Salvar Alterações
+                </button>
+            </div>
         </template>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
 
 const auth = useAuthStore();
+const router = useRouter();
+
+// Esta página não usa o AlunoLayout (sem sidebar, cabeçalho próprio),
+// então precisa resolver iniciais/logout localmente.
+const iniciais = computed(() => {
+    const nome = auth.pessoa?.nome || 'Aluno';
+    return nome
+        .split(' ')
+        .slice(0, 2)
+        .map((parte) => parte[0])
+        .join('')
+        .toUpperCase();
+});
+
+async function sair() {
+    await auth.logout();
+    router.push({ name: 'login' });
+}
 const matricula = computed(() => auth.pessoa?.id_pessoa);
 
 const carregando = ref(true);
