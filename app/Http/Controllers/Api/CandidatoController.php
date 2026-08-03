@@ -25,6 +25,9 @@ class CandidatoController extends Controller
             'informacoesProfissionais',
             'preferenciasDeTrabalho',
             'dadosAcademicos',
+            'cursosSenac',
+            'cursosExternos',
+            'experienciasProfissionais',
         ])->get();
 
         return response()->json($candidatos);
@@ -84,6 +87,9 @@ class CandidatoController extends Controller
             'informacoesProfissionais',
             'preferenciasDeTrabalho',
             'dadosAcademicos',
+            'cursosSenac',
+            'cursosExternos',
+            'experienciasProfissionais',
             'convites.vaga',
             'empresas',
         ])->findOrFail($matricula);

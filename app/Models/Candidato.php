@@ -47,6 +47,21 @@ class Candidato extends Model
         return $this->hasMany(DadosAcademicos::class, 'candidato_matricula', 'matricula');
     }
 
+    public function cursosSenac()
+    {
+        return $this->hasMany(CursoSenac::class, 'candidato_matricula', 'matricula');
+    }
+
+    public function cursosExternos()
+    {
+        return $this->hasMany(CursoExterno::class, 'candidato_matricula', 'matricula');
+    }
+
+    public function experienciasProfissionais()
+    {
+        return $this->hasMany(ExperienciaProfissional::class, 'candidato_matricula', 'matricula');
+    }
+
     public function convites()
     {
         return $this->hasMany(Convite::class, 'candidatos_matricula', 'matricula');

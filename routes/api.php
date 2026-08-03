@@ -45,8 +45,18 @@ Route::middleware('auth.token')->group(function () {
         Route::post('profissional', [PerfilCandidatoController::class, 'storeInfoProfissional']);
         Route::post('preferencias', [PerfilCandidatoController::class, 'storePreferencias']);
         Route::post('academico',    [PerfilCandidatoController::class, 'storeDadosAcademicos']);
+
+        Route::post('cursos-senac',    [PerfilCandidatoController::class, 'storeCursoSenac']);
+
+        Route::post('cursos-externos',      [PerfilCandidatoController::class, 'storeCursoExterno']);
+        Route::delete('cursos-externos/{id}', [PerfilCandidatoController::class, 'destroyCursoExterno']);
+
+        Route::post('experiencias',      [PerfilCandidatoController::class, 'storeExperiencia']);
+        Route::put('experiencias/{id}',  [PerfilCandidatoController::class, 'updateExperiencia']);
+        Route::delete('experiencias/{id}', [PerfilCandidatoController::class, 'destroyExperiencia']);
     });
-    Route::delete('academico/{id}', [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
+    Route::delete('academico/{id}',    [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
+    Route::delete('cursos-senac/{id}', [PerfilCandidatoController::class, 'destroyCursoSenac']);
 
     // Empresas
     Route::get('empresas/favoritos', [EmpresaController::class, 'favoritos']);

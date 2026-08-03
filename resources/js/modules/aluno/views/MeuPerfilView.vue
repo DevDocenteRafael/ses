@@ -55,6 +55,80 @@
                         </div>
                     </div>
 
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body">
+                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Cursos Realizados no Senac</h2>
+
+                            <p v-if="!cursosSenac.length" class="text-secondary small mb-0">
+                                Nenhum curso concluído no Senac registrado ainda.
+                            </p>
+
+                            <div v-for="curso in cursosSenac" :key="curso.id" class="mb-3">
+                                <p class="fw-semibold mb-0">{{ curso.nome_curso }}</p>
+                                <p class="text-secondary small mb-0">
+                                    {{ curso.unidade }} | Concluído em {{ anoDe(curso.concluido_em) }}<template v-if="curso.carga_horaria"> | {{ curso.carga_horaria }}h</template>
+                                </p>
+                            </div>
+
+                            <div class="alert alert-warning small mb-0">
+                                <i class="bi bi-lock me-1"></i>
+                                Esta seção não permite edição ou remoção de cursos.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h2 class="text-uppercase text-secondary small fw-bold mb-0">Cursos Externos</h2>
+                                <button type="button" class="btn btn-sm btn-primary" @click="mostrarFormCursoExterno = !mostrarFormCursoExterno">
+                                    <i class="bi bi-plus-lg me-1"></i> Adicionar
+                                </button>
+                            </div>
+
+                            <p v-if="!cursosExternos.length && !mostrarFormCursoExterno" class="text-secondary small mb-0">
+                                Nenhum curso externo cadastrado ainda.
+                            </p>
+
+                            <div v-for="curso in cursosExternos" :key="curso.id" class="d-flex align-items-start justify-content-between mb-3">
+                                <div>
+                                    <p class="fw-semibold mb-0">{{ curso.nome_curso }}</p>
+                                    <p class="text-secondary small mb-0">
+                                        {{ curso.instituicao }} | Concluído em {{ anoDe(curso.concluido_em) }}<template v-if="curso.carga_horaria"> | {{ curso.carga_horaria }}h</template>
+                                    </p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" @click="removerCursoExterno(curso.id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <div v-if="mostrarFormCursoExterno" class="border rounded p-3 mt-2">
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1">Nome do Curso</label>
+                                    <input v-model="novoCursoExterno.nome_curso" type="text" class="form-control form-control-sm" placeholder="Ex: Inglês Intermediário">
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-sm-6">
+                                        <label class="form-label small mb-1">Instituição</label>
+                                        <input v-model="novoCursoExterno.instituicao" type="text" class="form-control form-control-sm" placeholder="Ex: CNA">
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <label class="form-label small mb-1">Carga Horária</label>
+                                        <input v-model.number="novoCursoExterno.carga_horaria" type="number" min="1" class="form-control form-control-sm" placeholder="120h">
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <label class="form-label small mb-1">Concluído em</label>
+                                        <input v-model="novoCursoExterno.concluido_em" type="date" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="cancelarCursoExterno">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-primary" @click="adicionarCursoExterno">Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <h2 class="text-uppercase text-secondary small fw-bold mb-3">Links Externos</h2>
@@ -142,7 +216,7 @@
                         </div>
                     </div>
 
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
                             <h2 class="text-uppercase text-secondary small fw-bold mb-3">Preferências de Trabalho (FR6)</h2>
 
@@ -186,6 +260,103 @@
                     </div>
                 </div>
             </div>
+
+            <div class="row g-3 mt-0">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h2 class="text-uppercase text-secondary small fw-bold mb-0">Experiências Profissionais</h2>
+                                <button type="button" class="btn btn-sm btn-primary" @click="mostrarFormExperiencia = !mostrarFormExperiencia">
+                                    <i class="bi bi-plus-lg me-1"></i> Adicionar
+                                </button>
+                            </div>
+
+                            <p v-if="!experiencias.length && !mostrarFormExperiencia" class="text-secondary small mb-0">
+                                Nenhuma experiência profissional cadastrada ainda.
+                            </p>
+
+                            <div v-for="exp in experiencias" :key="exp.id" class="d-flex align-items-start justify-content-between border-bottom pb-3 mb-3">
+                                <div>
+                                    <span class="badge text-bg-primary-subtle text-primary mb-1">{{ exp.tipo }}</span>
+                                    <p class="fw-semibold mb-0">{{ exp.cargo }}</p>
+                                    <p class="text-secondary small mb-1">{{ exp.empresa }}</p>
+                                    <p class="text-secondary small mb-1">
+                                        <i class="bi bi-calendar3 me-1"></i>
+                                        {{ mesAno(exp.data_inicio) }} - {{ exp.data_fim ? mesAno(exp.data_fim) : 'Atual' }}
+                                        · {{ duracao(exp.data_inicio, exp.data_fim) }}
+                                        <template v-if="exp.local"> · {{ exp.local }}</template>
+                                    </p>
+                                    <p v-if="exp.descricao" class="small mb-0">{{ exp.descricao }}</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0" @click="removerExperiencia(exp.id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <div v-if="mostrarFormExperiencia" class="border rounded p-3">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">Tipo</label>
+                                        <select v-model="novaExperiencia.tipo" class="form-select form-select-sm">
+                                            <option>Estágio</option>
+                                            <option>CLT</option>
+                                            <option>PJ / Freelancer</option>
+                                            <option>Jovem Aprendiz</option>
+                                            <option>Voluntariado</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">Cargo</label>
+                                        <input v-model="novaExperiencia.cargo" type="text" class="form-control form-control-sm" placeholder="Ex: Desenvolvedor Web Estagiário">
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">Empresa</label>
+                                        <input v-model="novaExperiencia.empresa" type="text" class="form-control form-control-sm" placeholder="Ex: TechSolutions LTDA">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-sm-3">
+                                        <label class="form-label small mb-1">Início</label>
+                                        <input v-model="novaExperiencia.data_inicio" type="date" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <label class="form-label small mb-1">Fim</label>
+                                        <input v-model="novaExperiencia.data_fim" type="date" class="form-control form-control-sm" :disabled="novaExperiencia.atual">
+                                    </div>
+                                    <div class="col-sm-2 d-flex align-items-end">
+                                        <div class="form-check">
+                                            <input v-model="novaExperiencia.atual" class="form-check-input" type="checkbox" id="expAtual">
+                                            <label class="form-check-label small" for="expAtual">Atual</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">Local</label>
+                                        <input v-model="novaExperiencia.local" type="text" class="form-control form-control-sm" placeholder="Ex: Brasília, DF">
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small mb-1">Descrição</label>
+                                    <textarea v-model="novaExperiencia.descricao" class="form-control form-control-sm" rows="2" placeholder="Principais atividades e responsabilidades..."></textarea>
+                                </div>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @click="cancelarExperiencia">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-primary" @click="adicionarExperiencia">Salvar</button>
+                                </div>
+                            </div>
+
+                            <button
+                                v-else
+                                type="button"
+                                class="btn btn-sm btn-outline-primary border-dashed w-100 mt-2"
+                                @click="mostrarFormExperiencia = true"
+                            >
+                                <i class="bi bi-plus-lg me-1"></i> Adicionar outra experiência
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </template>
     </div>
 </template>
@@ -203,6 +374,12 @@ const salvando = ref(false);
 const mensagem = ref(null);
 
 const dadosAcademicos = ref(null);
+const cursosSenac = ref([]);
+const cursosExternos = ref([]);
+const experiencias = ref([]);
+
+const mostrarFormCursoExterno = ref(false);
+const mostrarFormExperiencia = ref(false);
 
 const links = reactive({
     linkedin: '',
@@ -227,10 +404,45 @@ const preferencias = reactive({
     pretensao_salarial: 0,
 });
 
+function cursoExternoVazio() {
+    return { nome_curso: '', instituicao: '', carga_horaria: null, concluido_em: '' };
+}
+
+function experienciaVazia() {
+    return { tipo: 'Estágio', cargo: '', empresa: '', local: '', data_inicio: '', data_fim: '', atual: false, descricao: '' };
+}
+
+const novoCursoExterno = reactive(cursoExternoVazio());
+const novaExperiencia = reactive(experienciaVazia());
+
 const anoConclusao = computed(() => {
     if (!dadosAcademicos.value?.ano_de_conclusao) return '-';
     return new Date(dadosAcademicos.value.ano_de_conclusao).getFullYear();
 });
+
+function anoDe(data) {
+    if (!data) return '-';
+    return new Date(data).getFullYear();
+}
+
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+function mesAno(data) {
+    if (!data) return '';
+    const d = new Date(data);
+    return `${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function duracao(inicio, fim) {
+    if (!inicio) return '';
+    const dataInicio = new Date(inicio);
+    const dataFim = fim ? new Date(fim) : new Date();
+    const meses = Math.max(
+        1,
+        (dataFim.getFullYear() - dataInicio.getFullYear()) * 12 + (dataFim.getMonth() - dataInicio.getMonth()) + 1
+    );
+    return meses === 1 ? '1 mês' : `${meses} meses`;
+}
 
 function aplicarTipoContratacao(valor) {
     const bitmask = valor || 0;
@@ -249,6 +461,9 @@ async function carregar() {
         const { data } = await alunosService.verPerfil(matricula.value);
 
         dadosAcademicos.value = data.dados_academicos?.[0] || null;
+        cursosSenac.value = data.cursos_senac || [];
+        cursosExternos.value = data.cursos_externos || [];
+        experiencias.value = (data.experiencias_profissionais || []).slice().sort((a, b) => new Date(b.data_inicio) - new Date(a.data_inicio));
 
         if (data.link_externo) {
             links.linkedin = data.link_externo.linkedin || '';
@@ -285,6 +500,70 @@ function removerHabilidade(indice) {
     perfil.habilidades.splice(indice, 1);
 }
 
+function cancelarCursoExterno() {
+    Object.assign(novoCursoExterno, cursoExternoVazio());
+    mostrarFormCursoExterno.value = false;
+}
+
+async function adicionarCursoExterno() {
+    if (!novoCursoExterno.nome_curso.trim() || !novoCursoExterno.instituicao.trim() || !novoCursoExterno.concluido_em) {
+        mensagem.value = { tipo: 'erro', texto: 'Preencha nome, instituição e data de conclusão do curso externo.' };
+        return;
+    }
+    try {
+        await alunosService.adicionarCursoExterno(matricula.value, { ...novoCursoExterno });
+        cancelarCursoExterno();
+        await carregar();
+    } catch (e) {
+        mensagem.value = { tipo: 'erro', texto: 'Não foi possível adicionar o curso externo.' };
+    }
+}
+
+async function removerCursoExterno(id) {
+    try {
+        await alunosService.removerCursoExterno(matricula.value, id);
+        await carregar();
+    } catch (e) {
+        mensagem.value = { tipo: 'erro', texto: 'Não foi possível remover o curso externo.' };
+    }
+}
+
+function cancelarExperiencia() {
+    Object.assign(novaExperiencia, experienciaVazia());
+    mostrarFormExperiencia.value = false;
+}
+
+async function adicionarExperiencia() {
+    if (!novaExperiencia.cargo.trim() || !novaExperiencia.empresa.trim() || !novaExperiencia.data_inicio) {
+        mensagem.value = { tipo: 'erro', texto: 'Preencha cargo, empresa e data de início da experiência.' };
+        return;
+    }
+    try {
+        await alunosService.adicionarExperiencia(matricula.value, {
+            tipo: novaExperiencia.tipo,
+            cargo: novaExperiencia.cargo,
+            empresa: novaExperiencia.empresa,
+            local: novaExperiencia.local,
+            data_inicio: novaExperiencia.data_inicio,
+            data_fim: novaExperiencia.atual ? null : (novaExperiencia.data_fim || null),
+            descricao: novaExperiencia.descricao,
+        });
+        cancelarExperiencia();
+        await carregar();
+    } catch (e) {
+        mensagem.value = { tipo: 'erro', texto: 'Não foi possível adicionar a experiência profissional.' };
+    }
+}
+
+async function removerExperiencia(id) {
+    try {
+        await alunosService.removerExperiencia(matricula.value, id);
+        await carregar();
+    } catch (e) {
+        mensagem.value = { tipo: 'erro', texto: 'Não foi possível remover a experiência profissional.' };
+    }
+}
+
 async function salvar() {
     salvando.value = true;
     mensagem.value = null;
@@ -309,3 +588,9 @@ async function salvar() {
 
 onMounted(carregar);
 </script>
+
+<style scoped>
+.border-dashed {
+    border-style: dashed !important;
+}
+</style>
