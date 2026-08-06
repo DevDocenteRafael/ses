@@ -9,3 +9,23 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+:root {
+    /* Altera a cor primária global */
+    --bs-primary: #004587;
+    --bs-primary-rgb: 0, 69, 135;
+}
+
+/* Força a atualização dos botões primários */
+.btn-primary {
+    --bs-btn-bg: #004587;
+    --bs-btn-border-color: #004587;
+    --bs-btn-hover-bg: #003366;
+    --bs-btn-hover-border-color: #003366;
+    --bs-btn-active-bg: #002850;
+    --bs-btn-active-border-color: #002850;
+    --bs-btn-disabled-bg: #004587;
+    --bs-btn-disabled-border-color: #004587;
+    background-color: #004587 !important;
+    border-color: #004587 !important;
+}
