@@ -89,6 +89,8 @@ class PerfilCandidatoController extends Controller
         $validated = $request->validate([
             'instituicao'      => 'required|string|max:100',
             'curso'            => 'required|string|max:45',
+            'segmento'         => 'nullable|string|max:60',
+            'tipo_curso'       => 'nullable|string|max:30',
             'unidade'          => 'required|string|max:45',
             'ano_de_conclusao' => 'required|date',
         ]);

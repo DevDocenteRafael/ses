@@ -17,20 +17,59 @@ class CandidatoController extends Controller
     /**
      * Lista todos os candidatos.
      */
-    public function index(): JsonResponse
+    /**
+     * Lista candidatos. Uso principal: busca de talentos pela empresa —
+     * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são
+     * aplicados aqui no servidor, e não no cliente.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $candidatos = Candidato::with([
-            'pessoa',
-            'linkExterno',
-            'informacoesProfissionais',
-            'preferenciasDeTrabalho',
-            'dadosAcademicos',
-            'cursosSenac',
-            'cursosExternos',
-            'experienciasProfissionais',
-        ])->get();
+        $query = Candidato::query()
+            ->where('status', true)
+            ->with([
+                'pessoa',
+                'linkExterno',
+                'informacoesProfissionais',
+                'preferenciasDeTrabalho',
+                'dadosAcademicos',
+            ]);
 
-        return response()->json($candidatos);
+        if ($request->filled('segmento')) {
+            $query->whereHas('dadosAcademicos', function ($q) use ($request) {
+                $q->where('segmento', $request->query('segmento'));
+            });
+        }
+
+        if ($request->filled('tipo_curso')) {
+            $query->whereHas('dadosAcademicos', function ($q) use ($request) {
+                $q->where('tipo_curso', $request->query('tipo_curso'));
+            });
+        }
+
+        if ($request->filled('disponibilidade')) {
+            $query->whereHas('preferenciasDeTrabalho', function ($q) use ($request) {
+                $q->where('disponibilidade_de_horario', $request->query('disponibilidade'));
+            });
+        }
+
+        // Bitmask: CLT=1, Estagio=2, Jovem Aprendiz=4 (ver PreferenciasDeTrabalho).
+        if ($request->filled('tipo_contratacao')) {
+            $mascara = (int) $request->query('tipo_contratacao');
+            $query->whereHas('preferenciasDeTrabalho', function ($q) use ($mascara) {
+                $q->whereRaw('(tipo_de_contratacao & ?) != 0', [$mascara]);
+            });
+        }
+
+        if ($request->filled('habilidades')) {
+            $habilidades = array_filter((array) $request->query('habilidades'));
+            foreach ($habilidades as $habilidade) {
+                $query->whereHas('informacoesProfissionais', function ($q) use ($habilidade) {
+                    $q->where('habilidades', 'like', '%' . $habilidade . '%');
+                });
+            }
+        }
+
+        return response()->json($query->get());
     }
 
     /**

@@ -1,253 +1,215 @@
 <template>
     <div>
-        <topbar titulo="Buscar Talentos" />
-
-        <div class="container-fluid p-4">
-            <div class="row g-4">
-                <!-- Filtros -->
-                <div class="col-lg-3">
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <h2 class="h6 fw-bold mb-3">Filtros Inteligentes</h2>
-
-                            <div class="mb-3">
-                                <label class="form-label small text-uppercase text-secondary fw-semibold">
-                                    Formação Acadêmica (FR20)
-                                </label>
-                                <select v-model="filtros.curso" class="form-select mb-2">
-                                    <option value="">Todos os Cursos</option>
-                                    <option v-for="c in cursosDisponiveis" :key="c" :value="c">{{ c }}</option>
-                                </select>
-                                <select v-model="filtros.unidade" class="form-select">
-                                    <option value="">Todas as Unidades</option>
-                                    <option v-for="u in unidadesDisponiveis" :key="u" :value="u">{{ u }}</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small text-uppercase text-secondary fw-semibold">
-                                    Contratação (FR18)
-                                </label>
-                                <div class="form-check" v-for="opt in tiposContratacao" :key="opt.valor">
-                                    <input
-                                        :id="`tipo-${opt.valor}`"
-                                        v-model="filtros.tiposContratacao"
-                                        class="form-check-input"
-                                        type="checkbox"
-                                        :value="opt.valor"
-                                    >
-                                    <label class="form-check-label" :for="`tipo-${opt.valor}`">{{ opt.rotulo }}</label>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small text-uppercase text-secondary fw-semibold">
-                                    Disponibilidade (FR17)
-                                </label>
-                                <select v-model="filtros.disponibilidade" class="form-select">
-                                    <option value="">Qualquer Horário</option>
-                                    <option v-for="d in disponibilidadesDisponiveis" :key="d" :value="d">{{ d }}</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small text-uppercase text-secondary fw-semibold">
-                                    Habilidades Técnicas (FR16)
-                                </label>
-                                <input
-                                    v-model="novaHabilidade"
-                                    type="text"
-                                    class="form-control mb-2"
-                                    placeholder="Digite uma competência..."
-                                    @keyup.enter="adicionarHabilidade"
-                                >
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span v-for="h in filtros.habilidades" :key="h" class="badge text-bg-dark">
-                                        {{ h }}
-                                        <button
-                                            type="button"
-                                            class="btn-close btn-close-white ms-1"
-                                            style="font-size: 0.55rem;"
-                                            :aria-label="`Remover ${h}`"
-                                            @click="removerHabilidade(h)"
-                                        ></button>
-                                    </span>
-                                </div>
-                            </div>
-
-                            <button class="btn btn-primary w-100 mb-2" @click="aplicarFiltros">Aplicar Filtros</button>
-                            <button class="btn btn-link w-100 text-decoration-none" @click="limparFiltros">Limpar Tudo</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Resultados -->
-                <div class="col-lg-9">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h2 class="h5 fw-bold mb-0">
-                            Resultados da Busca
-                            <span class="badge text-bg-secondary ms-2">{{ resultados.length }} candidatos</span>
-                        </h2>
-                        <select v-model="ordenacao" class="form-select w-auto">
-                            <option value="compatibilidade">Ordenar por Compatibilidade</option>
-                            <option value="nome">Ordenar por Nome</option>
-                        </select>
-                    </div>
-
-                    <loading v-if="empresa.carregando" />
-
-                    <p v-else-if="!resultados.length" class="text-secondary">
-                        Nenhum candidato encontrado para os filtros selecionados.
-                    </p>
-
-                    <div v-else class="card border-0 shadow-sm mb-3" v-for="c in resultadosOrdenados" :key="c.matricula">
-                        <div class="card-body d-flex flex-wrap align-items-center gap-3">
-                            <span
-                                class="ses-inicial rounded-1 d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
-                            >
-                                {{ iniciais(c.pessoa?.nome) }}
-                            </span>
-
-                            <div class="flex-grow-1">
-                                <h3 class="h6 fw-bold mb-1">{{ c.pessoa?.nome }}</h3>
-                                <p class="small text-secondary mb-2">
-                                    <i class="bi bi-mortarboard"></i>
-                                    {{ c.dadosAcademicos?.[0]?.curso || 'Curso não informado' }}
-                                    <span v-if="c.dadosAcademicos?.[0]?.unidade"> | {{ c.dadosAcademicos[0].unidade }}</span>
-                                </p>
-                                <div class="d-flex flex-wrap gap-2 mb-2">
-                                    <span
-                                        v-for="h in (c.informacoesProfissionais?.habilidades || []).slice(0, 4)"
-                                        :key="h"
-                                        class="badge text-bg-primary-subtle text-primary-emphasis"
-                                    >{{ h }}</span>
-                                </div>
-                                <p class="small text-secondary mb-0">
-                                    <i class="bi bi-geo-alt"></i>
-                                    {{ c.preferenciasDeTrabalho?.regiao_administrativa || 'Região não informada' }}
-                                    <template v-if="c.preferenciasDeTrabalho?.disponibilidade_de_horario">
-                                        &nbsp;<i class="bi bi-clock"></i>
-                                        Disponível: {{ c.preferenciasDeTrabalho.disponibilidade_de_horario }}
-                                    </template>
-                                </p>
-                            </div>
-
-                            <div class="text-end flex-shrink-0" style="min-width: 180px;">
-                                <p class="fw-bold text-warning mb-0">{{ c.compatibilidade }}% Match</p>
-                                <p class="small text-secondary mb-2">Compatibilidade Ponderada</p>
-                                <button class="btn btn-primary btn-sm d-block w-100 mb-1" @click="abrirPerfil(c)">
-                                    Ver Perfil Completo
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm d-block w-100" @click="alternarFavorito(c)">
-                                    <i class="bi" :class="ehFavorito(c.matricula) ? 'bi-star-fill' : 'bi-star'"></i>
-                                    {{ ehFavorito(c.matricula) ? 'Favoritado' : 'Favoritar' }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold fs-5">Senac</span>
+                <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
+                <h1 class="h5 fw-bold mb-0">Portal da Empresa</h1>
             </div>
-        </div>
 
-        <modal :show="modalAberto" titulo="Perfil do Candidato" @fechar="modalAberto = false">
-            <div v-if="perfilSelecionado">
-                <h3 class="h6 fw-bold">{{ perfilSelecionado.pessoa?.nome }}</h3>
-                <p class="text-secondary small">{{ perfilSelecionado.informacoesProfissionais?.sobre_mim || 'Sem descrição.' }}</p>
-
-                <p class="mb-1">
-                    <strong>Cargo de interesse:</strong>
-                    {{ perfilSelecionado.informacoesProfissionais?.cargo_de_interesse || '—' }}
-                </p>
-                <p class="mb-1">
-                    <strong>Região:</strong>
-                    {{ perfilSelecionado.preferenciasDeTrabalho?.regiao_administrativa || '—' }}
-                </p>
-                <p class="mb-1">
-                    <strong>Pretensão salarial:</strong>
-                    {{ perfilSelecionado.preferenciasDeTrabalho?.pretensao_salarial ?? '—' }}
-                </p>
-                <p class="mb-2">
-                    <strong>Curso:</strong>
-                    {{ perfilSelecionado.dadosAcademicos?.[0]?.curso || '—' }}
-                    <span v-if="perfilSelecionado.dadosAcademicos?.[0]?.unidade">
-                        ({{ perfilSelecionado.dadosAcademicos[0].unidade }})
-                    </span>
-                </p>
-
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span
-                        v-for="h in perfilSelecionado.informacoesProfissionais?.habilidades || []"
-                        :key="h"
-                        class="badge text-bg-primary-subtle text-primary-emphasis"
-                    >{{ h }}</span>
+            <div class="d-flex align-items-center gap-2">
+                <div class="text-end d-none d-sm-block">
+                    <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Empresa' }}</p>
+                    <p class="small mb-0 opacity-75">{{ auth.pessoa?.email }}</p>
                 </div>
-
-                <button class="btn btn-primary w-100" @click="alternarFavorito(perfilSelecionado)">
-                    <i class="bi" :class="ehFavorito(perfilSelecionado.matricula) ? 'bi-star-fill' : 'bi-star'"></i>
-                    {{ ehFavorito(perfilSelecionado.matricula) ? 'Remover dos Favoritos' : 'Favoritar Candidato' }}
+                <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                      style="width: 38px; height: 38px;">
+                    {{ iniciais }}
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-light ms-2" @click="sair">
+                    <i class="bi bi-box-arrow-left me-1"></i> Sair
                 </button>
             </div>
-        </modal>
+        </header>
+
+        <div class="d-flex">
+            <aside class="bg-white border-end p-4 d-none d-lg-block" style="width: 320px; min-height: calc(100vh - 64px);">
+                <h2 class="h6 fw-bold mb-4">Filtros Inteligentes</h2>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
+                    <div class="mb-2">
+                        <label class="form-label small text-secondary mb-1">Segmento</label>
+                        <select v-model="filtros.segmento" class="form-select form-select-sm">
+                            <option value="">Todos os Segmentos</option>
+                            <option v-for="s in segmentos" :key="s.value" :value="s.value">{{ s.label }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-secondary mb-1">Tipo de Curso</label>
+                        <select v-model="filtros.tipo_curso" class="form-select form-select-sm">
+                            <option value="">Todos os Tipos</option>
+                            <option v-for="t in tiposCurso" :key="t.value" :value="t.value">{{ t.label }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Contratação (FR18)</label>
+                    <div class="form-check small mb-1">
+                        <input v-model="filtros.clt" class="form-check-input" type="checkbox" id="fCLT">
+                        <label class="form-check-label" for="fCLT">CLT / Efetivo</label>
+                    </div>
+                    <div class="form-check small mb-1">
+                        <input v-model="filtros.estagio" class="form-check-input" type="checkbox" id="fEstagio">
+                        <label class="form-check-label" for="fEstagio">Estágio</label>
+                    </div>
+                    <div class="form-check small mb-1">
+                        <input v-model="filtros.jovemAprendiz" class="form-check-input" type="checkbox" id="fAprendiz">
+                        <label class="form-check-label" for="fAprendiz">Jovem Aprendiz</label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade (FR17)</label>
+                    <select v-model="filtros.disponibilidade" class="form-select form-select-sm">
+                        <option value="">Qualquer Horário</option>
+                        <option value="Manhã">Manhã</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Noite">Noite</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas (FR16)</label>
+                    <input
+                        v-model="novaHabilidade"
+                        type="text"
+                        class="form-control form-control-sm mb-2"
+                        placeholder="Digite uma competência..."
+                        @keydown.enter.prevent="adicionarHabilidade"
+                    >
+                    <div class="d-flex flex-wrap gap-1">
+                        <span v-for="(h, i) in filtros.habilidades" :key="h" class="badge bg-light text-dark border" style="font-size: 10px; cursor: pointer;" @click="filtros.habilidades.splice(i, 1)">
+                            {{ h }} ×
+                        </span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary w-100" :disabled="buscando" @click="buscar">
+                    <span v-if="buscando" class="spinner-border spinner-border-sm me-1"></span>
+                    Aplicar Filtros
+                </button>
+                <button type="button" class="btn btn-link btn-sm w-100 mt-2 text-secondary" @click="limparFiltros">
+                    Limpar Tudo
+                </button>
+            </aside>
+
+            <main class="flex-grow-1 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="h5 mb-0">
+                        Resultados da Busca
+                        <span class="badge bg-secondary ms-2">{{ candidatos.length }} candidato{{ candidatos.length === 1 ? '' : 's' }}</span>
+                    </h2>
+                </div>
+
+                <div v-if="carregando" class="text-center text-secondary py-5">
+                    <span class="spinner-border spinner-border-sm me-2"></span> Carregando candidatos...
+                </div>
+
+                <p v-else-if="!candidatos.length" class="text-secondary text-center py-5">
+                    Nenhum candidato encontrado com os filtros selecionados.
+                </p>
+
+                <div v-else class="row g-3">
+                    <div v-for="c in candidatos" :key="c.matricula" class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <div class="row align-items-center g-3">
+                                    <div class="col-auto">
+                                        <span class="rounded-3 bg-primary text-white d-flex align-items-center justify-content-center fw-semibold"
+                                              style="width: 80px; height: 80px; font-size: 1.4rem;">
+                                            {{ iniciaisDe(c.pessoa?.nome) }}
+                                        </span>
+                                    </div>
+                                    <div class="col">
+                                        <h3 class="h5 mb-1">{{ c.pessoa?.nome }}</h3>
+                                        <p class="mb-2 text-secondary small">
+                                            <i class="bi bi-mortarboard me-1"></i>
+                                            {{ cursoPrincipal(c)?.curso }} | {{ cursoPrincipal(c)?.unidade }}
+                                        </p>
+                                        <div class="d-flex flex-wrap gap-2 mb-3">
+                                            <span v-for="h in (c.informacoes_profissionais?.habilidades || [])" :key="h" class="badge bg-light text-primary border">
+                                                {{ h }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }}, DF</small>
+                                            <small class="text-secondary"><i class="bi bi-clock me-1"></i>Disponível: {{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '-' }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto border-start ps-4">
+                                        <router-link :to="{ name: 'empresa.candidato', params: { matricula: c.matricula } }" class="btn btn-primary d-block">
+                                            Ver Perfil Completo
+                                        </router-link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
     </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import topbar from '../../../components/common/header.vue';
-import loading from '../../../components/common/loading.vue';
-import modal from '../../../components/common/modal.vue';
-import { useEmpresaStore } from '../../../store/empresa';
+import { computed, reactive, ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
+import empresaService from '../../../services/empresaServices';
 
 const auth = useAuthStore();
-const empresa = useEmpresaStore();
+const router = useRouter();
 
-// Estado "de trabalho" dos filtros (o que o usuário está mexendo agora)
+const segmentos = [
+    { value: 'beleza-e-cuidado-pessoal', label: 'Beleza e Cuidado Pessoal' },
+    { value: 'economia-criativa-e-design', label: 'Economia Criativa e Design' },
+    { value: 'gastronomia-e-turismo', label: 'Gastronomia e Turismo' },
+    { value: 'gestao-de-empresas-e-negocios', label: 'Gestão, Comércio e Moda' },
+    { value: 'moda-e-costura', label: 'Moda e Costura' },
+    { value: 'saude-massagem-e-estetica', label: 'Saúde, Massagem e Estética' },
+    { value: 'seguranca-no-trabalho', label: 'Segurança no Trabalho' },
+    { value: 'tecnologia-e-games', label: 'Tecnologia e Economia Criativa' },
+];
+
+const tiposCurso = [
+    { value: 'livres', label: 'Cursos Livres' },
+    { value: 'extensao', label: 'Certificação em TI' },
+    { value: 'tecnico', label: 'Técnico' },
+    { value: 'graduacao', label: 'Graduação' },
+    { value: 'pos-graduacao', label: 'Pós-graduação' },
+];
+
 const filtros = reactive({
-    curso: '',
-    unidade: '',
-    tiposContratacao: [],
+    segmento: '',
+    tipo_curso: '',
+    clt: true,
+    estagio: true,
+    jovemAprendiz: false,
     disponibilidade: '',
     habilidades: [],
 });
 
-// Snapshot aplicado de fato à busca — só muda quando clica em
-// "Aplicar Filtros", como no protótipo.
-const filtrosAplicados = ref(instantaneo());
-
 const novaHabilidade = ref('');
-const ordenacao = ref('compatibilidade');
-const modalAberto = ref(false);
-const perfilSelecionado = ref(null);
+const carregando = ref(true);
+const buscando = ref(false);
+const candidatos = ref([]);
 
-const tiposContratacao = [
-    { valor: 0, rotulo: 'CLT / Efetivo' },
-    { valor: 1, rotulo: 'Estágio' },
-    { valor: 2, rotulo: 'Jovem Aprendiz' },
-];
+const iniciais = computed(() => iniciaisDe(auth.pessoa?.nome || 'Empresa'));
 
-onMounted(async () => {
-    await empresa.buscarTalentos();
-    const cnpj = auth.pessoa?.id_pessoa;
-    if (cnpj) {
-        await empresa.carregarPerfil(cnpj);
-    }
-});
+function iniciaisDe(nome) {
+    return (nome || '')
+        .split(' ')
+        .slice(0, 2)
+        .map((p) => p[0])
+        .join('')
+        .toUpperCase();
+}
 
-const candidatos = computed(() => empresa.candidatosEncontrados);
-
-const cursosDisponiveis = computed(() =>
-    [...new Set(candidatos.value.map((c) => c.dadosAcademicos?.[0]?.curso).filter(Boolean))]
-);
-const unidadesDisponiveis = computed(() =>
-    [...new Set(candidatos.value.map((c) => c.dadosAcademicos?.[0]?.unidade).filter(Boolean))]
-);
-const disponibilidadesDisponiveis = computed(() =>
-    [...new Set(candidatos.value.map((c) => c.preferenciasDeTrabalho?.disponibilidade_de_horario).filter(Boolean))]
-);
-
-function instantaneo() {
-    return { curso: '', unidade: '', tiposContratacao: [], disponibilidade: '', habilidades: [] };
+function cursoPrincipal(candidato) {
+    const lista = candidato.dados_academicos || [];
+    return lista[0] || null;
 }
 
 function adicionarHabilidade() {
@@ -258,110 +220,45 @@ function adicionarHabilidade() {
     novaHabilidade.value = '';
 }
 
-function removerHabilidade(h) {
-    filtros.habilidades = filtros.habilidades.filter((x) => x !== h);
+function tipoContratacaoBitmask() {
+    return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0) + (filtros.jovemAprendiz ? 4 : 0);
 }
 
-function aplicarFiltros() {
-    filtrosAplicados.value = JSON.parse(JSON.stringify(filtros));
+async function buscar() {
+    buscando.value = true;
+    carregando.value = true;
+    try {
+        const params = {};
+        if (filtros.segmento) params.segmento = filtros.segmento;
+        if (filtros.tipo_curso) params.tipo_curso = filtros.tipo_curso;
+        if (filtros.disponibilidade) params.disponibilidade = filtros.disponibilidade;
+        if (filtros.habilidades.length) params.habilidades = filtros.habilidades;
+        const mascara = tipoContratacaoBitmask();
+        if (mascara) params.tipo_contratacao = mascara;
+
+        const { data } = await empresaService.buscarTalentos(params);
+        candidatos.value = data;
+    } finally {
+        buscando.value = false;
+        carregando.value = false;
+    }
 }
 
 function limparFiltros() {
-    filtros.curso = '';
-    filtros.unidade = '';
-    filtros.tiposContratacao = [];
+    filtros.segmento = '';
+    filtros.tipo_curso = '';
+    filtros.clt = true;
+    filtros.estagio = true;
+    filtros.jovemAprendiz = false;
     filtros.disponibilidade = '';
     filtros.habilidades = [];
-    aplicarFiltros();
+    buscar();
 }
 
-/**
- * Compatibilidade ponderada (FR16-FR20), calculada no front: combina
- * sobreposição de habilidades (peso maior) com aderência ao tipo de
- * contratação e à disponibilidade escolhidos nos filtros.
- */
-function calcularCompatibilidade(candidato, f) {
-    const habilidadesCandidato = candidato.informacoesProfissionais?.habilidades || [];
-    let pontos = 0;
-    let pesoTotal = 0;
-
-    if (f.habilidades.length) {
-        const encontradas = f.habilidades.filter((h) =>
-            habilidadesCandidato.some((hc) => hc.toLowerCase() === h.toLowerCase())
-        ).length;
-        pontos += (encontradas / f.habilidades.length) * 70;
-        pesoTotal += 70;
-    }
-
-    pesoTotal += 15;
-    if (
-        !f.tiposContratacao.length
-        || f.tiposContratacao.includes(candidato.preferenciasDeTrabalho?.tipo_de_contratacao)
-    ) {
-        pontos += 15;
-    }
-
-    pesoTotal += 15;
-    if (
-        !f.disponibilidade
-        || candidato.preferenciasDeTrabalho?.disponibilidade_de_horario === f.disponibilidade
-    ) {
-        pontos += 15;
-    }
-
-    if (!pesoTotal) return 100;
-    return Math.round((pontos / pesoTotal) * 100);
+async function sair() {
+    await auth.logout();
+    router.push({ name: 'login' });
 }
 
-const resultados = computed(() => {
-    const f = filtrosAplicados.value;
-
-    return candidatos.value
-        .filter((c) => !f.curso || c.dadosAcademicos?.[0]?.curso === f.curso)
-        .filter((c) => !f.unidade || c.dadosAcademicos?.[0]?.unidade === f.unidade)
-        .filter((c) => !f.disponibilidade || c.preferenciasDeTrabalho?.disponibilidade_de_horario === f.disponibilidade)
-        .filter((c) => !f.tiposContratacao.length || f.tiposContratacao.includes(c.preferenciasDeTrabalho?.tipo_de_contratacao))
-        .filter((c) => !f.habilidades.length || f.habilidades.some((h) =>
-            (c.informacoesProfissionais?.habilidades || []).some((hc) => hc.toLowerCase() === h.toLowerCase())
-        ))
-        .map((c) => ({ ...c, compatibilidade: calcularCompatibilidade(c, f) }));
-});
-
-const resultadosOrdenados = computed(() => {
-    const lista = [...resultados.value];
-    if (ordenacao.value === 'nome') {
-        return lista.sort((a, b) => (a.pessoa?.nome || '').localeCompare(b.pessoa?.nome || ''));
-    }
-    return lista.sort((a, b) => b.compatibilidade - a.compatibilidade);
-});
-
-function ehFavorito(matricula) {
-    return empresa.favoritosDaEmpresa.some((c) => c.matricula === matricula);
-}
-
-async function alternarFavorito(candidato) {
-    if (ehFavorito(candidato.matricula)) {
-        await empresa.desfavoritar(candidato.matricula);
-    } else {
-        await empresa.favoritar(candidato);
-    }
-}
-
-function abrirPerfil(c) {
-    perfilSelecionado.value = c;
-    modalAberto.value = true;
-}
-
-function iniciais(nome) {
-    if (!nome) return '';
-    return nome.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
-}
+onMounted(buscar);
 </script>
-
-<style scoped>
-.ses-inicial {
-    width: 48px;
-    height: 48px;
-    background-color: #142a4d;
-}
-</style>

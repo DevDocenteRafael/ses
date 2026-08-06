@@ -11,6 +11,8 @@ class DadosAcademicos extends Model
     protected $fillable = [
         'instituicao',
         'curso',
+        'segmento',
+        'tipo_curso',
         'unidade',
         'ano_de_conclusao',
         'candidato_matricula',

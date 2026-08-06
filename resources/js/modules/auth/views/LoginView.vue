@@ -18,7 +18,7 @@ const formulario = reactive({
 
 const painelPorTipo = {
 	administrativo: '/admin',
-	empresa: '/empresa',
+	empresa: '/empresa/buscar-talentos',
 	candidato: '/aluno/perfil',
 };
 

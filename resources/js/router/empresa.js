@@ -13,11 +13,6 @@ export default [
                 component: () => import('../modules/empresa/views/DashboardView.vue'),
             },
             {
-                path: 'buscar-talentos',
-                name: 'empresa.buscar-talentos',
-                component: () => import('../modules/empresa/views/BuscarTalentosView.vue'),
-            },
-            {
                 path: 'minhas-vagas',
                 name: 'empresa.minhas-vagas',
                 component: () => import('../modules/empresa/views/MinhasVagasView.vue'),

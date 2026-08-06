@@ -3,12 +3,10 @@ import { useAuthStore } from '../store/auth';
 
 import authRoutes from './auth';
 import adminRoutes from './admin';
-import empresaRoutes from './empresa';
 
 // Layouts (componentes "casca" que envolvem as views de cada área)
 const AuthLayout = () => import('../layouts/AuthLayout.vue');
 const AdminLayout = () => import('../layouts/AdminLayout.vue');
-const EmpresaLayout = () => import('../layouts/EmpresaLayout.vue');
 
 /**
  * Cada grupo de rotas (admin/empresa/aluno) é "encaixado" dentro do
@@ -32,10 +30,18 @@ const routes = [
         meta: adminRoutes[0].meta,
     },
     {
-        path: '/empresa',
-        component: EmpresaLayout,
-        children: empresaRoutes[0].children,
-        meta: empresaRoutes[0].meta,
+        // Páginas com cabeçalho próprio (sem sidebar), fora do EmpresaLayout.
+        path: '/empresa/buscar-talentos',
+        name: 'empresa.buscar-talentos',
+        component: () => import('../modules/empresa/views/BuscarTalentosView.vue'),
+        meta: { requiresAuth: true, role: 'empresa' },
+    },
+    {
+        path: '/empresa/candidatos/:matricula',
+        name: 'empresa.candidato',
+        component: () => import('../modules/empresa/views/PerfilCandidatoView.vue'),
+        meta: { requiresAuth: true, role: 'empresa' },
+        props: true,
     },
     {
         // Única página do aluno após o login (sem Dashboard/Convites).
@@ -72,7 +78,7 @@ router.beforeEach((to, from, next) => {
 
     const painelPorTipo = {
         administrativo: '/admin',
-        empresa: '/empresa',
+        empresa: '/empresa/buscar-talentos',
         candidato: '/aluno/perfil',
     };
 
