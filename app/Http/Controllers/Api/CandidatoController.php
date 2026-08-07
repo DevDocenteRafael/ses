@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Candidato;
 use App\Models\Convite;
-use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
 class CandidatoController extends Controller
@@ -70,48 +68,6 @@ class CandidatoController extends Controller
         }
 
         return response()->json($query->get());
-    }
-
-    /**
-     * Cria um novo candidato (junto com pessoa).
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'matricula'            => 'required|integer|unique:candidato,matricula',
-            'cpf'                  => 'required|string|max:14|unique:candidato,cpf',
-            'status'               => 'required|boolean',
-            // Dados da Pessoa
-            'nome'                 => 'required|string|max:100',
-            'email'                => 'required|email|unique:pessoa,email',
-            'telefone'             => 'required|string|max:11|unique:pessoa,telefone',
-            'senha'                => 'required|string|min:6',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $pessoa = Pessoa::create([
-                'id_pessoa'      => $validated['matricula'],
-                'nome'           => $validated['nome'],
-                'email'          => $validated['email'],
-                'telefone'       => $validated['telefone'],
-                'senha'          => Hash::make($validated['senha']),
-                'data_cadastro'  => now(),
-            ]);
-
-            $candidato = Candidato::create([
-                'matricula'       => $validated['matricula'],
-                'cpf'             => $validated['cpf'],
-                'status'          => $validated['status'],
-                'pessoa_id_pessoa' => $pessoa->id_pessoa,
-            ]);
-
-            DB::commit();
-            return response()->json($candidato->load('pessoa'), 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
     }
 
     /**

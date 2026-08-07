@@ -21,13 +21,6 @@ Route::prefix('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
 });
 
-// ── Criação de conta (públicas) ───────────────────────────────────
-// Precisam ficar fora do grupo autenticado: um usuário novo ainda não
-// tem token para se cadastrar. `->except(['store'])` abaixo remove o
-// POST duplicado do apiResource protegido.
-Route::post('candidatos', [CandidatoController::class, 'store']);
-Route::post('empresas',   [EmpresaController::class, 'store']);
-
 // ── Demais rotas exigem token válido ─────────────────────────────
 Route::middleware('auth.token')->group(function () {
 

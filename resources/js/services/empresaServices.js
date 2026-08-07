@@ -4,11 +4,6 @@ import api from './api';
  * Chamadas de API usadas pelo painel da empresa.
  */
 export default {
-    // Criação de conta (pública — ver routes/api.php)
-    cadastrar(dados) {
-        return api.post('/empresas', dados);
-    },
-
     // Perfil da empresa
     verPerfil(cnpj) {
         return api.get(`/empresas/${encodeURIComponent(cnpj)}`);
