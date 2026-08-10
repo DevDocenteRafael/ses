@@ -50,8 +50,8 @@
                                     </td>
                                     <td>{{ aluno.cpf }}</td>
                                     <td>
-                                        <p class="mb-0">{{ aluno.dadosAcademicos?.[0]?.curso || '—' }}</p>
-                                        <p class="text-secondary small mb-0">{{ aluno.dadosAcademicos?.[0]?.unidade || '—' }}</p>
+                                        <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
+                                        <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
                                     </td>
                                     <td>
                                         <span

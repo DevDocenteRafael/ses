@@ -21,7 +21,7 @@ class EmpresaController extends Controller
         return response()->json($empresas);
     }
 
-    public function show(int $cnpj): JsonResponse
+    public function show(string $cnpj): JsonResponse
     {
         $empresa = Empresa::with([
             'pessoa',
@@ -35,8 +35,13 @@ class EmpresaController extends Controller
         return response()->json($empresa);
     }
 
-    public function update(Request $request, int $cnpj): JsonResponse
+    public function update(Request $request, string $cnpj): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas o administrativo pode alterar dados de empresas.');
+        }
+
         $empresa = Empresa::findOrFail($cnpj);
 
         $validated = $request->validate([
@@ -50,8 +55,13 @@ class EmpresaController extends Controller
         return response()->json($empresa->load('pessoa'));
     }
 
-    public function destroy(int $cnpj): JsonResponse
+    public function destroy(Request $request, string $cnpj): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas o administrativo pode remover empresas.');
+        }
+
         $empresa = Empresa::findOrFail($cnpj);
         $empresa->delete();
 

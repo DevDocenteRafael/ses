@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Administrativo;
 use App\Models\AlunoMigrado;
+use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Empresa;
 use App\Models\EngajamentoPorUnidadeSenac;
@@ -89,6 +90,53 @@ class AdministrativoController extends Controller
             ->orderBy('mes')
             ->get();
 
+        // Linha "Buscas Realizadas" nos últimos 6 meses (mesmo eixo do gráfico acima).
+        $buscasPorMes = BuscaTalento::query()
+            ->selectRaw("strftime('%Y-%m', buscado_em) as mes, count(*) as total")
+            ->where('buscado_em', '>=', now()->subMonths(6)->startOfMonth())
+            ->groupBy('mes')
+            ->orderBy('mes')
+            ->get();
+
+        // Tabela "Filtros Mais Acessados pelas Empresas": cada busca loga um
+        // JSON de filtros (ex.: {"segmento":"...","tipo_curso":"..."}); aqui
+        // desmembramos e contamos por par filtro/valor.
+        $rotulosFiltro = [
+            'segmento'         => 'Segmento',
+            'tipo_curso'       => 'Tipo de Curso',
+            'disponibilidade'  => 'Disponibilidade',
+            'tipo_contratacao' => 'Contratação',
+            'habilidades'      => 'Habilidade',
+        ];
+        $contagem = [];
+        foreach (BuscaTalento::orderByDesc('buscado_em')->limit(500)->get() as $busca) {
+            foreach ((array) $busca->filtros as $filtro => $valor) {
+                foreach ((array) $valor as $valorUnico) {
+                    if ($valorUnico === null || $valorUnico === '') {
+                        continue;
+                    }
+                    $chave = $filtro . '|' . $valorUnico;
+                    $contagem[$chave] ??= [
+                        'filtro'        => $rotulosFiltro[$filtro] ?? $filtro,
+                        'valor'         => (string) $valorUnico,
+                        'totalBuscas'   => 0,
+                        'ultimaPesquisa' => $busca->buscado_em,
+                    ];
+                    $contagem[$chave]['totalBuscas']++;
+                }
+            }
+        }
+        $filtrosMaisAcessados = collect($contagem)
+            ->sortByDesc('totalBuscas')
+            ->take(10)
+            ->values()
+            ->map(fn ($item) => [
+                'filtro'         => $item['filtro'],
+                'valor'          => $item['valor'],
+                'totalBuscas'    => $item['totalBuscas'],
+                'ultimaPesquisa' => $item['ultimaPesquisa']->diffForHumans(),
+            ]);
+
         return response()->json([
             'perfisAtivos' => [
                 'total' => $totalCandidatos,
@@ -104,6 +152,8 @@ class AdministrativoController extends Controller
             ],
             'acessosPorSegmento' => $acessosPorSegmento,
             'visualizacoesPorMes' => $visualizacoesPorMes,
+            'buscasPorMes' => $buscasPorMes,
+            'filtrosMaisAcessados' => $filtrosMaisAcessados,
         ]);
     }
 

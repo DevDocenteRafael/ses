@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
+use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -71,7 +73,40 @@ class CandidatoController extends Controller
             }
         }
 
+        $this->registrarBuscaDeTalentos($request, $solicitante);
+
         return response()->json($query->get());
+    }
+
+    /**
+     * Loga os filtros usados por uma empresa ao buscar talentos, para
+     * alimentar "Filtros Mais Acessados" e "Buscas Realizadas" no
+     * relatório administrativo (FR38). Silencioso para quem não é empresa
+     * ou não aplicou nenhum filtro (evita logar toda listagem genérica).
+     */
+    private function registrarBuscaDeTalentos(Request $request, ?Pessoa $solicitante): void
+    {
+        if (! $solicitante || $solicitante->tipo() !== 'empresa') {
+            return;
+        }
+
+        $filtros = array_filter([
+            'segmento'         => $request->query('segmento'),
+            'tipo_curso'       => $request->query('tipo_curso'),
+            'disponibilidade'  => $request->query('disponibilidade'),
+            'tipo_contratacao' => $request->query('tipo_contratacao'),
+            'habilidades'      => $request->query('habilidades'),
+        ]);
+
+        if (! $filtros) {
+            return;
+        }
+
+        BuscaTalento::create([
+            'empresa_cnpj' => $solicitante->empresa?->cnpj,
+            'filtros'      => $filtros,
+            'buscado_em'   => now(),
+        ]);
     }
 
     /**
