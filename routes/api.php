@@ -68,11 +68,15 @@ Route::middleware('auth.token')->group(function () {
 
     // Administrativo
     Route::prefix('administrativo')->group(function () {
+        Route::get('dashboard',                  [AdministrativoController::class, 'dashboard']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
-        Route::get('{pessoaId}',                 [AdministrativoController::class, 'show']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
         Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
         Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);
+        // Precisa ficar por último: sendo um curinga, {pessoaId} casaria com
+        // qualquer um dos caminhos estáticos acima (ex: "engajamento") se
+        // viesse antes deles, tornando essas rotas inalcançáveis.
+        Route::get('{pessoaId}',                 [AdministrativoController::class, 'show']);
     });
 });

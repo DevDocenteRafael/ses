@@ -42,6 +42,7 @@ class EmpresaController extends Controller
         $validated = $request->validate([
             'razao_social'        => 'sometimes|string|max:45',
             'atividade_economica' => 'sometimes|string|max:45',
+            'status'              => 'sometimes|boolean',
         ]);
 
         $empresa->update($validated);

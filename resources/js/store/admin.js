@@ -8,27 +8,25 @@ export const useAdminStore = defineStore('admin', {
         vagas: [],
         convites: [],
         engajamento: [],
+        dashboard: null,
         carregando: false,
         erro: null,
-
-        // TODO(back-end): a tabela `empresa` ainda não tem uma coluna de
-        // aprovação de cadastro. Enquanto essa migração não existe, guardamos
-        // aqui (em memória, não persiste) quais CNPJs foram marcados como
-        // "pendente" pela equipe do SENAC, para a tela de Gestão de Empresas
-        // funcionar como no protótipo.
-        statusEmpresas: {},
     }),
 
-    getters: {
-        empresasPendentes: (state) => state.empresas.filter(
-            (e) => state.statusEmpresas[e.cnpj] === 'pendente',
-        ),
-        empresasAprovadas: (state) => state.empresas.filter(
-            (e) => state.statusEmpresas[e.cnpj] !== 'pendente',
-        ),
-    },
-
     actions: {
+        async carregarDashboard() {
+            this.carregando = true;
+            this.erro = null;
+            try {
+                const { data } = await adminService.getDashboard();
+                this.dashboard = data;
+            } catch (e) {
+                this.erro = e.response?.data?.message || 'Erro ao carregar indicadores.';
+            } finally {
+                this.carregando = false;
+            }
+        },
+
         async carregarConvites(params = {}) {
             this.carregando = true;
             this.erro = null;
@@ -40,14 +38,6 @@ export const useAdminStore = defineStore('admin', {
             } finally {
                 this.carregando = false;
             }
-        },
-
-        marcarEmpresaPendente(cnpj) {
-            this.statusEmpresas = { ...this.statusEmpresas, [cnpj]: 'pendente' };
-        },
-
-        marcarEmpresaAprovada(cnpj) {
-            this.statusEmpresas = { ...this.statusEmpresas, [cnpj]: 'aprovada' };
         },
 
         async carregarAlunos(params = {}) {
@@ -63,6 +53,16 @@ export const useAdminStore = defineStore('admin', {
             }
         },
 
+        /**
+         * Libera/bloqueia o acesso de um candidato (FR37). Persiste via
+         * PUT /candidatos/{matricula} (coluna `candidato.status`).
+         */
+        async atualizarStatusAluno(matricula, status) {
+            await adminService.atualizarStatusAluno(matricula, status);
+            const aluno = this.alunos.find((a) => a.matricula === matricula);
+            if (aluno) aluno.status = status;
+        },
+
         async carregarEmpresas(params = {}) {
             this.carregando = true;
             this.erro = null;
@@ -74,6 +74,16 @@ export const useAdminStore = defineStore('admin', {
             } finally {
                 this.carregando = false;
             }
+        },
+
+        /**
+         * Libera/bloqueia o acesso de uma empresa (FR35). Persiste via
+         * PUT /empresas/{cnpj} (coluna `empresa.status`).
+         */
+        async atualizarStatusEmpresa(cnpj, status) {
+            await adminService.atualizarStatusEmpresa(cnpj, status);
+            const empresa = this.empresas.find((e) => e.cnpj === cnpj);
+            if (empresa) empresa.status = status;
         },
 
         async carregarVagas(params = {}) {

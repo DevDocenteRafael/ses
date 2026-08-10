@@ -18,6 +18,10 @@ export default {
         return api.get(`/candidatos/${matricula}`);
     },
 
+    atualizarStatusAluno(matricula, status) {
+        return api.put(`/candidatos/${matricula}`, { status });
+    },
+
     sincronizarAlunos(dados) {
         return api.post('/administrativo/sincronizar-alunos', dados);
     },
@@ -29,6 +33,10 @@ export default {
 
     verEmpresa(cnpj) {
         return api.get(`/empresas/${encodeURIComponent(cnpj)}`);
+    },
+
+    atualizarStatusEmpresa(cnpj, status) {
+        return api.put(`/empresas/${encodeURIComponent(cnpj)}`, { status });
     },
 
     // Vagas

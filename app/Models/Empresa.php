@@ -14,8 +14,13 @@ class Empresa extends Model
         'cnpj',
         'razao_social',
         'atividade_economica',
+        'status',
         'pessoa_id_pessoa',
         'responsavel_contratual_id_responsavel_contratual',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
     ];
 
     // Relacionamentos

@@ -1,144 +1,117 @@
 <template>
     <div>
-        <topbar titulo="Empresas Cadastradas" subtitulo="Aprovação e gestão de parceiros corporativos" />
+        <topbar titulo="Gestão de Empresas" subtitulo="Aprovação e controle de acesso de parceiros corporativos (FR35)">
+            <template #acoes>
+                <button class="btn btn-outline-primary" :disabled="admin.carregando" @click="sincronizar">
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                    {{ admin.carregando ? 'Sincronizando...' : 'Sincronizar SIG' }}
+                </button>
+            </template>
+        </topbar>
 
         <div class="container-fluid p-4">
             <loading v-if="admin.carregando && !carregouUmaVez" mensagem="Carregando empresas..." />
 
-            <template v-else>
-                <div v-if="admin.empresasPendentes.length" class="card border-0 shadow-sm mb-4">
-                    <div class="card-body">
-                        <h2 class="h6 fw-bold text-primary mb-3">Aguardando Aprovação</h2>
-
-                        <div
-                            v-for="empresa in admin.empresasPendentes"
-                            :key="empresa.cnpj"
-                            class="d-flex align-items-center justify-content-between py-3 border-bottom"
-                        >
-                            <div>
-                                <span class="fw-semibold me-2">{{ empresa.razao_social }}</span>
-                                <span class="badge text-bg-warning-subtle text-warning-emphasis">Pendente</span>
-                                <p class="text-secondary small mb-0 mt-1">
-                                    CNPJ: {{ formatarCnpj(empresa.cnpj) }} | Atividade: {{ empresa.atividade_economica }}
-                                </p>
-                                <p class="text-secondary small mb-0">
-                                    Responsável: {{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}
-                                    <span v-if="empresa.pessoa?.email"> | {{ empresa.pessoa.email }}</span>
-                                </p>
-                            </div>
-                            <div class="d-flex gap-2 flex-shrink-0">
-                                <button class="btn btn-success btn-sm" @click="admin.marcarEmpresaAprovada(empresa.cnpj)">
-                                    Aprovar Cadastro
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm" @click="solicitarComplemento(empresa)">
-                                    Solicitar Complemento
-                                </button>
-                            </div>
+            <div v-else class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <h2 class="h6 fw-bold text-primary mb-0">Histórico de Empresas</h2>
+                        <div class="input-group" style="max-width: 320px;">
+                            <input
+                                v-model="busca"
+                                type="text"
+                                class="form-control"
+                                placeholder="Buscar por Nome ou CNPJ"
+                            >
+                            <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
                         </div>
                     </div>
-                </div>
 
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                            <h2 class="h6 fw-bold mb-0">Histórico de Empresas</h2>
-                            <div class="input-group" style="max-width: 320px;">
-                                <input
-                                    v-model="busca"
-                                    type="text"
-                                    class="form-control"
-                                    placeholder="Buscar por Nome ou CNPJ"
-                                >
-                                <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
-                            </div>
-                        </div>
+                    <p v-if="!empresasFiltradas.length" class="text-secondary small mb-0">
+                        Nenhuma empresa encontrada.
+                    </p>
 
-                        <p v-if="!empresasFiltradas.length" class="text-secondary small mb-0">
-                            Nenhuma empresa encontrada.
-                        </p>
-
-                        <div v-else class="table-responsive">
-                            <table class="table align-middle">
-                                <thead>
-                                    <tr class="text-secondary small text-uppercase">
-                                        <th>Empresa</th>
-                                        <th>Atividade</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="empresa in empresasFiltradas" :key="empresa.cnpj">
-                                        <td>
-                                            <p class="fw-semibold mb-0">{{ empresa.razao_social }}</p>
-                                            <p class="text-secondary small mb-0">CNPJ: {{ formatarCnpj(empresa.cnpj) }}</p>
-                                        </td>
-                                        <td>{{ empresa.atividade_economica }}</td>
-                                        <td>
-                                            <span
-                                                class="badge"
-                                                :class="statusEmpresa(empresa) === 'pendente'
-                                                    ? 'text-bg-warning-subtle text-warning-emphasis'
-                                                    : 'text-bg-success-subtle text-success-emphasis'"
-                                            >
-                                                {{ statusEmpresa(empresa) === 'pendente' ? 'Pendente' : 'Aprovada' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="btn-group">
-                                                <button
-                                                    class="btn btn-sm btn-outline-secondary"
-                                                    title="Ver vagas da empresa"
-                                                    @click="verVagas(empresa)"
-                                                >
-                                                    <i class="bi bi-bar-chart"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-secondary" title="Editar">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div v-else class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr class="text-secondary small text-uppercase">
+                                    <th>Empresa</th>
+                                    <th>CNPJ</th>
+                                    <th>Atividade</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="empresa in empresasFiltradas" :key="empresa.cnpj">
+                                    <td>
+                                        <p class="fw-semibold mb-0">{{ empresa.razao_social }}</p>
+                                        <p class="text-secondary small mb-0">
+                                            Responsável: {{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}
+                                        </p>
+                                    </td>
+                                    <td>{{ formatarCnpj(empresa.cnpj) }}</td>
+                                    <td>{{ empresa.atividade_economica }}</td>
+                                    <td>
+                                        <span
+                                            class="badge"
+                                            :class="empresa.status
+                                                ? 'text-bg-success-subtle text-success-emphasis'
+                                                : 'text-bg-danger-subtle text-danger-emphasis'"
+                                        >
+                                            {{ empresa.status ? 'Liberado' : 'Bloqueado' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button
+                                            class="btn btn-sm"
+                                            :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
+                                            :disabled="alterando === empresa.cnpj"
+                                            @click="alternarStatus(empresa)"
+                                        >
+                                            {{ empresa.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </template>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
 
 const admin = useAdminStore();
-const router = useRouter();
 const carregouUmaVez = ref(false);
 const busca = ref('');
+const alterando = ref(null);
 
 onMounted(async () => {
     await admin.carregarEmpresas();
     carregouUmaVez.value = true;
 });
 
-function statusEmpresa(empresa) {
-    return admin.statusEmpresas[empresa.cnpj] === 'pendente' ? 'pendente' : 'aprovada';
+// "Sincronizar SIG": ainda não existe uma integração real com o SIG para
+// empresas (nenhuma tabela de log equivalente à `alunos_migrados`), então
+// por ora o botão só recarrega a lista com os dados mais recentes do banco.
+async function sincronizar() {
+    await admin.carregarEmpresas();
 }
 
-function solicitarComplemento(empresa) {
-    // TODO(back-end): notificar a empresa por e-mail pedindo documentação
-    // complementar ainda depende de um endpoint próprio. Por ora, mantemos
-    // o cadastro marcado como pendente na revisão da equipe do SENAC.
-    admin.marcarEmpresaPendente(empresa.cnpj);
-}
-
-function verVagas(empresa) {
-    router.push({ name: 'admin.vagas', query: { empresa: empresa.cnpj } });
+async function alternarStatus(empresa) {
+    alterando.value = empresa.cnpj;
+    try {
+        await admin.atualizarStatusEmpresa(empresa.cnpj, !empresa.status);
+    } finally {
+        alterando.value = null;
+    }
 }
 
 function formatarCnpj(cnpj) {

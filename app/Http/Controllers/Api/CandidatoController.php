@@ -13,9 +13,6 @@ use Illuminate\Support\Facades\DB;
 class CandidatoController extends Controller
 {
     /**
-     * Lista todos os candidatos.
-     */
-    /**
      * Lista candidatos. Uso principal: busca de talentos pela empresa —
      * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são
      * aplicados aqui no servidor, e não no cliente.
@@ -23,7 +20,6 @@ class CandidatoController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Candidato::query()
-            ->where('status', true)
             ->with([
                 'pessoa',
                 'linkExterno',
@@ -31,6 +27,14 @@ class CandidatoController extends Controller
                 'preferenciasDeTrabalho',
                 'dadosAcademicos',
             ]);
+
+        // Empresas só devem ver candidatos com acesso liberado (FR16-20).
+        // O administrativo precisa ver todos, inclusive os bloqueados, para
+        // poder geri-los na tela "Gestão dos Candidatos" (FR37).
+        $solicitante = $this->pessoaAutenticada($request);
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            $query->where('status', true);
+        }
 
         if ($request->filled('segmento')) {
             $query->whereHas('dadosAcademicos', function ($q) use ($request) {
