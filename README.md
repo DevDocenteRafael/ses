@@ -62,8 +62,8 @@ O Portal de Empregabilidade Senac DF tem como objetivo aproximar alunos e empres
 ├── docker/
 ├── docker-compose.yml
 └── vite.config.js
-
-## Pré-requisitos ##
+```
+### Pré-requisitos ###
 
 Antes de iniciar o projeto, certifique-se de possuir instalado:
 
@@ -78,15 +78,15 @@ Antes de iniciar o projeto, certifique-se de possuir instalado:
 ##  Instalação ##
 
 ### 1. Clonar o repositório ###
-bash
-git clone: https://github.com/DevDocenteRafael/ses.git
+```bash
+git clone: https://github.com/volktz/ses
 
-cd portal-empregabilidade
-
+cd ses
+```
 ### 2. Instalar dependências do PHP ###
 ```bash
 composer install
-
+```
 ### 3. Instalar dependências do Frontend ###
 ```bash
 npm install
@@ -99,16 +99,37 @@ Copie o arquivo de exemplo:
 cp .env.example .env
 ```
 
-Configure as variáveis de ambiente conforme necessário.
+Configure as variáveis de ambiente conforme necessário para sqlite.
 
 ### 5. Gerar chave da aplicação ###
 ```bash
 php artisan key:generate
 ```
-### 6. Executar migrações ###
+### 6. Gerar arquivo de DB para testes(POWERSHELL) ###
+
+```bash
+New-Item -ItemType File -Path database\database.sqlite -Force
+```
+
+### 7. Executar migrações e seeds ###
 ```bash
 php artisan migrate
+php artisan db:seed
 ```
+
+### Rodando servidor ###
+Em um terminal
+```bash
+npm run dev
+```
+
+Em outro terminal diferente
+```bash
+php artisan serve
+```
+
+Acesse http://127.0.0.1:8000
+
 ## Executando com Docker ##
 
 Suba os containers:
