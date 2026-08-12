@@ -1,13 +1,14 @@
 <template>
-    <aside class="ses-sidebar d-flex flex-column flex-shrink-0 p-3 text-white">
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <span class="ses-brand fs-4 fw-bold">Senac</span>
+    <aside :class="['ses-sidebar', { 'ses-sidebar-collapsed': isCollapsed }]" class="d-flex flex-column flex-shrink-0 p-3 text-white">
+        <div class="ses-header d-flex align-items-center justify-content-between mb-4">
+            <span v-if="!isCollapsed" class="ses-brand fs-4 fw-bold">Senac</span>
             <button
                 type="button"
-                class="btn btn-sm ses-toggle rounded-circle"
+                class="btn btn-sm ses-toggle rounded-circle flex-shrink-0"
                 aria-label="Recolher menu"
+                @click="toggleCollapse"
             >
-                <i class="bi bi-chevron-left"></i>
+                <i :class="['bi', isCollapsed ? 'bi-chevron-right' : 'bi-chevron-left']"></i>
             </button>
         </div>
 
@@ -17,12 +18,13 @@
                     :to="{ name: item.to }"
                     class="nav-link ses-nav-link d-flex align-items-center justify-content-between text-white"
                     active-class="ses-nav-link-active"
+                    exact-active-class="ses-nav-link-active"
                 >
                     <span>
                         <i class="bi" :class="item.icon"></i>
-                        <span class="ms-2">{{ item.label }}</span>
+                        <span class="ms-2 sidebar-label">{{ item.label }}</span>
                     </span>
-                    <span v-if="item.badge" class="badge rounded-pill text-bg-danger">
+                    <span v-if="item.badge" class="badge rounded-pill text-bg-danger sidebar-badge">
                         {{ item.badge }}
                     </span>
                 </router-link>
@@ -33,12 +35,14 @@
 
         <button type="button" class="btn ses-nav-link text-white d-flex align-items-center" @click="$emit('sair')">
             <i class="bi bi-box-arrow-left"></i>
-            <span class="ms-2">Sair</span>
+            <span class="ms-2 sidebar-label">Sair</span>
         </button>
     </aside>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 defineProps({
     /**
      * Itens do menu: [{ label, icon (classe bootstrap-icons), to (nome da rota), badge (opcional) }]
@@ -50,6 +54,12 @@ defineProps({
 });
 
 defineEmits(['sair']);
+
+const isCollapsed = ref(false);
+
+const toggleCollapse = () => {
+    isCollapsed.value = !isCollapsed.value;
+};
 </script>
 
 <style scoped>
@@ -57,10 +67,31 @@ defineEmits(['sair']);
     width: 260px;
     min-height: 100vh;
     background-color: #142a4d;
+    transition: width 0.3s ease-in-out;
+}
+
+.ses-sidebar-collapsed {
+    width: 80px;
+}
+
+.ses-sidebar-collapsed .sidebar-label,
+.ses-sidebar-collapsed .sidebar-badge {
+    display: none;
+}
+
+.ses-sidebar-collapsed .ses-nav-link {
+    justify-content: center;
+    padding: 0.6rem;
+}
+
+.ses-header {
+    min-height: 44px;
+    align-items: center;
 }
 
 .ses-brand {
     letter-spacing: 0.5px;
+    flex-grow: 1;
 }
 
 .ses-toggle {
@@ -72,6 +103,12 @@ defineEmits(['sair']);
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.ses-toggle:hover {
+    transform: scale(1.1);
 }
 
 .ses-nav-link {
@@ -79,6 +116,7 @@ defineEmits(['sair']);
     border-radius: 0.375rem;
     padding: 0.6rem 0.9rem;
     border-left: 3px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .ses-nav-link:hover {
@@ -87,10 +125,10 @@ defineEmits(['sair']);
 }
 
 .ses-nav-link-active {
-    background-color: rgba(245, 166, 35, 0.15);
-    border-left-color: #f5a623;
-    color: #fff;
-    font-weight: 600;
+    background-color: rgba(245, 166, 35, 0.15) !important;
+    border-left-color: #f5a623 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
 }
 
 .ses-divider {
