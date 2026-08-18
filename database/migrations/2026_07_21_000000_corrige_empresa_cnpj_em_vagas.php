@@ -17,6 +17,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Desativa a checagem de FK para permitir recriar a tabela
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('vagas');
 
         Schema::create('vagas', function (Blueprint $table) {
@@ -30,14 +33,19 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('empresa_cnpj')
-                  ->references('cnpj')
-                  ->on('empresa')
-                  ->cascadeOnDelete();
+                ->references('cnpj')
+                ->on('empresa')
+                ->cascadeOnDelete();
         });
+
+        // Reativa a checagem de FK
+        Schema::enableForeignKeyConstraints();
     }
 
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::dropIfExists('vagas');
 
         Schema::create('vagas', function (Blueprint $table) {
@@ -50,5 +58,7 @@ return new class extends Migration
             $table->foreignId('empresa_id')->constrained('empresa');
             $table->timestamps();
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 };
