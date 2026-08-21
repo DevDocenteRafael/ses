@@ -3,6 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCursoExternoRequest;
+use App\Http\Requests\StoreCursoSenacRequest;
+use App\Http\Requests\StoreDadosAcademicosRequest;
+use App\Http\Requests\StoreExperienciaRequest;
+use App\Http\Requests\StoreInfoProfissionalRequest;
+use App\Http\Requests\StoreLinkRequest;
+use App\Http\Requests\StorePreferenciasRequest;
+use App\Http\Requests\UpdateExperienciaRequest;
 use App\Models\LinkExterno;
 use App\Models\InformacoesProfissionais;
 use App\Models\PreferenciasDeTrabalho;
@@ -17,15 +25,11 @@ class PerfilCandidatoController extends Controller
 {
     // ── Links Externos ───────────────────────────────────────────
 
-    public function storeLink(Request $request, int $matricula): JsonResponse
+    public function storeLink(StoreLinkRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'linkedin'  => 'nullable|url|max:100',
-            'portfolio' => 'nullable|url|max:100',
-            'github'    => 'nullable|url|max:100',
-        ]);
+        $validated = $request->validated();
 
         $link = LinkExterno::updateOrCreate(
             ['candidato_matricula' => $matricula],
@@ -37,17 +41,11 @@ class PerfilCandidatoController extends Controller
 
     // ── Informações Profissionais ────────────────────────────────
 
-    public function storeInfoProfissional(Request $request, int $matricula): JsonResponse
+    public function storeInfoProfissional(StoreInfoProfissionalRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'sobre_mim'          => 'nullable|string|max:200',
-            'cargo_de_interesse' => 'nullable|string|max:45',
-            'area_de_atuacao'    => 'required|string|max:45',
-            'habilidades'        => 'nullable|array',
-            'habilidades.*'      => 'string|max:45',
-        ]);
+        $validated = $request->validated();
 
         $info = InformacoesProfissionais::updateOrCreate(
             ['candidato_matricula' => $matricula],
@@ -59,16 +57,11 @@ class PerfilCandidatoController extends Controller
 
     // ── Preferências de Trabalho ─────────────────────────────────
 
-    public function storePreferencias(Request $request, int $matricula): JsonResponse
+    public function storePreferencias(StorePreferenciasRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'tipo_de_contratacao'        => 'nullable|integer|min:0',
-            'disponibilidade_de_horario' => 'nullable|string|max:30',
-            'regiao_administrativa'      => 'required|string|max:100',
-            'pretensao_salarial'         => 'nullable|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         $pref = PreferenciasDeTrabalho::updateOrCreate(
             ['candidato_matricula' => $matricula],
@@ -82,19 +75,11 @@ class PerfilCandidatoController extends Controller
     // Nota: sincronizados via API do SIG (FR4) — mantido aqui apenas
     // como fallback manual, não é o fluxo principal de preenchimento.
 
-    public function storeDadosAcademicos(Request $request, int $matricula): JsonResponse
+    public function storeDadosAcademicos(StoreDadosAcademicosRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'instituicao'      => 'required|string|max:100',
-            'curso'            => 'required|string|max:45',
-            'segmento'         => 'nullable|string|max:60',
-            'tipo_curso'       => 'nullable|string|max:30',
-            'unidade'          => 'required|string|max:45',
-            'ano_de_conclusao' => 'required|date',
-        ]);
-
+        $validated = $request->validated();
         $validated['candidato_matricula'] = $matricula;
 
         $academico = DadosAcademicos::create($validated);
@@ -114,17 +99,11 @@ class PerfilCandidatoController extends Controller
     // acadêmicos. Mantido aqui apenas como fallback manual — a tela
     // de perfil exibe esta seção como somente leitura para o candidato.
 
-    public function storeCursoSenac(Request $request, int $matricula): JsonResponse
+    public function storeCursoSenac(StoreCursoSenacRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'nome_curso'     => 'required|string|max:100',
-            'unidade'        => 'required|string|max:45',
-            'carga_horaria'  => 'nullable|integer|min:1',
-            'concluido_em'   => 'required|date',
-        ]);
-
+        $validated = $request->validated();
         $validated['candidato_matricula'] = $matricula;
 
         $curso = CursoSenac::create($validated);
@@ -141,17 +120,11 @@ class PerfilCandidatoController extends Controller
 
     // ── Cursos Externos ───────────────────────────────────────────
 
-    public function storeCursoExterno(Request $request, int $matricula): JsonResponse
+    public function storeCursoExterno(StoreCursoExternoRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'nome_curso'    => 'required|string|max:100',
-            'instituicao'   => 'required|string|max:100',
-            'carga_horaria' => 'nullable|integer|min:1',
-            'concluido_em'  => 'required|date',
-        ]);
-
+        $validated = $request->validated();
         $validated['candidato_matricula'] = $matricula;
 
         $curso = CursoExterno::create($validated);
@@ -170,20 +143,11 @@ class PerfilCandidatoController extends Controller
 
     // ── Experiências Profissionais ────────────────────────────────
 
-    public function storeExperiencia(Request $request, int $matricula): JsonResponse
+    public function storeExperiencia(StoreExperienciaRequest $request, int $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
-        $validated = $request->validate([
-            'tipo'        => 'required|string|max:30',
-            'cargo'       => 'required|string|max:100',
-            'empresa'     => 'required|string|max:100',
-            'local'       => 'nullable|string|max:100',
-            'data_inicio' => 'required|date',
-            'data_fim'    => 'nullable|date|after_or_equal:data_inicio',
-            'descricao'   => 'nullable|string',
-        ]);
-
+        $validated = $request->validated();
         $validated['candidato_matricula'] = $matricula;
 
         $experiencia = ExperienciaProfissional::create($validated);
@@ -191,21 +155,13 @@ class PerfilCandidatoController extends Controller
         return response()->json($experiencia, 201);
     }
 
-    public function updateExperiencia(Request $request, int $matricula, int $id): JsonResponse
+    public function updateExperiencia(UpdateExperienciaRequest $request, int $matricula, int $id): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
         $experiencia = ExperienciaProfissional::where('candidato_matricula', $matricula)->findOrFail($id);
 
-        $validated = $request->validate([
-            'tipo'        => 'sometimes|string|max:30',
-            'cargo'       => 'sometimes|string|max:100',
-            'empresa'     => 'sometimes|string|max:100',
-            'local'       => 'nullable|string|max:100',
-            'data_inicio' => 'sometimes|date',
-            'data_fim'    => 'nullable|date|after_or_equal:data_inicio',
-            'descricao'   => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $experiencia->update($validated);
 
