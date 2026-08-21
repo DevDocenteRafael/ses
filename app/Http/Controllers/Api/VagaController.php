@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vaga;
+use App\Http\Requests\StoreVagaRequest;
+use App\Http\Requests\UpdateVagaRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -26,16 +28,9 @@ class VagaController extends Controller
         return response()->json($query->get());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreVagaRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'titulo'          => 'required|string|max:100',
-            'tipo'            => 'required|integer',
-            'area'            => 'required|string|max:45',
-            'status'          => 'required|boolean',
-            'data_publicacao' => 'required|date',
-            'empresa_cnpj'    => 'required|integer|exists:empresa,cnpj',
-        ]);
+        $validated = $request->validated();
 
         $vaga = Vaga::create($validated);
 
@@ -49,16 +44,11 @@ class VagaController extends Controller
         return response()->json($vaga);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateVagaRequest $request, int $id): JsonResponse
     {
         $vaga = Vaga::findOrFail($id);
 
-        $validated = $request->validate([
-            'titulo'  => 'sometimes|string|max:100',
-            'tipo'    => 'sometimes|integer',
-            'area'    => 'sometimes|string|max:45',
-            'status'  => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $vaga->update($validated);
 
