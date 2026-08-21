@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreConviteRequest;
+use App\Http\Requests\UpdateConviteRequest;
 use App\Models\Convite;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -24,14 +26,9 @@ class ConviteController extends Controller
         return response()->json($query->latest('data_envio')->get());
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreConviteRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'descricao'            => 'required|string|max:150',
-            'empresa_cnpj'         => 'required|string|exists:empresa,cnpj',
-            'candidatos_matricula' => 'required|integer|exists:candidato,matricula',
-            'vagas_id_vaga'        => 'required|integer|exists:vagas,id_vaga',
-        ]);
+        $validated = $request->validated();
 
         $validated['status'] = Convite::STATUS_PENDENTE;
         $validated['data_envio'] = now();
@@ -52,21 +49,13 @@ class ConviteController extends Controller
      * Atualiza o status do convite (aceitar/recusar/arquivar). Somente o
      * candidato dono do convite pode alterá-lo.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateConviteRequest $request, int $id): JsonResponse
     {
         $convite = Convite::findOrFail($id);
 
         $this->garantirCandidatoDono($request, (int) $convite->candidatos_matricula);
 
-        $validated = $request->validate([
-            'status'    => 'required|integer|in:' . implode(',', [
-                Convite::STATUS_PENDENTE,
-                Convite::STATUS_ACEITO,
-                Convite::STATUS_RECUSADO,
-                Convite::STATUS_ARQUIVADO,
-            ]),
-            'descricao' => 'sometimes|string|max:150',
-        ]);
+        $validated = $request->validated();
 
         $convite->update($validated);
 

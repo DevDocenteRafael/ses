@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateCandidatoRequest;
 use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
@@ -144,7 +145,7 @@ class CandidatoController extends Controller
     /**
      * Atualiza dados do candidato (somente o próprio candidato ou administrativo).
      */
-    public function update(Request $request, int $matricula): JsonResponse
+    public function update(UpdateCandidatoRequest $request, int $matricula): JsonResponse
     {
         $solicitante = $this->pessoaAutenticada($request);
         if (! $solicitante || ! in_array($solicitante->tipo(), ['candidato', 'administrativo'], true)) {
@@ -155,13 +156,7 @@ class CandidatoController extends Controller
         }
 
         $candidato = Candidato::findOrFail($matricula);
-
-        $validated = $request->validate([
-            'status'   => 'sometimes|boolean',
-            'nome'     => 'sometimes|string|max:100',
-            'email'    => 'sometimes|email|unique:pessoa,email,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
-            'telefone' => 'sometimes|string|max:11|unique:pessoa,telefone,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -175,7 +170,7 @@ class CandidatoController extends Controller
                 'telefone' => $validated['telefone'] ?? null,
             ]);
 
-            if (!empty($pessoaData)) {
+            if (! empty($pessoaData)) {
                 $candidato->pessoa->update($pessoaData);
             }
 
