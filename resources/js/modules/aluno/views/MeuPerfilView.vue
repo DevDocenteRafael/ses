@@ -255,7 +255,8 @@
                                     <label class="form-label">Disponibilidade de Horário</label>
                                     <select v-model="preferencias.disponibilidade_de_horario" class="form-select">
                                         <option>Manhã</option>
-                                        <option>Tarde/Noite</option>
+                                        <option>Tarde</option>
+                                        <option>Noite</option>
                                         <option>Integral</option>
                                     </select>
                                 </div>
@@ -441,7 +442,7 @@ const preferencias = reactive({
     clt: false,
     estagio: false,
     jovemAprendiz: false,
-    disponibilidade_de_horario: 'Tarde/Noite',
+    disponibilidade_de_horario: 'Manhã',
     regiao_administrativa: '',
     pretensao_salarial: 0,
 });
