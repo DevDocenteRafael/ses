@@ -65,7 +65,7 @@ class PerfilCandidatoController extends Controller
 
         $validated = $request->validate([
             'tipo_de_contratacao'        => 'nullable|integer|min:0',
-            'disponibilidade_de_horario' => 'nullable|string|max:30',
+            'disponibilidade_de_horario' => ['nullable', 'string', 'in:Manhã,Tarde,Noite,Integral'],
             'regiao_administrativa'      => 'required|string|max:100',
             'pretensao_salarial'         => 'nullable|numeric|min:0',
         ]);
