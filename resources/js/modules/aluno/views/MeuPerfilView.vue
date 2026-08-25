@@ -74,7 +74,15 @@
                                     </div>
                                     <div class="col-sm-3">
                                         <label class="form-label small mb-1">Carga Horária</label>
-                                        <input v-model.number="novoCursoExterno.carga_horaria" type="number" min="1" class="form-control form-control-sm" placeholder="120h">
+                                        <input
+                                            :value="novoCursoExterno.carga_horaria ?? ''"
+                                            type="text"
+                                            inputmode="numeric"
+                                            class="form-control form-control-sm sem-setas"
+                                            placeholder="120h"
+                                            @keydown="bloquearSinalNegativo"
+                                            @input="normalizarCargaHorariaCursoExterno"
+                                        >
                                     </div>
                                     <div class="col-sm-3">
                                         <label class="form-label small mb-1">Concluído em</label>
@@ -213,7 +221,14 @@
                                     <label class="form-label">Pretensão Salarial (Opcional)</label>
                                     <div class="input-group">
                                         <span class="input-group-text">R$</span>
-                                        <input v-model.number="preferencias.pretensao_salarial" type="number" min="0" step="0.01" class="form-control">
+                                        <input
+                                            :value="preferencias.pretensao_salarial"
+                                            type="text"
+                                            inputmode="numeric"
+                                            class="form-control sem-setas"
+                                            @keydown="bloquearSinalNegativo"
+                                            @input="aplicarMascaraPretensaoSalarial"
+                                        >
                                     </div>
                                 </div>
                             </div>
@@ -306,14 +321,6 @@
                                 </div>
                             </div>
 
-                            <button
-                                v-else
-                                type="button"
-                                class="btn btn-sm btn-outline-primary border-dashed w-100 mt-2"
-                                @click="mostrarFormExperiencia = true"
-                            >
-                                <i class="bi bi-plus-lg me-1"></i> Adicionar outra experiência
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -389,8 +396,49 @@ const preferencias = reactive({
     jovemAprendiz: false,
     disponibilidade_de_horario: 'Manhã',
     regiao_administrativa: '',
-    pretensao_salarial: 0,
+    pretensao_salarial: '',
 });
+
+function formatarPretensaoSalarial(valor) {
+    const apenasDigitos = String(valor ?? '').replace(/\D/g, '');
+
+    if (!apenasDigitos) {
+        return '';
+    }
+
+    const valorEmCentavos = Number(apenasDigitos) / 100;
+
+    return valorEmCentavos.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function converterPretensaoSalarialParaNumero(valor) {
+    const apenasDigitos = String(valor ?? '').replace(/\D/g, '');
+
+    if (!apenasDigitos) {
+        return null;
+    }
+
+    return Number(apenasDigitos) / 100;
+}
+
+function aplicarMascaraPretensaoSalarial(evento) {
+    preferencias.pretensao_salarial = formatarPretensaoSalarial(evento.target.value);
+}
+
+function bloquearSinalNegativo(evento) {
+    if (evento.key === '-') {
+        evento.preventDefault();
+    }
+}
+
+function normalizarCargaHorariaCursoExterno(evento) {
+    const apenasDigitos = String(evento.target.value ?? '').replace(/\D/g, '');
+
+    novoCursoExterno.carga_horaria = apenasDigitos === '' ? null : Number(apenasDigitos);
+}
 
 function cursoExternoVazio() {
     return { nome_curso: '', instituicao: '', carga_horaria: null, concluido_em: '' };
@@ -465,7 +513,7 @@ async function carregar() {
             aplicarTipoContratacao(data.preferencias_de_trabalho.tipo_de_contratacao);
             preferencias.disponibilidade_de_horario = data.preferencias_de_trabalho.disponibilidade_de_horario || preferencias.disponibilidade_de_horario;
             preferencias.regiao_administrativa = data.preferencias_de_trabalho.regiao_administrativa || '';
-            preferencias.pretensao_salarial = Number(data.preferencias_de_trabalho.pretensao_salarial || 0);
+            preferencias.pretensao_salarial = formatarPretensaoSalarial(data.preferencias_de_trabalho.pretensao_salarial);
         }
     } finally {
         carregando.value = false;
@@ -558,7 +606,7 @@ async function salvar() {
                 tipo_de_contratacao: tipoContratacaoBitmask(),
                 disponibilidade_de_horario: preferencias.disponibilidade_de_horario,
                 regiao_administrativa: preferencias.regiao_administrativa,
-                pretensao_salarial: preferencias.pretensao_salarial,
+                pretensao_salarial: converterPretensaoSalarialParaNumero(preferencias.pretensao_salarial),
             }),
         ]);
         mensagem.value = { tipo: 'sucesso', texto: 'Perfil atualizado com sucesso.' };
@@ -575,5 +623,16 @@ onMounted(carregar);
 <style scoped>
 .border-dashed {
     border-style: dashed !important;
+}
+
+.sem-setas::-webkit-outer-spin-button,
+.sem-setas::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.sem-setas[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 </style>
