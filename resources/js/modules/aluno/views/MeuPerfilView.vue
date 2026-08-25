@@ -39,61 +39,6 @@
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
-                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Dados Acadêmicos (SIG)</h2>
-
-                            <template v-if="dadosAcademicos">
-                                <div class="mb-3">
-                                    <p class="text-secondary small mb-0">Instituição</p>
-                                    <p class="fw-semibold mb-0">{{ dadosAcademicos.instituicao }}</p>
-                                </div>
-                                <div class="mb-3">
-                                    <p class="text-secondary small mb-0">Curso</p>
-                                    <p class="fw-semibold mb-0">{{ dadosAcademicos.curso }}</p>
-                                </div>
-                                <div class="mb-3">
-                                    <p class="text-secondary small mb-0">Unidade</p>
-                                    <p class="fw-semibold mb-0">{{ dadosAcademicos.unidade }}</p>
-                                </div>
-                                <div class="mb-3">
-                                    <p class="text-secondary small mb-0">Ano de Conclusão</p>
-                                    <p class="fw-semibold mb-0">{{ anoConclusao }}</p>
-                                </div>
-                            </template>
-                            <p v-else class="text-secondary small mb-3">
-                                Seus dados acadêmicos ainda não foram sincronizados.
-                            </p>
-
-                            <div class="alert alert-light border small mb-0">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Dados sincronizados via API SIG (FR4).
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body">
-                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Cursos Realizados no Senac</h2>
-
-                            <p v-if="!cursosSenac.length" class="text-secondary small mb-0">
-                                Nenhum curso concluído no Senac registrado ainda.
-                            </p>
-
-                            <div v-for="curso in cursosSenac" :key="curso.id" class="mb-3">
-                                <p class="fw-semibold mb-0">{{ curso.nome_curso }}</p>
-                                <p class="text-secondary small mb-0">
-                                    {{ curso.unidade }} | Concluído em {{ anoDe(curso.concluido_em) }}<template v-if="curso.carga_horaria"> | {{ curso.carga_horaria }}h</template>
-                                </p>
-                            </div>
-
-                            <div class="alert alert-warning small mb-0">
-                                <i class="bi bi-lock me-1"></i>
-                                Esta seção não permite edição ou remoção de cursos.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <h2 class="text-uppercase text-secondary small fw-bold mb-0">Cursos Externos</h2>
                                 <button type="button" class="btn btn-sm btn-primary" @click="mostrarFormCursoExterno = !mostrarFormCursoExterno">
@@ -255,7 +200,8 @@
                                     <label class="form-label">Disponibilidade de Horário</label>
                                     <select v-model="preferencias.disponibilidade_de_horario" class="form-select">
                                         <option>Manhã</option>
-                                        <option>Tarde/Noite</option>
+                                        <option>Tarde</option>
+                                        <option>Noite</option>
                                         <option>Integral</option>
                                     </select>
                                 </div>
@@ -441,7 +387,7 @@ const preferencias = reactive({
     clt: false,
     estagio: false,
     jovemAprendiz: false,
-    disponibilidade_de_horario: 'Tarde/Noite',
+    disponibilidade_de_horario: 'Manhã',
     regiao_administrativa: '',
     pretensao_salarial: 0,
 });
@@ -456,11 +402,6 @@ function experienciaVazia() {
 
 const novoCursoExterno = reactive(cursoExternoVazio());
 const novaExperiencia = reactive(experienciaVazia());
-
-const anoConclusao = computed(() => {
-    if (!dadosAcademicos.value?.ano_de_conclusao) return '-';
-    return new Date(dadosAcademicos.value.ano_de_conclusao).getFullYear();
-});
 
 function anoDe(data) {
     if (!data) return '-';
