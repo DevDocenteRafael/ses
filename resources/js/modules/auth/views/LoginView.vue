@@ -9,6 +9,7 @@ const router = useRouter();
 
 const carregando = ref(false);
 const mensagemErro = ref('');
+const mostrarSenha = ref(false);
 
 const formulario = reactive({
 	email: '',
@@ -82,16 +83,25 @@ async function enviarLogin() {
 									>
 								</div>
 
-								<div class="mb-2">
+								<div class="mb-2 auth-login-password-wrapper">
 									<input
 										id="senha"
 										v-model="formulario.senha"
-										type="password"
-										class="form-control auth-login-input"
+										:type="mostrarSenha ? 'text' : 'password'"
+										class="form-control auth-login-input auth-login-password-input"
 										placeholder="Senha"
 										autocomplete="current-password"
 										required
 									>
+									<button
+										type="button"
+										class="auth-login-password-toggle"
+										:aria-label="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
+										:title="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
+										@click="mostrarSenha = !mostrarSenha"
+									>
+										<i :class="mostrarSenha ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+									</button>
 								</div>
 
 								<div class="auth-login-actions mt-3">
