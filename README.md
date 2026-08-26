@@ -96,7 +96,7 @@ npm install
 
 Copie o arquivo de exemplo:
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
 Configure as variáveis de ambiente conforme necessário para sqlite.
