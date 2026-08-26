@@ -37,8 +37,14 @@
                         </div>
                     </div>
 
-                    <div v-if="mensagemSucesso" class="alert alert-success py-2 mb-3">
-                        {{ mensagemSucesso }}
+                    <div
+                        v-if="mensagemSucesso"
+                        class="alert alert-success py-2 px-3 mb-3 d-inline-flex align-items-center gap-2"
+                        role="status"
+                        aria-live="polite"
+                    >
+                        <i class="bi bi-check-circle"></i>
+                        <span>{{ mensagemSucesso }}</span>
                     </div>
 
                     <div
@@ -72,7 +78,16 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Telefone</label>
-                                                <input v-model.trim="formulario.telefone" type="text" inputmode="numeric" class="form-control" maxlength="11" required>
+                                                <input
+                                                    v-model="formulario.telefone"
+                                                    type="text"
+                                                    inputmode="numeric"
+                                                    autocomplete="tel"
+                                                    class="form-control"
+                                                    maxlength="16"
+                                                    required
+                                                    @input="onTelefoneInput"
+                                                >
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Matrícula</label>
@@ -80,7 +95,16 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">CPF</label>
-                                                <input v-model.trim="formulario.cpf" type="text" class="form-control" maxlength="14" required>
+                                                <input
+                                                    v-model="formulario.cpf"
+                                                    type="text"
+                                                    inputmode="numeric"
+                                                    autocomplete="off"
+                                                    class="form-control"
+                                                    maxlength="14"
+                                                    required
+                                                    @input="onCpfInput"
+                                                >
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Curso</label>
@@ -143,7 +167,7 @@
                                             <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
                                             <p class="text-secondary small mb-0">E-mail: {{ aluno.pessoa?.email || '—' }}</p>
                                         </td>
-                                        <td>{{ aluno.cpf }}</td>
+                                        <td>{{ censurarCpf(aluno.cpf) }}</td>
                                         <td>
                                             <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
                                             <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
@@ -184,6 +208,10 @@
                                                         <span>{{ aluno.informacoes_profissionais?.sobre_mim || 'Não informado' }}</span>
                                                     </div>
                                                     <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">CPF</small>
+                                                        <span>{{ censurarCpf(aluno.cpf) }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
                                                         <small class="text-secondary d-block">Cargo de interesse</small>
                                                         <span>{{ aluno.informacoes_profissionais?.cargo_de_interesse || 'Não informado' }}</span>
                                                     </div>
@@ -219,6 +247,8 @@ import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
 
+const DURACAO_NOTIFICACAO_SUCESSO = 4000;
+
 const admin = useAdminStore();
 const carregouUmaVez = ref(false);
 const busca = ref('');
@@ -228,6 +258,7 @@ const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
 const mensagemErro = ref('');
 const mensagemSucesso = ref('');
+const timeoutMensagemSucesso = ref(null);
 const formularioInicial = () => ({
     nome: '',
     email: '',
@@ -263,16 +294,35 @@ function limparFormulario() {
     Object.assign(formulario, formularioInicial());
 }
 
+function limparMensagemSucesso() {
+    if (timeoutMensagemSucesso.value) {
+        clearTimeout(timeoutMensagemSucesso.value);
+        timeoutMensagemSucesso.value = null;
+    }
+    mensagemSucesso.value = '';
+}
+
+function exibirMensagemSucesso(texto) {
+    limparMensagemSucesso();
+    mensagemSucesso.value = texto;
+    timeoutMensagemSucesso.value = setTimeout(() => {
+        mensagemSucesso.value = '';
+        timeoutMensagemSucesso.value = null;
+    }, DURACAO_NOTIFICACAO_SUCESSO);
+}
+
 function abrirModalCadastro() {
     mensagemErro.value = '';
     modalCadastroAberto.value = true;
 }
 
-function fecharModalCadastro() {
+function fecharModalCadastro({ limpar = true } = {}) {
     if (salvandoCadastro.value) return;
     modalCadastroAberto.value = false;
     mensagemErro.value = '';
-    limparFormulario();
+    if (limpar) {
+        limparFormulario();
+    }
 }
 
 function obterMensagemErro(error) {
@@ -294,9 +344,58 @@ function obterMensagemErro(error) {
     return 'Não foi possível cadastrar o candidato. Verifique os dados e tente novamente.';
 }
 
+function removerMascara(valor) {
+    return String(valor ?? '').replace(/\D/g, '');
+}
+
+function limitarDigitos(valor, limite = 11) {
+    return removerMascara(valor).slice(0, limite);
+}
+
+function formatarCpf(valor) {
+    const digitos = limitarDigitos(valor, 11);
+
+    if (digitos.length <= 3) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
+    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
+
+    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
+}
+
+function formatarTelefone(valor) {
+    const digitos = limitarDigitos(valor, 11);
+
+    if (digitos.length <= 2) return digitos ? `(${digitos}` : '';
+    if (digitos.length <= 3) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+    if (digitos.length <= 7) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 3)} ${digitos.slice(3)}`;
+
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 3)} ${digitos.slice(3, 7)}-${digitos.slice(7, 11)}`;
+}
+
+function censurarCpf(valor) {
+    const digitos = limitarDigitos(valor, 11);
+
+    if (digitos.length !== 11) {
+        return formatarCpf(digitos);
+    }
+
+    return `***.${digitos.slice(3, 6)}.***-**`;
+}
+
+function onCpfInput(evento) {
+    const valorFormatado = formatarCpf(evento.target.value);
+    formulario.cpf = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
+function onTelefoneInput(evento) {
+    const valorFormatado = formatarTelefone(evento.target.value);
+    formulario.telefone = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
 async function salvarNovoCandidato() {
     mensagemErro.value = '';
-    mensagemSucesso.value = '';
 
     if (formulario.senha !== formulario.confirmarSenha) {
         mensagemErro.value = 'As senhas informadas não coincidem.';
@@ -309,17 +408,20 @@ async function salvarNovoCandidato() {
         await admin.cadastrarAluno({
             nome: formulario.nome,
             email: formulario.email,
-            telefone: formulario.telefone.replace(/\D/g, ''),
+            telefone: removerMascara(formulario.telefone),
             matricula: Number(formulario.matricula),
-            cpf: formulario.cpf,
+            cpf: removerMascara(formulario.cpf),
             curso: formulario.curso,
             unidade: formulario.unidade,
             senha: formulario.senha,
             status: formulario.status,
         });
 
-        mensagemSucesso.value = 'Candidato cadastrado com sucesso.';
-        fecharModalCadastro();
+        await admin.carregarAlunos();
+        modalCadastroAberto.value = false;
+        fecharModalCadastro({ limpar: false });
+        limparFormulario();
+        exibirMensagemSucesso('Candidato cadastrado com sucesso.');
     } catch (error) {
         mensagemErro.value = obterMensagemErro(error);
     } finally {
@@ -348,8 +450,12 @@ function formatarPretensao(valor) {
 const alunosFiltrados = computed(() => {
     const termo = busca.value.trim().toLowerCase();
     if (!termo) return admin.alunos;
+    const termoSemMascara = removerMascara(termo);
+
     return admin.alunos.filter(
-        (a) => a.pessoa?.nome?.toLowerCase().includes(termo) || a.cpf?.includes(termo),
+        (a) => a.pessoa?.nome?.toLowerCase().includes(termo)
+            || a.cpf?.includes(termo)
+            || removerMascara(a.cpf).includes(termoSemMascara),
     );
 });
 </script>
