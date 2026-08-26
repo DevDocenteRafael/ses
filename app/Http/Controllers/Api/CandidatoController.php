@@ -6,14 +6,108 @@ use App\Http\Controllers\Controller;
 use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
+use App\Models\DadosAcademicos;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class CandidatoController extends Controller
 {
+    public function store(Request $request): JsonResponse
+    {
+        $solicitante = $request->attributes->get('pessoa_autenticada');
+
+        if ($solicitante && $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas o administrativo pode cadastrar candidatos manualmente.');
+        }
+
+        $validated = $request->validate([
+            'matricula' => ['required', 'integer', 'unique:candidato,matricula'],
+            'cpf' => ['required', 'string', 'max:14'],
+            'status' => ['sometimes', 'boolean'],
+            'nome' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:100', 'unique:pessoa,email'],
+            'telefone' => ['required', 'string', 'max:14'],
+            'senha' => ['required', 'string', 'min:6'],
+            'curso' => ['nullable', 'string', 'max:45'],
+            'unidade' => ['nullable', 'string', 'max:45'],
+        ]);
+
+        $cpf = preg_replace('/\D+/', '', $validated['cpf']) ?? $validated['cpf'];
+        $telefone = preg_replace('/\D+/', '', $validated['telefone']) ?? $validated['telefone'];
+
+        if (strlen($cpf) !== 11) {
+            return response()->json([
+                'errors' => ['cpf' => ['O campo cpf deve conter 11 dígitos.']],
+            ], 422);
+        }
+
+        if (strlen($telefone) !== 11) {
+            return response()->json([
+                'errors' => ['telefone' => ['O campo telefone deve conter 11 dígitos.']],
+            ], 422);
+        }
+
+        if (Candidato::query()->where('cpf', $cpf)->exists()) {
+            return response()->json([
+                'errors' => ['cpf' => ['O cpf informado já está em uso.']],
+            ], 422);
+        }
+
+        if (Pessoa::query()->where('telefone', $telefone)->exists()) {
+            return response()->json([
+                'errors' => ['telefone' => ['O telefone informado já está em uso.']],
+            ], 422);
+        }
+
+        $status = $solicitante && $solicitante->tipo() === 'administrativo'
+            ? ($validated['status'] ?? true)
+            : true;
+
+        DB::beginTransaction();
+
+        try {
+            $pessoa = Pessoa::query()->create([
+                'nome' => $validated['nome'],
+                'email' => $validated['email'],
+                'telefone' => $telefone,
+                'senha' => Hash::make($validated['senha']),
+                'data_cadastro' => now(),
+            ]);
+
+            $candidato = Candidato::query()->create([
+                'matricula' => $validated['matricula'],
+                'cpf' => $cpf,
+                'status' => $status,
+                'pessoa_id_pessoa' => $pessoa->id_pessoa,
+            ]);
+
+            if (! empty($validated['curso']) || ! empty($validated['unidade'])) {
+                DadosAcademicos::query()->create([
+                    'instituicao' => 'Senac DF',
+                    'curso' => $validated['curso'] ?? 'Não informado',
+                    'unidade' => $validated['unidade'] ?? 'Não informado',
+                    'ano_de_conclusao' => now()->toDateString(),
+                    'candidato_matricula' => $candidato->matricula,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json($candidato->load(['pessoa', 'dadosAcademicos']), 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'error' => 'Nao foi possivel cadastrar o candidato.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Lista candidatos. Uso principal: busca de talentos pela empresa —
      * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são

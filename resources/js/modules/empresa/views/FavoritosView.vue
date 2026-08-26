@@ -99,14 +99,14 @@
                                                 <div>
                                                     <p class="fw-semibold mb-0">{{ c.pessoa?.nome }}</p>
                                                     <p class="small text-secondary mb-0">
-                                                        {{ c.preferenciasDeTrabalho?.regiao_administrativa || '—' }}
+                                                        {{ c.preferencias_de_trabalho?.regiao_administrativa || '—' }}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <p class="mb-0">{{ c.dadosAcademicos?.[0]?.curso || '—' }}</p>
-                                            <p class="small text-secondary mb-0">{{ c.dadosAcademicos?.[0]?.unidade || '—' }}</p>
+                                            <p class="mb-0">{{ c.dados_academicos?.[0]?.curso || '—' }}</p>
+                                            <p class="small text-secondary mb-0">{{ c.dados_academicos?.[0]?.unidade || '—' }}</p>
                                         </td>
                                         <td>
                                             <div class="dropdown">
@@ -170,12 +170,12 @@
         <modal :show="modalComparacaoAberto" titulo="Comparar Candidatos" @fechar="modalComparacaoAberto = false">
             <div v-for="c in candidatosSelecionados" :key="c.matricula" class="mb-3 pb-3 border-bottom">
                 <p class="fw-bold mb-1">{{ c.pessoa?.nome }}</p>
-                <p class="small mb-1"><strong>Curso:</strong> {{ c.dadosAcademicos?.[0]?.curso || '—' }}</p>
-                <p class="small mb-1"><strong>Região:</strong> {{ c.preferenciasDeTrabalho?.regiao_administrativa || '—' }}</p>
-                <p class="small mb-1"><strong>Disponibilidade:</strong> {{ c.preferenciasDeTrabalho?.disponibilidade_de_horario || '—' }}</p>
+                <p class="small mb-1"><strong>Curso:</strong> {{ c.dados_academicos?.[0]?.curso || '—' }}</p>
+                <p class="small mb-1"><strong>Região:</strong> {{ c.preferencias_de_trabalho?.regiao_administrativa || '—' }}</p>
+                <p class="small mb-1"><strong>Disponibilidade:</strong> {{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '—' }}</p>
                 <div class="d-flex flex-wrap gap-1">
                     <span
-                        v-for="h in c.informacoesProfissionais?.habilidades || []"
+                        v-for="h in c.informacoes_profissionais?.habilidades || []"
                         :key="h"
                         class="badge text-bg-primary-subtle text-primary-emphasis"
                     >{{ h }}</span>
@@ -186,12 +186,12 @@
         <modal :show="modalPerfilAberto" titulo="Perfil do Candidato" @fechar="modalPerfilAberto = false">
             <div v-if="perfilSelecionado">
                 <h3 class="h6 fw-bold">{{ perfilSelecionado.pessoa?.nome }}</h3>
-                <p class="text-secondary small">{{ perfilSelecionado.informacoesProfissionais?.sobre_mim || 'Sem descrição.' }}</p>
-                <p class="mb-1"><strong>Cargo de interesse:</strong> {{ perfilSelecionado.informacoesProfissionais?.cargo_de_interesse || '—' }}</p>
-                <p class="mb-1"><strong>Pretensão salarial:</strong> {{ perfilSelecionado.preferenciasDeTrabalho?.pretensao_salarial ?? '—' }}</p>
+                <p class="text-secondary small">{{ perfilSelecionado.informacoes_profissionais?.sobre_mim || 'Sem descrição.' }}</p>
+                <p class="mb-1"><strong>Cargo de interesse:</strong> {{ perfilSelecionado.informacoes_profissionais?.cargo_de_interesse || '—' }}</p>
+                <p class="mb-1"><strong>Pretensão salarial:</strong> {{ perfilSelecionado.preferencias_de_trabalho?.pretensao_salarial ?? '—' }}</p>
                 <div class="d-flex flex-wrap gap-2 mt-2">
                     <span
-                        v-for="h in perfilSelecionado.informacoesProfissionais?.habilidades || []"
+                        v-for="h in perfilSelecionado.informacoes_profissionais?.habilidades || []"
                         :key="h"
                         class="badge text-bg-primary-subtle text-primary-emphasis"
                     >{{ h }}</span>

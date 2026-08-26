@@ -4,6 +4,10 @@ import api from './api';
  * Chamadas de API usadas pelo painel do aluno/candidato.
  */
 export default {
+    cadastrar(dados) {
+        return api.post('/candidatos', dados);
+    },
+
     // Painel (indicadores, convites pendentes, últimas visualizações)
     dashboard(matricula) {
         return api.get(`/candidatos/${matricula}/dashboard`);

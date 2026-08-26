@@ -9,10 +9,9 @@ class Pessoa extends Authenticatable
 {
     protected $table = 'pessoa';
     protected $primaryKey = 'id_pessoa';
-    public $incrementing = false;
+    public $incrementing = true;
 
     protected $fillable = [
-        'id_pessoa',
         'nome',
         'email',
         'telefone',

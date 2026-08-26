@@ -63,6 +63,12 @@ export const useAdminStore = defineStore('admin', {
             if (aluno) aluno.status = status;
         },
 
+        async cadastrarAluno(dados) {
+            const { data } = await adminService.cadastrarAluno(dados);
+            this.alunos.unshift(data);
+            return data;
+        },
+
         async carregarEmpresas(params = {}) {
             this.carregando = true;
             this.erro = null;

@@ -53,6 +53,9 @@
                                     <p class="text-secondary lead mb-3">
                                         {{ cursoPrincipal?.curso }} <template v-if="cursoPrincipal?.unidade"> | {{ cursoPrincipal.unidade }}</template>
                                     </p>
+                                    <p v-if="candidato.informacoes_profissionais?.cargo_de_interesse" class="mb-3 fw-semibold text-primary">
+                                        {{ candidato.informacoes_profissionais.cargo_de_interesse }}
+                                    </p>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                         <span class="badge bg-secondary">{{ statusLabel }}</span>
                                     </div>
@@ -80,6 +83,41 @@
                                         <i class="bi bi-check text-success me-2"></i>{{ h }}
                                     </li>
                                 </ul>
+                            </div>
+
+                            <h2 class="h6 mb-3 border-bottom pb-2">Experiências Profissionais</h2>
+                            <div class="mb-4">
+                                <p v-if="!experienciasProfissionais.length" class="text-secondary small mb-0">Nenhuma experiência profissional cadastrada.</p>
+                                <div v-else>
+                                    <div v-for="experiencia in experienciasProfissionais" :key="experiencia.id" class="mb-3 pb-3 border-bottom ultima-secao-item">
+                                        <div class="d-flex flex-wrap justify-content-between gap-2 mb-1">
+                                            <strong>{{ experiencia.cargo || 'Cargo não informado' }}</strong>
+                                            <span class="small text-secondary">{{ periodoExperiencia(experiencia) }}</span>
+                                        </div>
+                                        <p class="mb-1 text-secondary">
+                                            {{ experiencia.empresa || 'Empresa não informada' }}
+                                            <template v-if="experiencia.tipo"> • {{ experiencia.tipo }}</template>
+                                            <template v-if="experiencia.local"> • {{ experiencia.local }}</template>
+                                        </p>
+                                        <p v-if="experiencia.descricao" class="small mb-0 text-secondary">{{ experiencia.descricao }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h2 class="h6 mb-3 border-bottom pb-2">Cursos Externos</h2>
+                            <div class="mb-4">
+                                <p v-if="!cursosExternos.length" class="text-secondary small mb-0">Nenhum curso externo cadastrado.</p>
+                                <div v-else>
+                                    <div v-for="curso in cursosExternos" :key="curso.id" class="mb-3 pb-3 border-bottom ultima-secao-item">
+                                        <strong class="d-block">{{ curso.nome_curso || 'Curso não informado' }}</strong>
+                                        <p class="mb-1 text-secondary">{{ curso.instituicao || 'Instituição não informada' }}</p>
+                                        <p class="small mb-0 text-secondary">
+                                            <template v-if="curso.carga_horaria">{{ curso.carga_horaria }}h</template>
+                                            <template v-if="curso.carga_horaria && curso.concluido_em"> • </template>
+                                            <template v-if="curso.concluido_em">Conclusão: {{ formatarData(curso.concluido_em) }}</template>
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <h2 class="h6 mb-3 border-bottom pb-2">Preferências de Trabalho</h2>
@@ -115,6 +153,29 @@
                                 <label class="small text-secondary d-block mb-1">Telefone / WhatsApp</label>
                                 <span class="fw-bold">{{ candidato.pessoa?.telefone || '-' }}</span>
                             </div>
+
+                            <template v-if="temLinksExternos">
+                                <hr>
+                                <h2 class="h6 fw-bold mb-3">Links Externos</h2>
+                                <div class="mb-2" v-if="candidato.link_externo?.linkedin">
+                                    <label class="small text-secondary d-block mb-1">LinkedIn</label>
+                                    <a :href="candidato.link_externo.linkedin" target="_blank" rel="noopener noreferrer" class="fw-bold text-decoration-none">
+                                        {{ candidato.link_externo.linkedin }}
+                                    </a>
+                                </div>
+                                <div class="mb-2" v-if="candidato.link_externo?.portfolio">
+                                    <label class="small text-secondary d-block mb-1">Portfólio</label>
+                                    <a :href="candidato.link_externo.portfolio" target="_blank" rel="noopener noreferrer" class="fw-bold text-decoration-none">
+                                        {{ candidato.link_externo.portfolio }}
+                                    </a>
+                                </div>
+                                <div class="mb-0" v-if="candidato.link_externo?.github">
+                                    <label class="small text-secondary d-block mb-1">GitHub</label>
+                                    <a :href="candidato.link_externo.github" target="_blank" rel="noopener noreferrer" class="fw-bold text-decoration-none">
+                                        {{ candidato.link_externo.github }}
+                                    </a>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -153,6 +214,15 @@ const cursoPrincipal = computed(() => (candidato.value.dados_academicos || [])[0
 
 const habilidades = computed(() => candidato.value.informacoes_profissionais?.habilidades || []);
 
+const experienciasProfissionais = computed(() => candidato.value.experiencias_profissionais || []);
+
+const cursosExternos = computed(() => candidato.value.cursos_externos || []);
+
+const temLinksExternos = computed(() => {
+    const links = candidato.value.link_externo || {};
+    return Boolean(links.linkedin || links.portfolio || links.github);
+});
+
 const statusLabel = computed(() => (candidato.value.status ? 'Ativo em busca' : 'Inativo'));
 
 const ultimaAtualizacao = computed(() => {
@@ -176,6 +246,20 @@ const pretensaoFormatada = computed(() => {
     return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 });
 
+function formatarData(data) {
+    if (!data) return '-';
+    return new Date(data).toLocaleDateString('pt-BR');
+}
+
+function periodoExperiencia(experiencia) {
+    const inicio = experiencia?.data_inicio ? formatarData(experiencia.data_inicio) : null;
+    const fim = experiencia?.data_fim ? formatarData(experiencia.data_fim) : 'Atual';
+
+    if (!inicio && !experiencia?.data_fim) return '-';
+    if (!inicio) return fim;
+    return `${inicio} - ${fim}`;
+}
+
 async function carregar() {
     carregando.value = true;
     erro.value = '';
@@ -196,3 +280,11 @@ async function sair() {
 
 onMounted(carregar);
 </script>
+
+<style scoped>
+.ultima-secao-item:last-child {
+    border-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+</style>

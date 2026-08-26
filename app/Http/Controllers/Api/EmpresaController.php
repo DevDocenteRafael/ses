@@ -30,6 +30,9 @@ class EmpresaController extends Controller
             'convites',
             'historicoDeEngajamento',
             'candidatos.pessoa',
+            'candidatos.informacoesProfissionais',
+            'candidatos.preferenciasDeTrabalho',
+            'candidatos.dadosAcademicos',
         ])->findOrFail($cnpj);
 
         return response()->json($empresa);

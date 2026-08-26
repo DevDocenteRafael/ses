@@ -22,6 +22,10 @@ export default {
         return api.put(`/candidatos/${matricula}`, { status });
     },
 
+    cadastrarAluno(dados) {
+        return api.post('/candidatos', dados);
+    },
+
     sincronizarAlunos(dados) {
         return api.post('/administrativo/sincronizar-alunos', dados);
     },

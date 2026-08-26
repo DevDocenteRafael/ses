@@ -22,9 +22,12 @@ Route::prefix('auth')->group(function () {
 });
 
 // ── Demais rotas exigem token válido ─────────────────────────────
+Route::post('candidatos', [CandidatoController::class, 'store']);
+
 Route::middleware('auth.token')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
+    Route::post('candidatos', [CandidatoController::class, 'store']);
 
     // Candidatos
     Route::apiResource('candidatos', CandidatoController::class)
