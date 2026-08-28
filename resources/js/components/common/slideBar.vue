@@ -66,8 +66,9 @@ const toggleCollapse = () => {
 .ses-sidebar {
     width: 260px;
     min-height: 100vh;
-    background-color: #142a4d;
+    background-color: var(--ses-primary);
     transition: width 0.3s ease-in-out;
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
 }
 
 .ses-sidebar-collapsed {
@@ -95,25 +96,28 @@ const toggleCollapse = () => {
 }
 
 .ses-toggle {
-    background-color: #f5a623;
-    border: none;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     width: 28px;
     height: 28px;
-    color: #142a4d;
+    color: var(--ses-primary);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .ses-toggle:hover {
     transform: scale(1.1);
+    background-color: #f8f9fa;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
 }
 
 .ses-nav-link {
     color: rgba(255, 255, 255, 0.85);
-    border-radius: 0.375rem;
+    border-radius: 0.5rem;
     padding: 0.6rem 0.9rem;
     border-left: 3px solid transparent;
     transition: all 0.2s ease;
@@ -125,7 +129,7 @@ const toggleCollapse = () => {
 }
 
 .ses-nav-link-active {
-    background-color: rgba(245, 166, 35, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.14) !important;
     border-left-color: #f5a623 !important;
     color: #fff !important;
     font-weight: 600 !important;

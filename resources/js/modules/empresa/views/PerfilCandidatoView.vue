@@ -111,10 +111,19 @@
                                     <div v-for="curso in cursosExternos" :key="curso.id" class="mb-3 pb-3 border-bottom ultima-secao-item">
                                         <strong class="d-block">{{ curso.nome_curso || 'Curso não informado' }}</strong>
                                         <p class="mb-1 text-secondary">{{ curso.instituicao || 'Instituição não informada' }}</p>
-                                        <p class="small mb-0 text-secondary">
-                                            <template v-if="curso.carga_horaria">{{ curso.carga_horaria }}h</template>
-                                            <template v-if="curso.carga_horaria && curso.concluido_em"> • </template>
-                                            <template v-if="curso.concluido_em">Conclusão: {{ formatarData(curso.concluido_em) }}</template>
+                                        <p class="small mb-0 text-secondary d-flex flex-wrap align-items-center gap-1">
+                                            <template v-if="cursoExternoEstaEmAndamento(curso.concluido_em)">
+                                                <span class="badge text-bg-primary-subtle text-primary fw-semibold">Cursando</span>
+                                                <span>•</span>
+                                                <span>Previsão de conclusão: {{ formatarData(curso.concluido_em) }}</span>
+                                            </template>
+                                            <template v-else-if="curso.concluido_em">
+                                                <span>Conclusão: {{ formatarData(curso.concluido_em) }}</span>
+                                            </template>
+                                            <template v-if="curso.carga_horaria">
+                                                <span v-if="curso.concluido_em">•</span>
+                                                <span>{{ curso.carga_horaria }}h</span>
+                                            </template>
                                         </p>
                                     </div>
                                 </div>
@@ -151,7 +160,7 @@
                             </div>
                             <div class="mb-0">
                                 <label class="small text-secondary d-block mb-1">Telefone / WhatsApp</label>
-                                <span class="fw-bold">{{ candidato.pessoa?.telefone || '-' }}</span>
+                                <span class="fw-bold">{{ formatarTelefone(candidato.pessoa?.telefone) || '-' }}</span>
                             </div>
 
                             <template v-if="temLinksExternos">
@@ -189,6 +198,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
+import { formatarTelefone } from '../../../utils/telefone';
 
 const props = defineProps({
     matricula: { type: [String, Number], required: true },
@@ -249,6 +259,35 @@ const pretensaoFormatada = computed(() => {
 function formatarData(data) {
     if (!data) return '-';
     return new Date(data).toLocaleDateString('pt-BR');
+}
+
+function dataLocalNormalizada(data) {
+    if (!data) return null;
+
+    const valor = String(data);
+    const [ano, mes, dia] = valor.split('-').map(Number);
+
+    if (!ano || !mes || !dia) {
+        const dataConvertida = new Date(valor);
+        return Number.isNaN(dataConvertida.getTime())
+            ? null
+            : new Date(dataConvertida.getFullYear(), dataConvertida.getMonth(), dataConvertida.getDate());
+    }
+
+    return new Date(ano, mes - 1, dia);
+}
+
+function cursoExternoEstaEmAndamento(data) {
+    const conclusao = dataLocalNormalizada(data);
+
+    if (!conclusao) {
+        return false;
+    }
+
+    const hoje = new Date();
+    const hojeLocal = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
+    return conclusao > hojeLocal;
 }
 
 function periodoExperiencia(experiencia) {

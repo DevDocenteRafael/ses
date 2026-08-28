@@ -23,7 +23,7 @@
         </header>
 
         <div class="d-flex">
-            <aside class="bg-white border-end p-4 d-none d-lg-block" style="width: 320px; min-height: calc(100vh - 64px);">
+            <aside class="bg-white border-end p-4 d-none d-lg-block" style="width: 300px; min-height: calc(100vh - 64px); flex: 0 0 300px;">
                 <h2 class="h6 fw-bold mb-4">Filtros Inteligentes</h2>
 
                 <div class="mb-4">
@@ -184,8 +184,8 @@ const tiposCurso = [
 const filtros = reactive({
     segmento: '',
     tipo_curso: '',
-    clt: true,
-    estagio: true,
+    clt: false,
+    estagio: false,
     jovemAprendiz: false,
     disponibilidade: '',
     habilidades: [],
@@ -247,8 +247,8 @@ async function buscar() {
 function limparFiltros() {
     filtros.segmento = '';
     filtros.tipo_curso = '';
-    filtros.clt = true;
-    filtros.estagio = true;
+    filtros.clt = false;
+    filtros.estagio = false;
     filtros.jovemAprendiz = false;
     filtros.disponibilidade = '';
     filtros.habilidades = [];

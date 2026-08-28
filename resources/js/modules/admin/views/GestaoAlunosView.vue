@@ -246,6 +246,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
+import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 
 const DURACAO_NOTIFICACAO_SUCESSO = 4000;
 
@@ -349,7 +350,7 @@ function removerMascara(valor) {
 }
 
 function limitarDigitos(valor, limite = 11) {
-    return removerMascara(valor).slice(0, limite);
+    return somenteNumeros(valor).slice(0, limite);
 }
 
 function formatarCpf(valor) {
@@ -360,16 +361,6 @@ function formatarCpf(valor) {
     if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
 
     return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
-}
-
-function formatarTelefone(valor) {
-    const digitos = limitarDigitos(valor, 11);
-
-    if (digitos.length <= 2) return digitos ? `(${digitos}` : '';
-    if (digitos.length <= 3) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
-    if (digitos.length <= 7) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 3)} ${digitos.slice(3)}`;
-
-    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 3)} ${digitos.slice(3, 7)}-${digitos.slice(7, 11)}`;
 }
 
 function censurarCpf(valor) {
@@ -408,7 +399,7 @@ async function salvarNovoCandidato() {
         await admin.cadastrarAluno({
             nome: formulario.nome,
             email: formulario.email,
-            telefone: removerMascara(formulario.telefone),
+            telefone: somenteNumeros(formulario.telefone),
             matricula: Number(formulario.matricula),
             cpf: removerMascara(formulario.cpf),
             curso: formulario.curso,

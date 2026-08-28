@@ -171,7 +171,7 @@ const variacaoPerfisClass = computed(() => {
 });
 
 // ── Donut: acessos por segmento/área de interesse ────────────────
-const paleta = ['#142a4d', '#f5a623', '#2f9e44', '#1c7ed6', '#868e96', '#e8590c'];
+const paleta = ['#004587', '#f5a623', '#2f9e44', '#1c7ed6', '#868e96', '#e8590c'];
 const circunferencia = 2 * Math.PI * 70;
 
 const totalAcessosSegmento = computed(
@@ -233,6 +233,6 @@ const pontosLinha = computed(() => pontosCirculo.value.map((p) => `${p.x},${p.y}
 .ses-donut-total {
     font-size: 22px;
     font-weight: 700;
-    fill: #142a4d;
+    fill: var(--ses-primary);
 }
 </style>

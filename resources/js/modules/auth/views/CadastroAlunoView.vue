@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import alunosService from '../../../services/alunosServices';
+import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import '../../../../css/modules/auth/cadastro.css';
 
 const router = useRouter();
@@ -34,6 +35,12 @@ function obterMensagemErro(error) {
 	return 'Não foi possível concluir o cadastro. Verifique os dados e tente novamente.';
 }
 
+function onTelefoneInput(evento) {
+    const valorFormatado = formatarTelefone(evento.target.value);
+    formulario.telefone = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
 async function enviarCadastro() {
 	mensagemErro.value = '';
 	mensagemSucesso.value = '';
@@ -56,7 +63,7 @@ async function enviarCadastro() {
 			status: formulario.aceiteLgpd,
 			nome: formulario.nome,
 			email: formulario.email,
-			telefone: formulario.telefone,
+            telefone: somenteNumeros(formulario.telefone),
 			senha: formulario.senha,
 		});
 
@@ -91,7 +98,7 @@ async function enviarCadastro() {
 						<input v-model.trim="formulario.email" type="email" class="form-control auth-cadastro-input" placeholder="Email" autocomplete="email" required>
 					</div>
 					<div class="col-md-6">
-						<input v-model.trim="formulario.telefone" type="tel" class="form-control auth-cadastro-input" placeholder="Telefone (somente números)" maxlength="11" required>
+						<input v-model="formulario.telefone" type="tel" inputmode="numeric" autocomplete="tel" class="form-control auth-cadastro-input" placeholder="Telefone" maxlength="16" required @input="onTelefoneInput">
 					</div>
 					<div class="col-md-6">
 						<input v-model.trim="formulario.matricula" type="text" inputmode="numeric" class="form-control auth-cadastro-input" placeholder="Matrícula Senac" required>

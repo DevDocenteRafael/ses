@@ -11,13 +11,15 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <div class="text-end d-none d-sm-block">
-                    <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
-                </div>
-                <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
-                      style="width: 38px; height: 38px;">
-                    {{ iniciais }}
-                </span>
+                <button type="button" class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0" @click="abrirModalInformacoesPessoais">
+                    <div class="text-end d-none d-sm-block">
+                        <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
+                    </div>
+                    <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                          style="width: 38px; height: 38px;">
+                        {{ iniciais }}
+                    </span>
+                </button>
                 <button type="button" class="btn btn-sm btn-outline-light ms-2" @click="sair">
                     <i class="bi bi-box-arrow-left me-1"></i> Sair
                 </button>
@@ -25,9 +27,67 @@
         </header>
 
         <div class="container-fluid p-4">
-        <div v-if="mensagem" class="alert" :class="mensagem.tipo === 'erro' ? 'alert-danger' : 'alert-success'">
-            {{ mensagem.texto }}
+        <transition name="toast-fade">
+            <div v-if="mensagem" class="toast-flutuante shadow-sm" :class="`toast-${mensagem.tipo || 'aviso'}`" role="status" aria-live="polite">
+                <div class="d-flex align-items-start gap-2">
+                    <i :class="iconeToast"></i>
+                    <div class="flex-grow-1 toast-texto">{{ mensagem.texto }}</div>
+                    <button type="button" class="btn-close btn-close-sm" aria-label="Fechar notificação" @click="fecharMensagem"></button>
+                </div>
+            </div>
+        </transition>
+
+        <div
+            v-if="modalInformacoesPessoaisAberto"
+            class="modal fade show d-block"
+            tabindex="-1"
+            role="dialog"
+            aria-modal="true"
+            @click.self="fecharModalInformacoesPessoais"
+        >
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-sm">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5 mb-0">Informações Pessoais</h2>
+                        <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalInformacoesPessoais"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nome</label>
+                            <input v-model.trim="informacoesPessoais.nome" type="text" class="form-control" :class="campoInvalido('nome')" maxlength="100">
+                            <div v-if="erroDeCampo('nome')" class="invalid-feedback d-block">{{ erroDeCampo('nome') }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">E-mail</label>
+                            <input :value="informacoesPessoais.email" type="email" class="form-control" readonly disabled>
+                            <div class="form-text">O e-mail permanece somente leitura nesta etapa.</div>
+                        </div>
+                        <div>
+                            <label class="form-label">Telefone / WhatsApp</label>
+                            <input
+                                v-model="informacoesPessoais.telefone"
+                                type="tel"
+                                inputmode="numeric"
+                                autocomplete="tel"
+                                class="form-control"
+                                :class="campoInvalido('telefone')"
+                                maxlength="16"
+                                @input="onTelefoneInformacoesPessoaisInput"
+                            >
+                            <div v-if="erroDeCampo('telefone')" class="invalid-feedback d-block">{{ erroDeCampo('telefone') }}</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @click="fecharModalInformacoesPessoais">Cancelar</button>
+                        <button type="button" class="btn btn-primary" :disabled="salvandoInformacoesPessoais" @click="salvarInformacoesPessoais">
+                            <span v-if="salvandoInformacoesPessoais" class="spinner-border spinner-border-sm me-2"></span>
+                            Salvar alterações
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
+        <div v-if="modalInformacoesPessoaisAberto" class="modal-backdrop fade show"></div>
 
 
         <div v-if="carregando" class="text-center text-secondary py-5">
@@ -46,6 +106,8 @@
                                 </button>
                             </div>
 
+                            <p class="text-secondary small mb-3">Adicione cursos concluídos ou que você está cursando atualmente.</p>
+
                             <p v-if="!cursosExternos.length && !mostrarFormCursoExterno" class="text-secondary small mb-0">
                                 Nenhum curso externo cadastrado ainda.
                             </p>
@@ -53,8 +115,21 @@
                             <div v-for="curso in cursosExternos" :key="curso.id" class="d-flex align-items-start justify-content-between mb-3">
                                 <div>
                                     <p class="fw-semibold mb-0">{{ curso.nome_curso }}</p>
-                                    <p class="text-secondary small mb-0">
-                                        {{ curso.instituicao }} | Concluído em {{ anoDe(curso.concluido_em) }}<template v-if="curso.carga_horaria"> | {{ curso.carga_horaria }}h</template>
+                                    <p class="text-secondary small mb-0 d-flex flex-wrap align-items-center gap-1">
+                                        <span>{{ curso.instituicao }}</span>
+                                        <span> | </span>
+                                        <template v-if="cursoExternoEstaEmAndamento(curso.concluido_em)">
+                                            <span class="badge text-bg-primary-subtle text-primary fw-semibold">Cursando</span>
+                                            <span> | </span>
+                                            <span>Previsão de conclusão em {{ anoDe(curso.concluido_em) }}</span>
+                                        </template>
+                                        <template v-else>
+                                            <span>Concluído em {{ anoDe(curso.concluido_em) }}</span>
+                                        </template>
+                                        <template v-if="curso.carga_horaria">
+                                            <span> | </span>
+                                            <span>{{ curso.carga_horaria }}h</span>
+                                        </template>
                                     </p>
                                 </div>
                                 <button type="button" class="btn btn-sm btn-link text-danger p-0" @click="removerCursoExterno(curso.id)">
@@ -64,13 +139,15 @@
 
                             <div v-if="mostrarFormCursoExterno" class="border rounded p-3 mt-2">
                                 <div class="mb-2">
-                                    <label class="form-label small mb-1">Nome do Curso</label>
-                                    <input v-model="novoCursoExterno.nome_curso" type="text" class="form-control form-control-sm" placeholder="Ex: Inglês Intermediário">
+                                    <label class="form-label small mb-1">Nome do Curso <span class="text-danger">*</span></label>
+                                    <input v-model="novoCursoExterno.nome_curso" type="text" class="form-control form-control-sm" :class="campoInvalido('nome_curso')" placeholder="Ex: Inglês Intermediário">
+                                    <div v-if="erroDeCampo('nome_curso')" class="invalid-feedback d-block">{{ erroDeCampo('nome_curso') }}</div>
                                 </div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-sm-6">
-                                        <label class="form-label small mb-1">Instituição</label>
-                                        <input v-model="novoCursoExterno.instituicao" type="text" class="form-control form-control-sm" placeholder="Ex: CNA">
+                                        <label class="form-label small mb-1">Instituição <span class="text-danger">*</span></label>
+                                        <input v-model="novoCursoExterno.instituicao" type="text" class="form-control form-control-sm" :class="campoInvalido('instituicao')" placeholder="Ex: CNA">
+                                        <div v-if="erroDeCampo('instituicao')" class="invalid-feedback d-block">{{ erroDeCampo('instituicao') }}</div>
                                     </div>
                                     <div class="col-sm-3">
                                         <label class="form-label small mb-1">Carga Horária</label>
@@ -79,14 +156,16 @@
                                             type="text"
                                             inputmode="numeric"
                                             class="form-control form-control-sm sem-setas"
-                                            placeholder="120h"
+                                            placeholder="120"
                                             @keydown="bloquearSinalNegativo"
                                             @input="normalizarCargaHorariaCursoExterno"
                                         >
                                     </div>
                                     <div class="col-sm-3">
-                                        <label class="form-label small mb-1">Concluído em</label>
-                                        <input v-model="novoCursoExterno.concluido_em" type="date" class="form-control form-control-sm">
+                                        <label class="form-label small mb-1">Término / Previsão de conclusão <span class="text-danger">*</span></label>
+                                        <input v-model="novoCursoExterno.concluido_em" type="date" class="form-control form-control-sm" :class="campoInvalido('concluido_em')">
+                                        <div class="form-text small">Informe a data de conclusão ou a previsão de término do curso.</div>
+                                        <div v-if="erroDeCampo('concluido_em')" class="invalid-feedback d-block">{{ erroDeCampo('concluido_em') }}</div>
                                     </div>
                                 </div>
                                 <div class="d-flex gap-2 justify-content-end">
@@ -130,6 +209,7 @@
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
                             <h2 class="text-uppercase text-secondary small fw-bold mb-3">Informações Profissionais (FR5)</h2>
+                            <p class="small text-secondary mb-3"><span class="text-danger fw-semibold">*</span> Campos obrigatórios</p>
 
                             <div class="mb-3">
                                 <label class="form-label">Sobre Mim</label>
@@ -153,32 +233,89 @@
                                     >
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label">Área de Atuação</label>
-                                    <select v-model="perfil.area_de_atuacao" class="form-select">
+                                    <label class="form-label">Área de Atuação <span class="text-danger">*</span></label>
+                                    <select v-model="perfil.area_de_atuacao" class="form-select" :class="campoInvalido('area_de_atuacao')">
+                                        <option value="">Selecione</option>
                                         <option>Tecnologia da Informação</option>
                                         <option>Administração</option>
                                         <option>Marketing</option>
                                         <option>Recursos Humanos</option>
                                         <option>Outra</option>
                                     </select>
+                                    <div v-if="erroDeCampo('area_de_atuacao')" class="invalid-feedback d-block">{{ erroDeCampo('area_de_atuacao') }}</div>
                                 </div>
                             </div>
 
-                            <div>
+                            <div class="position-relative" ref="habilidadesDropdownContainer">
                                 <label class="form-label">Habilidades (Tags)</label>
-                                <div class="d-flex flex-wrap align-items-center gap-2">
-                                    <span v-for="(hab, i) in perfil.habilidades" :key="hab" class="badge text-bg-primary-subtle text-primary d-flex align-items-center gap-1 py-2 px-3">
-                                        {{ hab }}
-                                        <i class="bi bi-x" role="button" @click="removerHabilidade(i)"></i>
-                                    </span>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-secondary rounded-circle"
-                                        style="width: 28px; height: 28px;"
-                                        @click="adicionarHabilidade"
-                                    >
-                                        <i class="bi bi-plus"></i>
-                                    </button>
+                                <div class="d-flex flex-column gap-2">
+                                    <div>
+                                        <div v-if="perfil.habilidades.length" class="d-flex flex-wrap align-items-center gap-2">
+                                            <span v-for="(hab, i) in perfil.habilidades" :key="`${hab}-${i}`" class="badge habilidade-chip d-inline-flex align-items-center gap-2 py-2 px-3">
+                                                <span>{{ hab }}</span>
+                                                <button type="button" class="btn-close btn-close-sm habilidade-chip-fechar" aria-label="Remover habilidade" @click="removerHabilidade(i)"></button>
+                                            </span>
+                                        </div>
+                                        <p v-else class="small text-secondary mb-0">Nenhuma habilidade adicionada.</p>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-primary" @click="alternarDropdownHabilidades">
+                                            <i class="bi" :class="mostrarDropdownHabilidades ? 'bi-x-lg' : 'bi-plus-lg'"></i>
+                                            <span class="ms-1">{{ mostrarDropdownHabilidades ? 'Fechar habilidades' : 'Adicionar habilidade' }}</span>
+                                        </button>
+                                    </div>
+                                    <div v-if="mostrarDropdownHabilidades" class="habilidades-dropdown border rounded shadow-sm bg-white p-3">
+                                        <div>
+                                            <p class="small text-secondary fw-semibold mb-2">Habilidades Técnicas</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button
+                                                    v-for="habilidade in sugestoesHabilidadesTecnicas"
+                                                    :key="habilidade"
+                                                    type="button"
+                                                    class="btn btn-sm sugestao-habilidade"
+                                                    :class="habilidadeSelecionada(habilidade) ? 'btn-primary' : 'btn-outline-primary'"
+                                                    @click="adicionarHabilidadeSugerida(habilidade)"
+                                                >
+                                                    {{ habilidade }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <p class="small text-secondary fw-semibold mb-2">Soft Skills</p>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button
+                                                    v-for="habilidade in sugestoesSoftSkills"
+                                                    :key="habilidade"
+                                                    type="button"
+                                                    class="btn btn-sm sugestao-habilidade"
+                                                    :class="habilidadeSelecionada(habilidade) ? 'btn-primary' : 'btn-outline-primary'"
+                                                    @click="adicionarHabilidadeSugerida(habilidade)"
+                                                >
+                                                    {{ habilidade }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <p class="small text-secondary fw-semibold mb-2">Outra habilidade</p>
+                                            <div class="d-flex flex-column flex-sm-row gap-2">
+                                                <input
+                                                    ref="habilidadeInput"
+                                                    v-model="novaHabilidade"
+                                                    type="text"
+                                                    class="form-control"
+                                                    placeholder="Digite uma habilidade..."
+                                                    maxlength="45"
+                                                    @keydown.enter.prevent="adicionarHabilidade"
+                                                >
+                                                <button type="button" class="btn btn-outline-primary flex-shrink-0" @click="adicionarHabilidade">
+                                                    <i class="bi bi-plus-lg me-1"></i> Adicionar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-end mt-3">
+                                            <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" @click="fecharDropdownHabilidades">Concluir</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -213,9 +350,43 @@
                                         <option>Integral</option>
                                     </select>
                                 </div>
-                                <div class="col-sm-6">
-                                    <label class="form-label">Região Administrativa (RA)</label>
-                                    <input v-model="preferencias.regiao_administrativa" type="text" class="form-control" placeholder="Ex: Ceilândia">
+                                <div class="col-sm-6 position-relative">
+                                    <label class="form-label">Região Administrativa (RA) <span class="text-danger">*</span></label>
+                                    <input
+                                        ref="raInput"
+                                        v-model="buscaRegiaoAdministrativa"
+                                        type="text"
+                                        class="form-control"
+                                        :class="campoInvalido('regiao_administrativa')"
+                                        placeholder="Pesquisar Região Administrativa..."
+                                        autocomplete="off"
+                                        @focus="abrirDropdownRegiaoAdministrativa"
+                                        @input="aoDigitarRegiaoAdministrativa"
+                                        @keydown.down.prevent="destacarProximaRegiaoAdministrativa"
+                                        @keydown.up.prevent="destacarRegiaoAdministrativaAnterior"
+                                        @keydown.enter.prevent="selecionarRegiaoAdministrativaDestacada"
+                                        @keydown.esc="fecharDropdownRegiaoAdministrativa"
+                                        @blur="agendarFechamentoDropdownRegiaoAdministrativa"
+                                    >
+                                    <div
+                                        v-if="mostrarDropdownRegiaoAdministrativa"
+                                        class="dropdown-menu d-block w-100 mt-1 shadow-sm ra-dropdown"
+                                    >
+                                        <button
+                                            v-for="(opcao, index) in regioesAdministrativasFiltradas"
+                                            :key="opcao.value"
+                                            type="button"
+                                            class="dropdown-item"
+                                            :class="{ active: index === indiceRegiaoAdministrativaDestacada }"
+                                            @mousedown.prevent="selecionarRegiaoAdministrativa(opcao)"
+                                        >
+                                            {{ opcao.label }}
+                                        </button>
+                                        <span v-if="!regioesAdministrativasFiltradas.length" class="dropdown-item-text text-secondary small">
+                                            Nenhuma Região Administrativa encontrada.
+                                        </span>
+                                    </div>
+                                    <div v-if="erroDeCampo('regiao_administrativa')" class="invalid-feedback d-block">{{ erroDeCampo('regiao_administrativa') }}</div>
                                 </div>
                                 <div class="col-sm-6">
                                     <label class="form-label">Pretensão Salarial (Opcional)</label>
@@ -273,36 +444,41 @@
                             <div v-if="mostrarFormExperiencia" class="border rounded p-3">
                                 <div class="row g-2 mb-2">
                                     <div class="col-sm-4">
-                                        <label class="form-label small mb-1">Tipo</label>
-                                        <select v-model="novaExperiencia.tipo" class="form-select form-select-sm">
+                                        <label class="form-label small mb-1">Tipo <span class="text-danger">*</span></label>
+                                        <select v-model="novaExperiencia.tipo" class="form-select form-select-sm" :class="campoInvalido('tipo')">
                                             <option>Estágio</option>
                                             <option>CLT</option>
                                             <option>PJ / Freelancer</option>
                                             <option>Jovem Aprendiz</option>
                                             <option>Voluntariado</option>
                                         </select>
+                                        <div v-if="erroDeCampo('tipo')" class="invalid-feedback d-block">{{ erroDeCampo('tipo') }}</div>
                                     </div>
                                     <div class="col-sm-4">
-                                        <label class="form-label small mb-1">Cargo</label>
-                                        <input v-model="novaExperiencia.cargo" type="text" class="form-control form-control-sm" placeholder="Ex: Desenvolvedor Web Estagiário">
+                                        <label class="form-label small mb-1">Cargo <span class="text-danger">*</span></label>
+                                        <input v-model="novaExperiencia.cargo" type="text" class="form-control form-control-sm" :class="campoInvalido('cargo')" placeholder="Ex: Desenvolvedor Web Estagiário">
+                                        <div v-if="erroDeCampo('cargo')" class="invalid-feedback d-block">{{ erroDeCampo('cargo') }}</div>
                                     </div>
                                     <div class="col-sm-4">
-                                        <label class="form-label small mb-1">Empresa</label>
-                                        <input v-model="novaExperiencia.empresa" type="text" class="form-control form-control-sm" placeholder="Ex: TechSolutions LTDA">
+                                        <label class="form-label small mb-1">Empresa <span class="text-danger">*</span></label>
+                                        <input v-model="novaExperiencia.empresa" type="text" class="form-control form-control-sm" :class="campoInvalido('empresa')" placeholder="Ex: TechSolutions LTDA">
+                                        <div v-if="erroDeCampo('empresa')" class="invalid-feedback d-block">{{ erroDeCampo('empresa') }}</div>
                                     </div>
                                 </div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-sm-3">
-                                        <label class="form-label small mb-1">Início</label>
-                                        <input v-model="novaExperiencia.data_inicio" type="date" class="form-control form-control-sm">
+                                        <label class="form-label small mb-1">Data de início <span class="text-danger">*</span></label>
+                                        <input v-model="novaExperiencia.data_inicio" type="date" class="form-control form-control-sm" :class="campoInvalido('data_inicio')">
+                                        <div v-if="erroDeCampo('data_inicio')" class="invalid-feedback d-block">{{ erroDeCampo('data_inicio') }}</div>
                                     </div>
                                     <div class="col-sm-3">
                                         <label class="form-label small mb-1">Fim</label>
-                                        <input v-model="novaExperiencia.data_fim" type="date" class="form-control form-control-sm" :disabled="novaExperiencia.atual">
+                                        <input v-model="novaExperiencia.data_fim" type="date" class="form-control form-control-sm" :disabled="novaExperiencia.atual" :class="campoInvalido('data_fim')">
+                                        <div v-if="erroDeCampo('data_fim')" class="invalid-feedback d-block">{{ erroDeCampo('data_fim') }}</div>
                                     </div>
                                     <div class="col-sm-2 d-flex align-items-end">
                                         <div class="form-check">
-                                            <input v-model="novaExperiencia.atual" class="form-check-input" type="checkbox" id="expAtual">
+                                            <input v-model="novaExperiencia.atual" class="form-check-input" type="checkbox" id="expAtual" @change="alternarExperienciaAtual">
                                             <label class="form-check-label small" for="expAtual">Atual</label>
                                         </div>
                                     </div>
@@ -338,13 +514,17 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue';
+import { computed, reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
+import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 
 const auth = useAuthStore();
 const router = useRouter();
+const raInput = ref(null);
+const habilidadeInput = ref(null);
+const habilidadesDropdownContainer = ref(null);
 
 // Esta página não usa o AlunoLayout (sem sidebar, cabeçalho próprio),
 // então precisa resolver iniciais/logout localmente.
@@ -362,24 +542,151 @@ async function sair() {
     await auth.logout();
     router.push({ name: 'login' });
 }
-const matricula = computed(() => auth.pessoa?.id_pessoa);
+const matricula = computed(() => auth.pessoa?.candidato?.matricula || auth.pessoa?.matricula);
 
 const carregando = ref(true);
 const salvando = ref(false);
 const mensagem = ref(null);
+const errosFormulario = ref({});
+let timeoutMensagem = null;
 
 const dadosAcademicos = ref(null);
 const cursosSenac = ref([]);
 const cursosExternos = ref([]);
 const experiencias = ref([]);
+const modalInformacoesPessoaisAberto = ref(false);
+const salvandoInformacoesPessoais = ref(false);
 
 const mostrarFormCursoExterno = ref(false);
 const mostrarFormExperiencia = ref(false);
+const buscaRegiaoAdministrativa = ref('');
+const novaHabilidade = ref('');
+const mostrarDropdownRegiaoAdministrativa = ref(false);
+const mostrarDropdownHabilidades = ref(false);
+const indiceRegiaoAdministrativaDestacada = ref(-1);
+let timeoutFechamentoDropdownRegiaoAdministrativa = null;
 
 const links = reactive({
     linkedin: '',
     portfolio: '',
     github: '',
+});
+
+const informacoesPessoais = reactive({
+    nome: '',
+    email: '',
+    telefone: '',
+});
+
+const sugestoesHabilidadesTecnicas = [
+    'Excel',
+    'Word',
+    'PowerPoint',
+    'Power BI',
+    'HTML',
+    'CSS',
+    'JavaScript',
+    'Vue.js',
+    'PHP',
+    'Laravel',
+    'MySQL',
+    'Git',
+    'Redes',
+    'Suporte Técnico',
+    'Pacote Office',
+    'Segurança da Informação',
+    'Banco de Dados',
+];
+
+const sugestoesSoftSkills = [
+    'Comunicação',
+    'Trabalho em Equipe',
+    'Organização',
+    'Proatividade',
+    'Liderança',
+    'Criatividade',
+    'Adaptabilidade',
+    'Resolução de Problemas',
+    'Pensamento Crítico',
+    'Inteligência Emocional',
+    'Gestão do Tempo',
+    'Empatia',
+    'Responsabilidade',
+    'Comprometimento',
+    'Flexibilidade',
+    'Autonomia',
+    'Atenção aos Detalhes',
+    'Capacidade de Aprendizado',
+    'Relacionamento Interpessoal',
+    'Tomada de Decisão',
+];
+
+const regioesAdministrativas = [
+    { label: 'RA 1º - Plano Piloto', value: 'Plano Piloto' },
+    { label: 'RA 2º - Gama', value: 'Gama' },
+    { label: 'RA 3º - Taguatinga', value: 'Taguatinga' },
+    { label: 'RA 4º - Brazlândia', value: 'Brazlândia' },
+    { label: 'RA 5º - Sobradinho', value: 'Sobradinho' },
+    { label: 'RA 6º - Planaltina', value: 'Planaltina' },
+    { label: 'RA 7º - Paranoá', value: 'Paranoá' },
+    { label: 'RA 8º - Núcleo Bandeirante', value: 'Núcleo Bandeirante' },
+    { label: 'RA 9º - Ceilândia', value: 'Ceilândia' },
+    { label: 'RA 10º - Guará', value: 'Guará' },
+    { label: 'RA 11º - Cruzeiro', value: 'Cruzeiro' },
+    { label: 'RA 12º - Samambaia', value: 'Samambaia' },
+    { label: 'RA 13º - Santa Maria', value: 'Santa Maria' },
+    { label: 'RA 14º - São Sebastião', value: 'São Sebastião' },
+    { label: 'RA 15º - Recanto das Emas', value: 'Recanto das Emas' },
+    { label: 'RA 16º - Lago Sul', value: 'Lago Sul' },
+    { label: 'RA 17º - Riacho Fundo', value: 'Riacho Fundo' },
+    { label: 'RA 18º - Lago Norte', value: 'Lago Norte' },
+    { label: 'RA 19º - Candangolândia', value: 'Candangolândia' },
+    { label: 'RA 20º - Águas Claras', value: 'Águas Claras' },
+    { label: 'RA 21º - Riacho Fundo II', value: 'Riacho Fundo II' },
+    { label: 'RA 22º - Sudoeste/Octogonal', value: 'Sudoeste/Octogonal' },
+    { label: 'RA 23º - Varjão', value: 'Varjão' },
+    { label: 'RA 24º - Park Way', value: 'Park Way' },
+    { label: 'RA 25º - SCIA / Estrutural', value: 'SCIA / Estrutural' },
+    { label: 'RA 26º - Sobradinho II', value: 'Sobradinho II' },
+    { label: 'RA 27º - Jardim Botânico', value: 'Jardim Botânico' },
+    { label: 'RA 28º - Itapoã', value: 'Itapoã' },
+    { label: 'RA 29º - SIA (Setor de Indústria e Abastecimento)', value: 'SIA (Setor de Indústria e Abastecimento)' },
+    { label: 'RA 30º - Vicente Pires', value: 'Vicente Pires' },
+    { label: 'RA 31º - Fercal', value: 'Fercal' },
+    { label: 'RA 32º - Sol Nascente / Pôr do Sol', value: 'Sol Nascente / Pôr do Sol' },
+    { label: 'RA 33º - Arniqueira', value: 'Arniqueira' },
+    { label: 'RA 34º - Arapoanga', value: 'Arapoanga' },
+    { label: 'RA 35º - Água Quente', value: 'Água Quente' },
+    { label: 'RA 36º - 26 de Setembro', value: '26 de Setembro' },
+    { label: 'RA 37º - Ponte Alta', value: 'Ponte Alta' },
+];
+
+const regioesAdministrativasPermitidas = regioesAdministrativas.map((regiao) => regiao.value);
+
+const regioesAdministrativasFiltradas = computed(() => {
+    const termo = normalizarTexto(buscaRegiaoAdministrativa.value);
+
+    if (!termo) {
+        return regioesAdministrativas;
+    }
+
+    return regioesAdministrativas.filter((opcao) => {
+        const labelNormalizado = normalizarTexto(opcao.label);
+        const valueNormalizado = normalizarTexto(opcao.value);
+        return labelNormalizado.includes(termo) || valueNormalizado.includes(termo);
+    });
+});
+
+const iconeToast = computed(() => {
+    if (mensagem.value?.tipo === 'sucesso') {
+        return 'bi bi-check-circle-fill toast-icone';
+    }
+
+    if (mensagem.value?.tipo === 'aviso') {
+        return 'bi bi-exclamation-triangle-fill toast-icone';
+    }
+
+    return 'bi bi-exclamation-octagon-fill toast-icone';
 });
 
 const perfil = reactive({
@@ -412,6 +719,114 @@ function formatarPretensaoSalarial(valor) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+}
+
+function formatarDataParaApi(valor) {
+    if (!valor) {
+        return '';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+        return valor;
+    }
+
+    const partes = String(valor).split('/');
+
+    if (partes.length === 3) {
+        const [dia, mes, ano] = partes;
+        return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+    }
+
+    return valor;
+}
+
+function normalizarTexto(valor) {
+    return String(valor ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
+function obterLabelRegiaoAdministrativa(valor) {
+    return regioesAdministrativas.find((regiao) => regiao.value === valor)?.label || valor || '';
+}
+
+function sincronizarBuscaRegiaoAdministrativa() {
+    buscaRegiaoAdministrativa.value = obterLabelRegiaoAdministrativa(preferencias.regiao_administrativa);
+}
+
+function abrirDropdownRegiaoAdministrativa() {
+    if (timeoutFechamentoDropdownRegiaoAdministrativa) {
+        clearTimeout(timeoutFechamentoDropdownRegiaoAdministrativa);
+        timeoutFechamentoDropdownRegiaoAdministrativa = null;
+    }
+    mostrarDropdownRegiaoAdministrativa.value = true;
+    indiceRegiaoAdministrativaDestacada.value = regioesAdministrativasFiltradas.value.length ? 0 : -1;
+}
+
+function fecharDropdownRegiaoAdministrativa() {
+    mostrarDropdownRegiaoAdministrativa.value = false;
+    indiceRegiaoAdministrativaDestacada.value = -1;
+    sincronizarBuscaRegiaoAdministrativa();
+}
+
+function agendarFechamentoDropdownRegiaoAdministrativa() {
+    timeoutFechamentoDropdownRegiaoAdministrativa = setTimeout(() => {
+        fecharDropdownRegiaoAdministrativa();
+    }, 150);
+}
+
+function aoDigitarRegiaoAdministrativa() {
+    mostrarDropdownRegiaoAdministrativa.value = true;
+    indiceRegiaoAdministrativaDestacada.value = regioesAdministrativasFiltradas.value.length ? 0 : -1;
+    preferencias.regiao_administrativa = '';
+}
+
+function selecionarRegiaoAdministrativa(opcao) {
+    preferencias.regiao_administrativa = opcao.value;
+    buscaRegiaoAdministrativa.value = opcao.label;
+    mostrarDropdownRegiaoAdministrativa.value = false;
+    indiceRegiaoAdministrativaDestacada.value = -1;
+}
+
+function destacarProximaRegiaoAdministrativa() {
+    if (!mostrarDropdownRegiaoAdministrativa.value) {
+        abrirDropdownRegiaoAdministrativa();
+        return;
+    }
+
+    if (!regioesAdministrativasFiltradas.value.length) {
+        indiceRegiaoAdministrativaDestacada.value = -1;
+        return;
+    }
+
+    indiceRegiaoAdministrativaDestacada.value = indiceRegiaoAdministrativaDestacada.value < regioesAdministrativasFiltradas.value.length - 1
+        ? indiceRegiaoAdministrativaDestacada.value + 1
+        : 0;
+}
+
+function destacarRegiaoAdministrativaAnterior() {
+    if (!mostrarDropdownRegiaoAdministrativa.value) {
+        abrirDropdownRegiaoAdministrativa();
+        return;
+    }
+
+    if (!regioesAdministrativasFiltradas.value.length) {
+        indiceRegiaoAdministrativaDestacada.value = -1;
+        return;
+    }
+
+    indiceRegiaoAdministrativaDestacada.value = indiceRegiaoAdministrativaDestacada.value > 0
+        ? indiceRegiaoAdministrativaDestacada.value - 1
+        : regioesAdministrativasFiltradas.value.length - 1;
+}
+
+function selecionarRegiaoAdministrativaDestacada() {
+    const opcao = regioesAdministrativasFiltradas.value[indiceRegiaoAdministrativaDestacada.value];
+    if (opcao) {
+        selecionarRegiaoAdministrativa(opcao);
+    }
 }
 
 function converterPretensaoSalarialParaNumero(valor) {
@@ -456,6 +871,35 @@ function anoDe(data) {
     return new Date(data).getFullYear();
 }
 
+function dataLocalNormalizada(data) {
+    if (!data) return null;
+
+    const valor = String(data);
+    const [ano, mes, dia] = valor.split('-').map(Number);
+
+    if (!ano || !mes || !dia) {
+        const dataConvertida = new Date(valor);
+        return Number.isNaN(dataConvertida.getTime())
+            ? null
+            : new Date(dataConvertida.getFullYear(), dataConvertida.getMonth(), dataConvertida.getDate());
+    }
+
+    return new Date(ano, mes - 1, dia);
+}
+
+function cursoExternoEstaEmAndamento(data) {
+    const conclusao = dataLocalNormalizada(data);
+
+    if (!conclusao) {
+        return false;
+    }
+
+    const hoje = new Date();
+    const hojeLocal = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
+    return conclusao > hojeLocal;
+}
+
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 function mesAno(data) {
@@ -480,6 +924,96 @@ function aplicarTipoContratacao(valor) {
     preferencias.clt = Boolean(bitmask & 1);
     preferencias.estagio = Boolean(bitmask & 2);
     preferencias.jovemAprendiz = Boolean(bitmask & 4);
+}
+
+function limparErrosFormulario() {
+    errosFormulario.value = {};
+}
+
+function mostrarMensagem(tipo, texto) {
+    mensagem.value = { tipo, texto };
+
+    if (timeoutMensagem) {
+        clearTimeout(timeoutMensagem);
+    }
+
+    timeoutMensagem = setTimeout(() => {
+        mensagem.value = null;
+        timeoutMensagem = null;
+    }, 4500);
+}
+
+function sincronizarInformacoesPessoais() {
+    informacoesPessoais.nome = auth.pessoa?.nome || '';
+    informacoesPessoais.email = auth.pessoa?.email || '';
+    informacoesPessoais.telefone = formatarTelefone(auth.pessoa?.telefone);
+}
+
+function abrirModalInformacoesPessoais() {
+    limparErrosFormulario();
+    sincronizarInformacoesPessoais();
+    modalInformacoesPessoaisAberto.value = true;
+}
+
+function fecharModalInformacoesPessoais() {
+    modalInformacoesPessoaisAberto.value = false;
+}
+
+function onTelefoneInformacoesPessoaisInput(evento) {
+    const valorFormatado = formatarTelefone(evento.target.value);
+    informacoesPessoais.telefone = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
+async function salvarInformacoesPessoais() {
+    salvandoInformacoesPessoais.value = true;
+    limparErrosFormulario();
+
+    try {
+        const { data } = await alunosService.atualizarPerfil(matricula.value, {
+            nome: informacoesPessoais.nome,
+            telefone: somenteNumeros(informacoesPessoais.telefone),
+        });
+
+        auth.pessoa = {
+            ...auth.pessoa,
+            nome: data.pessoa?.nome || informacoesPessoais.nome,
+            telefone: data.pessoa?.telefone || somenteNumeros(informacoesPessoais.telefone),
+        };
+
+        localStorage.setItem('ses_pessoa', JSON.stringify(auth.pessoa));
+        sincronizarInformacoesPessoais();
+        fecharModalInformacoesPessoais();
+        mostrarMensagem('sucesso', 'Informações pessoais atualizadas com sucesso.');
+    } catch (e) {
+        definirErrosFormulario(e?.response?.data?.errors || {});
+        mostrarMensagem('erro', 'Não foi possível atualizar as informações pessoais.');
+    } finally {
+        salvandoInformacoesPessoais.value = false;
+    }
+}
+
+function fecharMensagem() {
+    if (timeoutMensagem) {
+        clearTimeout(timeoutMensagem);
+        timeoutMensagem = null;
+    }
+
+    mensagem.value = null;
+}
+
+function definirErrosFormulario(erros = {}) {
+    errosFormulario.value = Object.fromEntries(
+        Object.entries(erros).map(([campo, mensagens]) => [campo, Array.isArray(mensagens) ? mensagens[0] : mensagens])
+    );
+}
+
+function erroDeCampo(campo) {
+    return errosFormulario.value[campo] || '';
+}
+
+function campoInvalido(campo) {
+    return erroDeCampo(campo) ? 'is-invalid' : '';
 }
 
 function tipoContratacaoBitmask() {
@@ -514,6 +1048,7 @@ async function carregar() {
             preferencias.disponibilidade_de_horario = data.preferencias_de_trabalho.disponibilidade_de_horario || preferencias.disponibilidade_de_horario;
             preferencias.regiao_administrativa = data.preferencias_de_trabalho.regiao_administrativa || '';
             preferencias.pretensao_salarial = formatarPretensaoSalarial(data.preferencias_de_trabalho.pretensao_salarial);
+            sincronizarBuscaRegiaoAdministrativa();
         }
     } finally {
         carregando.value = false;
@@ -521,14 +1056,51 @@ async function carregar() {
 }
 
 function adicionarHabilidade() {
-    const nova = window.prompt('Nova habilidade:');
-    if (nova?.trim()) {
-        perfil.habilidades.push(nova.trim());
+    const habilidade = novaHabilidade.value.trim();
+
+    if (habilidade && !perfil.habilidades.includes(habilidade)) {
+        perfil.habilidades.push(habilidade);
+        novaHabilidade.value = '';
+        habilidadeInput.value?.focus();
     }
+}
+
+function alternarDropdownHabilidades() {
+    mostrarDropdownHabilidades.value = !mostrarDropdownHabilidades.value;
+
+    if (mostrarDropdownHabilidades.value) {
+        setTimeout(() => habilidadeInput.value?.focus(), 0);
+    }
+}
+
+function fecharDropdownHabilidades() {
+    mostrarDropdownHabilidades.value = false;
+}
+
+function adicionarHabilidadeSugerida(habilidade) {
+    if (!perfil.habilidades.includes(habilidade)) {
+        perfil.habilidades.push(habilidade);
+    }
+}
+
+function habilidadeSelecionada(habilidade) {
+    return perfil.habilidades.includes(habilidade);
 }
 
 function removerHabilidade(indice) {
     perfil.habilidades.splice(indice, 1);
+}
+
+function alternarExperienciaAtual() {
+    if (novaExperiencia.atual) {
+        novaExperiencia.data_fim = '';
+    }
+}
+
+function aoClicarForaDosDropdowns(evento) {
+    if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
+        fecharDropdownHabilidades();
+    }
 }
 
 function cancelarCursoExterno() {
@@ -537,16 +1109,27 @@ function cancelarCursoExterno() {
 }
 
 async function adicionarCursoExterno() {
+    limparErrosFormulario();
     if (!novoCursoExterno.nome_curso.trim() || !novoCursoExterno.instituicao.trim() || !novoCursoExterno.concluido_em) {
-        mensagem.value = { tipo: 'erro', texto: 'Preencha nome, instituição e data de conclusão do curso externo.' };
+        mostrarMensagem('erro', 'Preencha nome, instituição e data de conclusão do curso externo.');
         return;
     }
     try {
-        await alunosService.adicionarCursoExterno(matricula.value, { ...novoCursoExterno });
+        await alunosService.adicionarCursoExterno(matricula.value, {
+            ...novoCursoExterno,
+            concluido_em: formatarDataParaApi(novoCursoExterno.concluido_em),
+        });
         cancelarCursoExterno();
         await carregar();
     } catch (e) {
-        mensagem.value = { tipo: 'erro', texto: 'Não foi possível adicionar o curso externo.' };
+        definirErrosFormulario(e?.response?.data?.errors || {});
+        const erroApi = e?.response?.data?.errors?.concluido_em?.[0]
+            || e?.response?.data?.errors?.nome_curso?.[0]
+            || e?.response?.data?.errors?.instituicao?.[0]
+            || e?.response?.data?.errors?.carga_horaria?.[0]
+            || e?.response?.data?.message;
+
+        mostrarMensagem('erro', erroApi || 'Não foi possível adicionar o curso. Verifique os campos informados.');
     }
 }
 
@@ -555,7 +1138,7 @@ async function removerCursoExterno(id) {
         await alunosService.removerCursoExterno(matricula.value, id);
         await carregar();
     } catch (e) {
-        mensagem.value = { tipo: 'erro', texto: 'Não foi possível remover o curso externo.' };
+        mostrarMensagem('erro', 'Não foi possível remover o curso externo.');
     }
 }
 
@@ -565,8 +1148,9 @@ function cancelarExperiencia() {
 }
 
 async function adicionarExperiencia() {
-    if (!novaExperiencia.cargo.trim() || !novaExperiencia.empresa.trim() || !novaExperiencia.data_inicio) {
-        mensagem.value = { tipo: 'erro', texto: 'Preencha cargo, empresa e data de início da experiência.' };
+    limparErrosFormulario();
+    if (!novaExperiencia.tipo.trim() || !novaExperiencia.cargo.trim() || !novaExperiencia.empresa.trim() || !novaExperiencia.data_inicio || (!novaExperiencia.atual && !novaExperiencia.data_fim)) {
+        mostrarMensagem('erro', 'Preencha os campos obrigatórios da experiência profissional.');
         return;
     }
     try {
@@ -582,7 +1166,8 @@ async function adicionarExperiencia() {
         cancelarExperiencia();
         await carregar();
     } catch (e) {
-        mensagem.value = { tipo: 'erro', texto: 'Não foi possível adicionar a experiência profissional.' };
+        definirErrosFormulario(e?.response?.data?.errors || {});
+        mostrarMensagem('erro', 'Não foi possível adicionar a experiência profissional.');
     }
 }
 
@@ -591,14 +1176,21 @@ async function removerExperiencia(id) {
         await alunosService.removerExperiencia(matricula.value, id);
         await carregar();
     } catch (e) {
-        mensagem.value = { tipo: 'erro', texto: 'Não foi possível remover a experiência profissional.' };
+        mostrarMensagem('erro', 'Não foi possível remover a experiência profissional.');
     }
 }
 
 async function salvar() {
     salvando.value = true;
     mensagem.value = null;
+    limparErrosFormulario();
     try {
+        if (preferencias.regiao_administrativa && !regioesAdministrativasPermitidas.includes(preferencias.regiao_administrativa)) {
+            definirErrosFormulario({ regiao_administrativa: ['Selecione uma Região Administrativa válida.'] });
+            mostrarMensagem('erro', 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
+            return;
+        }
+
         await Promise.all([
             alunosService.salvarLinks(matricula.value, { ...links }),
             alunosService.salvarInfoProfissional(matricula.value, { ...perfil }),
@@ -609,15 +1201,27 @@ async function salvar() {
                 pretensao_salarial: converterPretensaoSalarialParaNumero(preferencias.pretensao_salarial),
             }),
         ]);
-        mensagem.value = { tipo: 'sucesso', texto: 'Perfil atualizado com sucesso.' };
+        mostrarMensagem('sucesso', 'Perfil atualizado com sucesso.');
     } catch (e) {
-        mensagem.value = { tipo: 'erro', texto: 'Nao foi possivel salvar. Verifique os campos e tente novamente.' };
+        definirErrosFormulario(e?.response?.data?.errors || {});
+        mostrarMensagem('erro', 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
     } finally {
         salvando.value = false;
     }
 }
 
-onMounted(carregar);
+onMounted(() => {
+    sincronizarInformacoesPessoais();
+    carregar();
+    document.addEventListener('click', aoClicarForaDosDropdowns);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', aoClicarForaDosDropdowns);
+    if (timeoutMensagem) {
+        clearTimeout(timeoutMensagem);
+    }
+});
 </script>
 
 <style scoped>
@@ -634,5 +1238,100 @@ onMounted(carregar);
 .sem-setas[type='number'] {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+.ra-dropdown {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.habilidade-chip {
+    background-color: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.15);
+    border-radius: 999px;
+    font-weight: 500;
+}
+
+.habilidade-chip-fechar {
+    font-size: 0.55rem;
+    opacity: 0.7;
+}
+
+.habilidade-chip-fechar:hover {
+    opacity: 1;
+}
+
+.sugestao-habilidade {
+    border-radius: 999px;
+    font-weight: 500;
+}
+
+.habilidades-dropdown {
+    width: 100%;
+}
+
+.toast-flutuante {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1080;
+    max-width: min(380px, calc(100vw - 32px));
+    padding: 0.9rem 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid transparent;
+}
+
+.toast-erro {
+    background: #fdeaea;
+    color: #842029;
+    border-color: #f5c2c7;
+}
+
+.toast-sucesso {
+    background: #e8f6ec;
+    color: #0f5132;
+    border-color: #badbcc;
+}
+
+.toast-aviso {
+    background: #fff3cd;
+    color: #664d03;
+    border-color: #ffecb5;
+}
+
+.toast-icone {
+    margin-top: 0.1rem;
+}
+
+.toast-texto {
+    word-break: break-word;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.perfil-pessoal-botao {
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.perfil-pessoal-botao:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+
+.perfil-pessoal-botao:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 4px;
+    border-radius: 999px;
 }
 </style>

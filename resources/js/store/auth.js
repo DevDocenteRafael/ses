@@ -55,6 +55,8 @@ export const useAuthStore = defineStore('auth', {
                 const { data } = await authService.me();
                 this.pessoa = data.pessoa;
                 this.tipo = data.tipo;
+                localStorage.setItem('ses_pessoa', JSON.stringify(data.pessoa));
+                localStorage.setItem('ses_tipo', data.tipo);
             } catch {
                 this.limparSessao();
             }

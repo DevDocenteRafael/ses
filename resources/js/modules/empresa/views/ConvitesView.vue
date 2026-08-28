@@ -67,7 +67,7 @@
                                         </button>
                                         <p v-if="contatoVisivel === c.id" class="small text-secondary mt-2 mb-0">
                                             {{ c.candidato?.pessoa?.email || 'E-mail não informado' }}<br>
-                                            {{ c.candidato?.pessoa?.telefone || 'Telefone não informado' }}
+                                            {{ formatarTelefone(c.candidato?.pessoa?.telefone) || 'Telefone não informado' }}
                                         </p>
                                     </template>
                                 </td>
@@ -91,6 +91,7 @@ import { computed, onMounted, ref } from 'vue';
 import loading from '../../../components/common/loading.vue';
 import { useEmpresaStore } from '../../../store/empresa';
 import { useAuthStore } from '../../../store/auth';
+import { formatarTelefone } from '../../../utils/telefone';
 
 const auth = useAuthStore();
 const empresa = useEmpresaStore();

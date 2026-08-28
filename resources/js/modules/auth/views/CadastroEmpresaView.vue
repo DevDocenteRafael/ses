@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import empresaService from '../../../services/empresaServices';
+import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import '../../../../css/modules/auth/cadastro.css';
 
 const router = useRouter();
@@ -38,6 +39,12 @@ function obterMensagemErro(error) {
 	return 'Não foi possível concluir o cadastro. Verifique os dados e tente novamente.';
 }
 
+function onTelefoneInput(campo, evento) {
+    const valorFormatado = formatarTelefone(evento.target.value);
+    formulario[campo] = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
 async function enviarCadastro() {
 	mensagemErro.value = '';
 	mensagemSucesso.value = '';
@@ -55,11 +62,11 @@ async function enviarCadastro() {
 			atividade_economica: formulario.atividadeEconomica,
 			nome: formulario.nome,
 			email: formulario.email,
-			telefone: formulario.telefone,
+			telefone: somenteNumeros(formulario.telefone),
 			senha: formulario.senha,
 			responsavel_nome: formulario.responsavelNome,
 			responsavel_email: formulario.responsavelEmail,
-			responsavel_telefone: formulario.responsavelTelefone,
+			responsavel_telefone: somenteNumeros(formulario.responsavelTelefone),
 			responsavel_senha: formulario.responsavelSenha,
 		});
 
@@ -107,7 +114,7 @@ async function enviarCadastro() {
 						<input v-model.trim="formulario.email" type="email" class="form-control auth-cadastro-input" placeholder="Email de login" autocomplete="email" required>
 					</div>
 					<div class="col-md-6">
-						<input v-model.trim="formulario.telefone" type="tel" class="form-control auth-cadastro-input" placeholder="Telefone" maxlength="11" required>
+						<input v-model="formulario.telefone" type="tel" inputmode="numeric" autocomplete="tel" class="form-control auth-cadastro-input" placeholder="Telefone" maxlength="16" required @input="onTelefoneInput('telefone', $event)">
 					</div>
 					<div class="col-md-6">
 						<input v-model="formulario.senha" type="password" class="form-control auth-cadastro-input" placeholder="Senha" autocomplete="new-password" minlength="6" required>
@@ -127,7 +134,7 @@ async function enviarCadastro() {
 						<input v-model.trim="formulario.responsavelEmail" type="email" class="form-control auth-cadastro-input" placeholder="Email do responsável" required>
 					</div>
 					<div class="col-md-6">
-						<input v-model.trim="formulario.responsavelTelefone" type="tel" class="form-control auth-cadastro-input" placeholder="Telefone do responsável" maxlength="11" required>
+						<input v-model="formulario.responsavelTelefone" type="tel" inputmode="numeric" autocomplete="tel" class="form-control auth-cadastro-input" placeholder="Telefone do responsável" maxlength="16" required @input="onTelefoneInput('responsavelTelefone', $event)">
 					</div>
 					<div class="col-md-6">
 						<input v-model="formulario.responsavelSenha" type="password" class="form-control auth-cadastro-input" placeholder="Senha do responsável" autocomplete="new-password" minlength="6" required>

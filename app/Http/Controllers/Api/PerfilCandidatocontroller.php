@@ -15,6 +15,46 @@ use Illuminate\Http\JsonResponse;
 
 class PerfilCandidatoController extends Controller
 {
+    private const REGIOES_ADMINISTRATIVAS_DF = [
+        'Plano Piloto',
+        'Gama',
+        'Taguatinga',
+        'Brazlândia',
+        'Sobradinho',
+        'Planaltina',
+        'Paranoá',
+        'Núcleo Bandeirante',
+        'Ceilândia',
+        'Guará',
+        'Cruzeiro',
+        'Samambaia',
+        'Santa Maria',
+        'São Sebastião',
+        'Recanto das Emas',
+        'Lago Sul',
+        'Riacho Fundo',
+        'Lago Norte',
+        'Candangolândia',
+        'Águas Claras',
+        'Riacho Fundo II',
+        'Sudoeste/Octogonal',
+        'Varjão',
+        'Park Way',
+        'SCIA / Estrutural',
+        'Sobradinho II',
+        'Jardim Botânico',
+        'Itapoã',
+        'SIA (Setor de Indústria e Abastecimento)',
+        'Vicente Pires',
+        'Fercal',
+        'Sol Nascente / Pôr do Sol',
+        'Arniqueira',
+        'Arapoanga',
+        'Água Quente',
+        '26 de Setembro',
+        'Ponte Alta',
+    ];
+
     // ── Links Externos ───────────────────────────────────────────
 
     public function storeLink(Request $request, int $matricula): JsonResponse
@@ -66,7 +106,7 @@ class PerfilCandidatoController extends Controller
         $validated = $request->validate([
             'tipo_de_contratacao'        => 'nullable|integer|min:0',
             'disponibilidade_de_horario' => ['nullable', 'string', 'in:Manhã,Tarde,Noite,Integral'],
-            'regiao_administrativa'      => 'required|string|max:100',
+            'regiao_administrativa'      => ['required', 'string', 'max:100', 'in:' . implode(',', self::REGIOES_ADMINISTRATIVAS_DF)],
             'pretensao_salarial'         => 'nullable|numeric|min:0',
         ]);
 

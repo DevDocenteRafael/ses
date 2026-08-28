@@ -22,6 +22,8 @@ const painelPorTipo = {
 	candidato: '/aluno/perfil',
 };
 
+const logoSenacSrc = '/img/senac-logo.png';
+
 function obterMensagemErro(error) {
 	if (error?.response?.data?.message) {
 		return error.response.data.message;
@@ -58,6 +60,11 @@ async function enviarLogin() {
 			<div class="row g-0 h-100">
 				<section class="col-12 col-lg-5 auth-login-aside text-center text-white">
 					<div class="auth-login-aside-inner px-4 py-5">
+						<img
+							:src="logoSenacSrc"
+							alt="Logo Senac"
+							class="auth-login-logo img-fluid"
+						>
 						<h1 class="auth-login-title mb-2">Bem-vindo!</h1>
 						<p class="auth-login-subtitle mb-0">Senac DF: lugar de oportunidades.</p>
 					</div>

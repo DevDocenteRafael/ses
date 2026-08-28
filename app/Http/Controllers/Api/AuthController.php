@@ -106,6 +106,7 @@ class AuthController extends Controller
     {
         return [
             'id_pessoa' => $pessoa->id_pessoa,
+            'matricula' => $pessoa->candidato?->matricula,
             'nome' => $pessoa->nome,
             'email' => $pessoa->email,
             'telefone' => $pessoa->telefone,

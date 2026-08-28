@@ -31,6 +31,17 @@
 
 .auth-login-aside-inner {
 	max-width: 320px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.auth-login-logo {
+	width: 180px;
+	height: auto;
+	max-width: 100%;
+	margin-bottom: 1.5rem;
 }
 
 .auth-login-title {
@@ -161,6 +172,11 @@
 
 	.auth-login-aside {
 		min-height: 220px;
+	}
+
+	.auth-login-logo {
+		width: 160px;
+		margin-bottom: 1.25rem;
 	}
 
 	.auth-login-content {
