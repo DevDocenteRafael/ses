@@ -83,13 +83,14 @@ git clone: https://github.com/volktz/ses
 
 cd ses
 ```
-### 2. Instalar dependências do PHP ###
+### 2. Instalar dependências do PHP (No PowerShell)###
 ```bash
 composer install
 ```
-### 3. Instalar dependências do Frontend ###
+### 3. Instalar dependências do Frontend (No CMD)###
 ```bash
 npm install
+npm audit fix
 ```
 
 ### 4. Configurar ambiente ###
@@ -105,11 +106,9 @@ Configure as variáveis de ambiente conforme necessário para sqlite.
 ```bash
 php artisan key:generate
 ```
-### 6. Gerar arquivo de DB para testes(POWERSHELL) ###
+### 6. Crie dentro do MySQL um banco de dados com o nome: ###
 
-```bash
-New-Item -ItemType File -Path database\database.sqlite -Force
-```
+ses_db
 
 ### 7. Executar migrações e seeds ###
 ```bash
