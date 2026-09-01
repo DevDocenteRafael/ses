@@ -28,14 +28,17 @@ class VagaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $empresa = $this->empresaAutenticada($request);
+
         $validated = $request->validate([
             'titulo'          => 'required|string|max:100',
             'tipo'            => 'required|integer',
             'area'            => 'required|string|max:45',
             'status'          => 'required|boolean',
             'data_publicacao' => 'required|date',
-            'empresa_cnpj'    => 'required|integer|exists:empresa,cnpj',
         ]);
+
+        $validated['empresa_cnpj'] = $empresa->cnpj;
 
         $vaga = Vaga::create($validated);
 
@@ -53,6 +56,8 @@ class VagaController extends Controller
     {
         $vaga = Vaga::findOrFail($id);
 
+        $this->garantirVagaDaEmpresa($request, $vaga);
+
         $validated = $request->validate([
             'titulo'  => 'sometimes|string|max:100',
             'tipo'    => 'sometimes|integer',
@@ -65,9 +70,13 @@ class VagaController extends Controller
         return response()->json($vaga);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        Vaga::findOrFail($id)->delete();
+        $vaga = Vaga::findOrFail($id);
+
+        $this->garantirVagaDaEmpresa($request, $vaga);
+
+        $vaga->delete();
 
         return response()->json(['message' => 'Vaga removida com sucesso.']);
     }

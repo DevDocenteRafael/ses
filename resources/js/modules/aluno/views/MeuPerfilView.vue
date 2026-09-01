@@ -37,57 +37,61 @@
             </div>
         </transition>
 
-        <div
-            v-if="modalInformacoesPessoaisAberto"
-            class="modal fade show d-block"
-            tabindex="-1"
-            role="dialog"
-            aria-modal="true"
-            @click.self="fecharModalInformacoesPessoais"
-        >
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-sm">
-                    <div class="modal-header">
-                        <h2 class="modal-title h5 mb-0">Informações Pessoais</h2>
-                        <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalInformacoesPessoais"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nome</label>
-                            <input v-model.trim="informacoesPessoais.nome" type="text" class="form-control" :class="campoInvalido('nome')" maxlength="100">
-                            <div v-if="erroDeCampo('nome')" class="invalid-feedback d-block">{{ erroDeCampo('nome') }}</div>
+        <transition name="app-modal">
+            <div
+                v-if="modalInformacoesPessoaisAberto"
+                class="modal fade show d-block"
+                tabindex="-1"
+                role="dialog"
+                aria-modal="true"
+                @click.self="fecharModalInformacoesPessoais"
+            >
+                <div class="modal-dialog modal-dialog-centered app-modal-dialog-animated">
+                    <div class="modal-content border-0 shadow-sm">
+                        <div class="modal-header">
+                            <h2 class="modal-title h5 mb-0">Informações Pessoais</h2>
+                            <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalInformacoesPessoais"></button>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">E-mail</label>
-                            <input :value="informacoesPessoais.email" type="email" class="form-control" readonly disabled>
-                            <div class="form-text">O e-mail permanece somente leitura nesta etapa.</div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Nome</label>
+                                <input v-model.trim="informacoesPessoais.nome" type="text" class="form-control" :class="campoInvalido('nome')" maxlength="100">
+                                <div v-if="erroDeCampo('nome')" class="invalid-feedback d-block">{{ erroDeCampo('nome') }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">E-mail</label>
+                                <input :value="informacoesPessoais.email" type="email" class="form-control" readonly disabled>
+                                <div class="form-text">O e-mail permanece somente leitura nesta etapa.</div>
+                            </div>
+                            <div>
+                                <label class="form-label">Telefone / WhatsApp</label>
+                                <input
+                                    v-model="informacoesPessoais.telefone"
+                                    type="tel"
+                                    inputmode="numeric"
+                                    autocomplete="tel"
+                                    class="form-control"
+                                    :class="campoInvalido('telefone')"
+                                    maxlength="16"
+                                    @input="onTelefoneInformacoesPessoaisInput"
+                                >
+                                <div v-if="erroDeCampo('telefone')" class="invalid-feedback d-block">{{ erroDeCampo('telefone') }}</div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="form-label">Telefone / WhatsApp</label>
-                            <input
-                                v-model="informacoesPessoais.telefone"
-                                type="tel"
-                                inputmode="numeric"
-                                autocomplete="tel"
-                                class="form-control"
-                                :class="campoInvalido('telefone')"
-                                maxlength="16"
-                                @input="onTelefoneInformacoesPessoaisInput"
-                            >
-                            <div v-if="erroDeCampo('telefone')" class="invalid-feedback d-block">{{ erroDeCampo('telefone') }}</div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" @click="fecharModalInformacoesPessoais">Cancelar</button>
+                            <button type="button" class="btn btn-primary" :disabled="salvandoInformacoesPessoais" @click="salvarInformacoesPessoais">
+                                <span v-if="salvandoInformacoesPessoais" class="spinner-border spinner-border-sm me-2"></span>
+                                Salvar alterações
+                            </button>
                         </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" @click="fecharModalInformacoesPessoais">Cancelar</button>
-                        <button type="button" class="btn btn-primary" :disabled="salvandoInformacoesPessoais" @click="salvarInformacoesPessoais">
-                            <span v-if="salvandoInformacoesPessoais" class="spinner-border spinner-border-sm me-2"></span>
-                            Salvar alterações
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-        <div v-if="modalInformacoesPessoaisAberto" class="modal-backdrop fade show"></div>
+        </transition>
+        <transition name="app-modal">
+            <div v-if="modalInformacoesPessoaisAberto" class="modal-backdrop fade show"></div>
+        </transition>
 
 
         <div v-if="carregando" class="text-center text-secondary py-5">

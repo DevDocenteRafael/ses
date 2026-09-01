@@ -71,3 +71,49 @@
 .text-bg-primary-subtle {
     background-color: rgba(var(--ses-primary-rgb), 0.12) !important;
 }
+
+.app-modal-overlay-enter-active,
+.app-modal-overlay-leave-active,
+.app-modal-panel-enter-active,
+.app-modal-panel-leave-active {
+    transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-modal-panel-enter-active,
+.app-modal-panel-leave-active {
+    transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-modal-overlay-enter-from,
+.app-modal-overlay-leave-to,
+.app-modal-panel-enter-from,
+.app-modal-panel-leave-to {
+    opacity: 0;
+}
+
+.app-modal-panel-enter-from,
+.app-modal-panel-leave-to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+}
+
+.app-modal-overlay-enter-to,
+.app-modal-overlay-leave-from,
+.app-modal-panel-enter-to,
+.app-modal-panel-leave-from {
+    opacity: 1;
+}
+
+.app-modal-panel-enter-to,
+.app-modal-panel-leave-from {
+    transform: translateY(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-modal-overlay-enter-active,
+    .app-modal-overlay-leave-active,
+    .app-modal-panel-enter-active,
+    .app-modal-panel-leave-active {
+        transition: none !important;
+    }
+}

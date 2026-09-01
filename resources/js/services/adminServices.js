@@ -43,6 +43,10 @@ export default {
         return api.put(`/empresas/${encodeURIComponent(cnpj)}`, { status });
     },
 
+    cadastrarEmpresa(dados) {
+        return api.post('/empresas', dados);
+    },
+
     // Vagas
     listarVagas(params = {}) {
         return api.get('/vagas', { params });

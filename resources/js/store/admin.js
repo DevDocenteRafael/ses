@@ -92,6 +92,12 @@ export const useAdminStore = defineStore('admin', {
             if (empresa) empresa.status = status;
         },
 
+        async cadastrarEmpresa(dados) {
+            const { data } = await adminService.cadastrarEmpresa(dados);
+            this.empresas.unshift(data);
+            return data;
+        },
+
         async carregarVagas(params = {}) {
             this.carregando = true;
             this.erro = null;

@@ -142,9 +142,13 @@ class PerfilCandidatoController extends Controller
         return response()->json($academico, 201);
     }
 
-    public function destroyDadosAcademicos(int $id): JsonResponse
+    public function destroyDadosAcademicos(Request $request, int $id): JsonResponse
     {
-        DadosAcademicos::findOrFail($id)->delete();
+        $dadoAcademico = DadosAcademicos::findOrFail($id);
+
+        $this->garantirCandidatoDono($request, (int) $dadoAcademico->candidato_matricula);
+
+        $dadoAcademico->delete();
 
         return response()->json(['message' => 'Dado acadêmico removido com sucesso.']);
     }
@@ -172,9 +176,13 @@ class PerfilCandidatoController extends Controller
         return response()->json($curso, 201);
     }
 
-    public function destroyCursoSenac(int $id): JsonResponse
+    public function destroyCursoSenac(Request $request, int $id): JsonResponse
     {
-        CursoSenac::findOrFail($id)->delete();
+        $curso = CursoSenac::findOrFail($id);
+
+        $this->garantirCandidatoDono($request, (int) $curso->candidato_matricula);
+
+        $curso->delete();
 
         return response()->json(['message' => 'Curso removido com sucesso.']);
     }

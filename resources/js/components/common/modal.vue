@@ -1,19 +1,21 @@
 <template>
     <teleport to="body">
-        <div v-if="show" class="ses-modal-backdrop" @click.self="$emit('fechar')">
-            <div class="ses-modal-dialog card border-0 shadow-lg">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h2 class="h5 fw-bold mb-0">
-                            <slot name="titulo">{{ titulo }}</slot>
-                        </h2>
-                        <button type="button" class="btn-close" aria-label="Fechar" @click="$emit('fechar')"></button>
-                    </div>
+        <transition name="app-modal">
+            <div v-if="show" class="ses-modal-backdrop" @click.self="$emit('fechar')">
+                <div class="ses-modal-dialog app-modal-dialog-animated card border-0 shadow-lg">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h2 class="h5 fw-bold mb-0">
+                                <slot name="titulo">{{ titulo }}</slot>
+                            </h2>
+                            <button type="button" class="btn-close" aria-label="Fechar" @click="$emit('fechar')"></button>
+                        </div>
 
-                    <slot />
+                        <slot />
+                    </div>
                 </div>
             </div>
-        </div>
+        </transition>
     </teleport>
 </template>
 

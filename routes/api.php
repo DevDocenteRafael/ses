@@ -28,6 +28,7 @@ Route::middleware('auth.token')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('candidatos', [CandidatoController::class, 'store']);
+    Route::post('empresas', [EmpresaController::class, 'store']);
 
     // Candidatos
     Route::apiResource('candidatos', CandidatoController::class)

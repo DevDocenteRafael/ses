@@ -16,15 +16,19 @@ use Illuminate\Support\Carbon;
 
 class AdministrativoController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         return response()->json(
             Administrativo::with(['pessoa', 'alunosMigrados', 'engajamentoPorUnidade'])->get()
         );
     }
 
-    public function show(int $pessoaId): JsonResponse
+    public function show(Request $request, int $pessoaId): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         return response()->json(
             Administrativo::with(['pessoa', 'alunosMigrados', 'engajamentoPorUnidade'])->findOrFail($pessoaId)
         );
@@ -42,8 +46,10 @@ class AdministrativoController extends Controller
      * tabela de log para isso, então esses dois pontos não são
      * retornados aqui (ver observação no card do frontend).
      */
-    public function dashboard(): JsonResponse
+    public function dashboard(Request $request): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         $inicioDoMes = Carbon::now()->startOfMonth();
         $inicioDoMesAnterior = (clone $inicioDoMes)->subMonth();
 
@@ -161,15 +167,16 @@ class AdministrativoController extends Controller
 
     public function sincronizarAlunos(Request $request): JsonResponse
     {
+        $administrativo = $this->garantirAdministrativo($request);
+
         $validated = $request->validate([
-            'administrativo_pessoa_id_pessoa' => 'required|integer|exists:administrativo,pessoa_id_pessoa',
             'status_ativacao'                 => 'required|boolean',
         ]);
 
         $aluno = AlunoMigrado::create([
             'status_ativacao'                 => $validated['status_ativacao'],
             'ultima_sincronizacao'            => now(),
-            'administrativo_pessoa_id_pessoa' => $validated['administrativo_pessoa_id_pessoa'],
+            'administrativo_pessoa_id_pessoa' => $administrativo->administrativo->pessoa_id_pessoa,
         ]);
 
         return response()->json($aluno, 201);
@@ -177,19 +184,24 @@ class AdministrativoController extends Controller
 
     // ── Engajamento por Unidade ──────────────────────────────────
 
-    public function listarEngajamento(): JsonResponse
+    public function listarEngajamento(Request $request): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         return response()->json(EngajamentoPorUnidadeSenac::with('administrativo.pessoa')->get());
     }
 
     public function storeEngajamento(Request $request): JsonResponse
     {
+        $administrativo = $this->garantirAdministrativo($request);
+
         $validated = $request->validate([
             'unidade'                         => 'required|string|max:100|unique:engajamento_por_unidade_senac,unidade',
             'elegibilidade'                   => 'required|boolean',
             'status'                          => 'required|boolean',
-            'administrativo_pessoa_id_pessoa' => 'required|integer|exists:administrativo,pessoa_id_pessoa',
         ]);
+
+        $validated['administrativo_pessoa_id_pessoa'] = $administrativo->administrativo->pessoa_id_pessoa;
 
         $engajamento = EngajamentoPorUnidadeSenac::create($validated);
 
@@ -198,6 +210,8 @@ class AdministrativoController extends Controller
 
     public function updateEngajamento(Request $request, string $unidade): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         $engajamento = EngajamentoPorUnidadeSenac::findOrFail($unidade);
 
         $validated = $request->validate([

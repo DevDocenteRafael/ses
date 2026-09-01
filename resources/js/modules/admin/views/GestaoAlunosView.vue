@@ -47,103 +47,107 @@
                         <span>{{ mensagemSucesso }}</span>
                     </div>
 
-                    <div
-                        v-if="modalCadastroAberto"
-                        class="modal fade show d-block"
-                        tabindex="-1"
-                        role="dialog"
-                        aria-modal="true"
-                        @click.self="fecharModalCadastro"
-                    >
-                        <div class="modal-dialog modal-lg modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h3 class="modal-title h5 mb-0">Novo Candidato</h3>
-                                    <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalCadastro"></button>
-                                </div>
-                                <form @submit.prevent="salvarNovoCandidato">
-                                    <div class="modal-body">
-                                        <div v-if="mensagemErro" class="alert alert-danger py-2">
-                                            {{ mensagemErro }}
-                                        </div>
+                    <transition name="app-modal">
+                        <div
+                            v-if="modalCadastroAberto"
+                            class="modal fade show d-block"
+                            tabindex="-1"
+                            role="dialog"
+                            aria-modal="true"
+                            @click.self="fecharModalCadastro"
+                        >
+                            <div class="modal-dialog modal-lg modal-dialog-centered app-modal-dialog-animated">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h3 class="modal-title h5 mb-0">Novo Candidato</h3>
+                                        <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalCadastro"></button>
+                                    </div>
+                                    <form @submit.prevent="salvarNovoCandidato">
+                                        <div class="modal-body">
+                                            <div v-if="mensagemErro" class="alert alert-danger py-2">
+                                                {{ mensagemErro }}
+                                            </div>
 
-                                        <div class="row g-3">
-                                            <div class="col-12">
-                                                <label class="form-label">Nome</label>
-                                                <input v-model.trim="formulario.nome" type="text" class="form-control" maxlength="100" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">E-mail</label>
-                                                <input v-model.trim="formulario.email" type="email" class="form-control" maxlength="100" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Telefone</label>
-                                                <input
-                                                    v-model="formulario.telefone"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    autocomplete="tel"
-                                                    class="form-control"
-                                                    maxlength="16"
-                                                    required
-                                                    @input="onTelefoneInput"
-                                                >
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Matrícula</label>
-                                                <input v-model.trim="formulario.matricula" type="text" inputmode="numeric" class="form-control" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">CPF</label>
-                                                <input
-                                                    v-model="formulario.cpf"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    autocomplete="off"
-                                                    class="form-control"
-                                                    maxlength="14"
-                                                    required
-                                                    @input="onCpfInput"
-                                                >
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Curso</label>
-                                                <input v-model.trim="formulario.curso" type="text" class="form-control" maxlength="45">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Unidade</label>
-                                                <input v-model.trim="formulario.unidade" type="text" class="form-control" maxlength="45">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Senha</label>
-                                                <input v-model="formulario.senha" type="password" class="form-control" minlength="6" required>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Confirmar senha</label>
-                                                <input v-model="formulario.confirmarSenha" type="password" class="form-control" minlength="6" required>
-                                            </div>
-                                            <div class="col-12">
-                                                <div class="form-check mt-2">
-                                                    <input id="status-candidato" v-model="formulario.status" class="form-check-input" type="checkbox">
-                                                    <label class="form-check-label" for="status-candidato">
-                                                        Liberar acesso ao candidato após o cadastro
-                                                    </label>
+                                            <div class="row g-3">
+                                                <div class="col-12">
+                                                    <label class="form-label">Nome</label>
+                                                    <input v-model.trim="formulario.nome" type="text" class="form-control" maxlength="100" required>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">E-mail</label>
+                                                    <input v-model.trim="formulario.email" type="email" class="form-control" maxlength="100" required>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Telefone</label>
+                                                    <input
+                                                        v-model="formulario.telefone"
+                                                        type="text"
+                                                        inputmode="numeric"
+                                                        autocomplete="tel"
+                                                        class="form-control"
+                                                        maxlength="16"
+                                                        required
+                                                        @input="onTelefoneInput"
+                                                    >
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Matrícula</label>
+                                                    <input v-model.trim="formulario.matricula" type="text" inputmode="numeric" class="form-control" required>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">CPF</label>
+                                                    <input
+                                                        v-model="formulario.cpf"
+                                                        type="text"
+                                                        inputmode="numeric"
+                                                        autocomplete="off"
+                                                        class="form-control"
+                                                        maxlength="14"
+                                                        required
+                                                        @input="onCpfInput"
+                                                    >
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Curso</label>
+                                                    <input v-model.trim="formulario.curso" type="text" class="form-control" maxlength="45">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Unidade</label>
+                                                    <input v-model.trim="formulario.unidade" type="text" class="form-control" maxlength="45">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Senha</label>
+                                                    <input v-model="formulario.senha" type="password" class="form-control" minlength="6" required>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Confirmar senha</label>
+                                                    <input v-model="formulario.confirmarSenha" type="password" class="form-control" minlength="6" required>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="form-check mt-2">
+                                                        <input id="status-candidato" v-model="formulario.status" class="form-check-input" type="checkbox">
+                                                        <label class="form-check-label" for="status-candidato">
+                                                            Liberar acesso ao candidato após o cadastro
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" @click="fecharModalCadastro">Cancelar</button>
-                                        <button type="submit" class="btn btn-primary" :disabled="salvandoCadastro">
-                                            <span v-if="salvandoCadastro" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                            {{ salvandoCadastro ? 'Salvando...' : 'Salvar candidato' }}
-                                        </button>
-                                    </div>
-                                </form>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" @click="fecharModalCadastro">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary" :disabled="salvandoCadastro">
+                                                <span v-if="salvandoCadastro" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                {{ salvandoCadastro ? 'Salvando...' : 'Salvar candidato' }}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div v-if="modalCadastroAberto" class="modal-backdrop fade show"></div>
+                    </transition>
+                    <transition name="app-modal">
+                        <div v-if="modalCadastroAberto" class="modal-backdrop fade show"></div>
+                    </transition>
 
                     <p v-if="!alunosFiltrados.length" class="text-secondary small mb-0">
                         Nenhum candidato encontrado.
