@@ -90,7 +90,7 @@ class AdministrativoController extends Controller
 
         // Linha "Visualizações de Perfil" nos últimos 6 meses.
         $visualizacoesPorMes = VisualizacaoPerfil::query()
-            ->selectRaw("strftime('%Y-%m', visualizado_em) as mes, count(*) as total")
+            ->selectRaw("DATE_FORMAT(visualizado_em, '%Y-%m') as mes, count(*) as total")
             ->where('visualizado_em', '>=', now()->subMonths(6)->startOfMonth())
             ->groupBy('mes')
             ->orderBy('mes')
@@ -98,7 +98,7 @@ class AdministrativoController extends Controller
 
         // Linha "Buscas Realizadas" nos últimos 6 meses (mesmo eixo do gráfico acima).
         $buscasPorMes = BuscaTalento::query()
-            ->selectRaw("strftime('%Y-%m', buscado_em) as mes, count(*) as total")
+            ->selectRaw("DATE_FORMAT(buscado_em, '%Y-%m') as mes, count(*) as total")
             ->where('buscado_em', '>=', now()->subMonths(6)->startOfMonth())
             ->groupBy('mes')
             ->orderBy('mes')

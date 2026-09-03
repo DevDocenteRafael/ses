@@ -1,6 +1,6 @@
 <template>
     <div>
-        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2 sticky-top z-3">
             <div class="d-flex align-items-center gap-2">
                 <span class="fw-bold fs-5">Senac</span>
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>

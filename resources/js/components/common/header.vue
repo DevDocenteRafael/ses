@@ -57,6 +57,9 @@ const iniciais = computed(() => {
 .ses-topbar {
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
 }
 
 .ses-avatar {
