@@ -316,8 +316,8 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        <div class="d-flex justify-content-end mt-3">
-                                            <button type="button" class="btn btn-sm btn-link text-secondary text-decoration-none" @click="fecharDropdownHabilidades">Concluir</button>
+                                        <div class="d-flex justify-content-end mt-4 pt-2">
+                                            <button type="button" class="btn btn-sm btn-primary px-4" @click="fecharDropdownHabilidades">Concluir</button>
                                         </div>
                                     </div>
                                 </div>
