@@ -19,6 +19,7 @@ class CursoSenac extends Model
     protected $casts = [
         'concluido_em'  => 'date',
         'carga_horaria' => 'integer',
+        'candidato_matricula' => 'string',
     ];
 
     public function candidato()

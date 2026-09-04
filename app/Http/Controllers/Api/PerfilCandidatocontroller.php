@@ -57,7 +57,7 @@ class PerfilCandidatoController extends Controller
 
     // ── Links Externos ───────────────────────────────────────────
 
-    public function storeLink(Request $request, int $matricula): JsonResponse
+    public function storeLink(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -77,7 +77,7 @@ class PerfilCandidatoController extends Controller
 
     // ── Informações Profissionais ────────────────────────────────
 
-    public function storeInfoProfissional(Request $request, int $matricula): JsonResponse
+    public function storeInfoProfissional(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -99,7 +99,7 @@ class PerfilCandidatoController extends Controller
 
     // ── Preferências de Trabalho ─────────────────────────────────
 
-    public function storePreferencias(Request $request, int $matricula): JsonResponse
+    public function storePreferencias(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -122,7 +122,7 @@ class PerfilCandidatoController extends Controller
     // Nota: sincronizados via API do SIG (FR4) — mantido aqui apenas
     // como fallback manual, não é o fluxo principal de preenchimento.
 
-    public function storeDadosAcademicos(Request $request, int $matricula): JsonResponse
+    public function storeDadosAcademicos(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -146,7 +146,7 @@ class PerfilCandidatoController extends Controller
     {
         $dadoAcademico = DadosAcademicos::findOrFail($id);
 
-        $this->garantirCandidatoDono($request, (int) $dadoAcademico->candidato_matricula);
+        $this->garantirCandidatoDono($request, (string) $dadoAcademico->candidato_matricula);
 
         $dadoAcademico->delete();
 
@@ -158,7 +158,7 @@ class PerfilCandidatoController extends Controller
     // acadêmicos. Mantido aqui apenas como fallback manual — a tela
     // de perfil exibe esta seção como somente leitura para o candidato.
 
-    public function storeCursoSenac(Request $request, int $matricula): JsonResponse
+    public function storeCursoSenac(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -180,7 +180,7 @@ class PerfilCandidatoController extends Controller
     {
         $curso = CursoSenac::findOrFail($id);
 
-        $this->garantirCandidatoDono($request, (int) $curso->candidato_matricula);
+        $this->garantirCandidatoDono($request, (string) $curso->candidato_matricula);
 
         $curso->delete();
 
@@ -189,7 +189,7 @@ class PerfilCandidatoController extends Controller
 
     // ── Cursos Externos ───────────────────────────────────────────
 
-    public function storeCursoExterno(Request $request, int $matricula): JsonResponse
+    public function storeCursoExterno(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -207,7 +207,7 @@ class PerfilCandidatoController extends Controller
         return response()->json($curso, 201);
     }
 
-    public function destroyCursoExterno(Request $request, int $matricula, int $id): JsonResponse
+    public function destroyCursoExterno(Request $request, string $matricula, int $id): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -218,7 +218,7 @@ class PerfilCandidatoController extends Controller
 
     // ── Experiências Profissionais ────────────────────────────────
 
-    public function storeExperiencia(Request $request, int $matricula): JsonResponse
+    public function storeExperiencia(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -239,7 +239,7 @@ class PerfilCandidatoController extends Controller
         return response()->json($experiencia, 201);
     }
 
-    public function updateExperiencia(Request $request, int $matricula, int $id): JsonResponse
+    public function updateExperiencia(Request $request, string $matricula, int $id): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 
@@ -260,7 +260,7 @@ class PerfilCandidatoController extends Controller
         return response()->json($experiencia);
     }
 
-    public function destroyExperiencia(Request $request, int $matricula, int $id): JsonResponse
+    public function destroyExperiencia(Request $request, string $matricula, int $id): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 

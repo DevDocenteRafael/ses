@@ -92,7 +92,7 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label">Matrícula</label>
-                                                    <input v-model.trim="formulario.matricula" type="text" inputmode="numeric" class="form-control" required>
+                                                    <input v-model="formulario.matricula" type="text" inputmode="numeric" class="form-control" maxlength="15" required @input="onMatriculaInput">
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label">CPF</label>
@@ -171,7 +171,7 @@
                                             <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
                                             <p class="text-secondary small mb-0">E-mail: {{ aluno.pessoa?.email || '—' }}</p>
                                         </td>
-                                        <td>{{ censurarCpf(aluno.cpf) }}</td>
+                                        <td>{{ formatarCpf(aluno.cpf) }}</td>
                                         <td>
                                             <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
                                             <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
@@ -213,7 +213,7 @@
                                                     </div>
                                                     <div class="col-md-6 col-lg-4">
                                                         <small class="text-secondary d-block">CPF</small>
-                                                        <span>{{ censurarCpf(aluno.cpf) }}</span>
+                                                        <span>{{ formatarCpf(aluno.cpf) }}</span>
                                                     </div>
                                                     <div class="col-md-6 col-lg-4">
                                                         <small class="text-secondary d-block">Cargo de interesse</small>
@@ -389,6 +389,12 @@ function onTelefoneInput(evento) {
     evento.target.value = valorFormatado;
 }
 
+function onMatriculaInput(evento) {
+    const valor = somenteNumeros(evento.target.value).slice(0, 15);
+    formulario.matricula = valor;
+    evento.target.value = valor;
+}
+
 async function salvarNovoCandidato() {
     mensagemErro.value = '';
 
@@ -404,7 +410,7 @@ async function salvarNovoCandidato() {
             nome: formulario.nome,
             email: formulario.email,
             telefone: somenteNumeros(formulario.telefone),
-            matricula: Number(formulario.matricula),
+            matricula: somenteNumeros(formulario.matricula).slice(0, 15),
             cpf: removerMascara(formulario.cpf),
             curso: formulario.curso,
             unidade: formulario.unidade,

@@ -34,7 +34,7 @@ class CandidatoTesteSeeder extends Seeder
             return;
         }
 
-        $matricula = (int) (Pessoa::max('id_pessoa') ?? 0) + 1;
+        $matricula = (string) ((Pessoa::max('id_pessoa') ?? 0) + 1);
 
         $pessoa = Pessoa::create([
             'id_pessoa'     => $matricula,

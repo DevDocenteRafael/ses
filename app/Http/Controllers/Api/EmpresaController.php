@@ -203,7 +203,7 @@ class EmpresaController extends Controller
         return response()->json($favoritos);
     }
 
-    public function favoritar(Request $request, int $matricula): JsonResponse
+    public function favoritar(Request $request, string $matricula): JsonResponse
     {
         $empresa = $this->empresaAutenticada($request);
 
@@ -212,7 +212,7 @@ class EmpresaController extends Controller
         return response()->json(['message' => 'Candidato favoritado com sucesso.'], 201);
     }
 
-    public function desfavoritar(Request $request, int $matricula): JsonResponse
+    public function desfavoritar(Request $request, string $matricula): JsonResponse
     {
         $empresa = $this->empresaAutenticada($request);
 

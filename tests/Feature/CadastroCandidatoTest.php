@@ -10,11 +10,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
 
 class CadastroCandidatoTest extends TestCase
 {
     use RefreshDatabase;
+    use GeneratesMatricula;
 
     public function test_admin_consegue_cadastrar_candidato_com_pessoa_relacionada_e_senha_hash(): void
     {
@@ -158,13 +160,111 @@ class CadastroCandidatoTest extends TestCase
             ->assertJsonPath('pessoa.email', $payload['email']);
     }
 
+    public function test_matricula_com_11_digitos_e_aceita_sem_converter_para_numero(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => '12312312312',
+            'email' => 'onze' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertCreated()
+            ->assertJsonPath('matricula', '12312312312');
+
+        $this->assertDatabaseHas('candidato', [
+            'matricula' => '12312312312',
+        ]);
+    }
+
+    public function test_matricula_com_15_digitos_e_aceita(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => '123456789012345',
+            'email' => 'quinze' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertCreated()
+            ->assertJsonPath('matricula', '123456789012345');
+    }
+
+    public function test_matricula_com_16_digitos_e_rejeitada(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => '1234567890123456',
+            'email' => 'dezesseis' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['matricula']);
+    }
+
+    public function test_matricula_com_zero_a_esquerda_e_preservada(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => '001234567890123',
+            'email' => 'zero' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertCreated()
+            ->assertJsonPath('matricula', '001234567890123');
+
+        $this->assertDatabaseHas('candidato', [
+            'matricula' => '001234567890123',
+        ]);
+    }
+
+    public function test_matricula_com_letras_e_rejeitada(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => 'ABC123',
+            'email' => 'letras' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['matricula']);
+    }
+
+    public function test_matricula_com_pontuacao_e_rejeitada(): void
+    {
+        $token = $this->criarAdminAutenticado();
+        $payload = $this->payloadValido([
+            'matricula' => '123-456',
+            'email' => 'pontuacao' . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/candidatos', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['matricula']);
+    }
+
     private function payloadValido(array $overrides = []): array
     {
         return array_merge([
             'nome' => 'Candidato Admin',
             'email' => 'candidato' . Str::random(6) . '@teste.com',
             'telefone' => (string) random_int(10000000000, 99999999999),
-            'matricula' => random_int(100000, 999999),
+            'matricula' => $this->gerarMatricula(),
             'cpf' => '123.456.789-01',
             'curso' => 'Técnico em Informática',
             'unidade' => 'Taguatinga',
@@ -208,7 +308,7 @@ class CadastroCandidatoTest extends TestCase
         $pessoa = Pessoa::query()->where('email', $pessoa->email)->firstOrFail();
 
         $candidato = Candidato::query()->create([
-            'matricula' => random_int(100000, 999999),
+            'matricula' => $this->gerarMatricula(),
             'cpf' => '12345678901',
             'status' => true,
             'pessoa_id_pessoa' => $pessoa->id_pessoa,

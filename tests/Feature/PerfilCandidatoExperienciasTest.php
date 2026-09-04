@@ -7,11 +7,13 @@ use App\Models\Pessoa;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
 
 class PerfilCandidatoExperienciasTest extends TestCase
 {
     use RefreshDatabase;
+    use GeneratesMatricula;
 
     public function test_experiencia_atual_sem_data_fim_e_aceita(): void
     {
@@ -87,7 +89,7 @@ class PerfilCandidatoExperienciasTest extends TestCase
         $pessoa = Pessoa::query()->where('email', $pessoa->email)->firstOrFail();
 
         $candidato = Candidato::query()->create([
-            'matricula' => random_int(100000, 999999),
+            'matricula' => $this->gerarMatricula(),
             'cpf' => (string) random_int(10000000000, 99999999999),
             'status' => true,
             'pessoa_id_pessoa' => $pessoa->id_pessoa,

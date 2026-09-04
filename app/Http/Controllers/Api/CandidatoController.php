@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class CandidatoController extends Controller
 {
@@ -25,7 +26,7 @@ class CandidatoController extends Controller
         }
 
         $validated = $request->validate([
-            'matricula' => ['required', 'integer', 'unique:candidato,matricula'],
+            'matricula' => ['required', 'string', 'min:1', 'max:15', 'regex:/^[0-9]+$/', Rule::unique('candidato', 'matricula')],
             'cpf' => ['required', 'string', 'max:14'],
             'status' => ['sometimes', 'boolean'],
             'nome' => ['required', 'string', 'max:100'],
@@ -34,6 +35,15 @@ class CandidatoController extends Controller
             'senha' => ['required', 'string', 'min:6'],
             'curso' => ['nullable', 'string', 'max:45'],
             'unidade' => ['nullable', 'string', 'max:45'],
+        ]);
+
+        $request->validate([
+            'matricula' => ['required', 'regex:/^[0-9]+$/'],
+        ], [
+            'matricula.regex' => 'O campo matricula deve conter apenas números.',
+            'matricula.max' => 'O campo matricula não pode ser maior que 15 caracteres.',
+            'matricula.string' => 'O campo matricula deve ser um texto.',
+            'matricula.unique' => 'A matrícula informada já está em uso.',
         ]);
 
         $cpf = preg_replace('/\D+/', '', $validated['cpf']) ?? $validated['cpf'];
@@ -207,7 +217,7 @@ class CandidatoController extends Controller
      * Exibe um candidato específico. Se quem pede for uma empresa (não o
      * próprio candidato), registra uma visualização de perfil (FR9).
      */
-    public function show(Request $request, int $matricula): JsonResponse
+    public function show(Request $request, string $matricula): JsonResponse
     {
         $candidato = Candidato::with([
             'pessoa',
@@ -238,7 +248,7 @@ class CandidatoController extends Controller
     /**
      * Atualiza dados do candidato (somente o próprio candidato ou administrativo).
      */
-    public function update(Request $request, int $matricula): JsonResponse
+    public function update(Request $request, string $matricula): JsonResponse
     {
         $solicitante = $this->pessoaAutenticada($request);
         if (! $solicitante || ! in_array($solicitante->tipo(), ['candidato', 'administrativo'], true)) {
@@ -284,7 +294,7 @@ class CandidatoController extends Controller
     /**
      * Remove um candidato.
      */
-    public function destroy(Request $request, int $matricula): JsonResponse
+    public function destroy(Request $request, string $matricula): JsonResponse
     {
         $solicitante = $this->pessoaAutenticada($request);
         if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
@@ -301,7 +311,7 @@ class CandidatoController extends Controller
      * Indicadores do painel do aluno (FR9): visualizações, convites
      * pendentes, completude do perfil e últimas visualizações.
      */
-    public function dashboard(Request $request, int $matricula): JsonResponse
+    public function dashboard(Request $request, string $matricula): JsonResponse
     {
         $this->garantirCandidatoDono($request, $matricula);
 

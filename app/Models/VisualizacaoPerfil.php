@@ -16,6 +16,7 @@ class VisualizacaoPerfil extends Model
 
     protected $casts = [
         'visualizado_em' => 'datetime',
+        'candidato_matricula' => 'string',
     ];
 
     public function candidato()

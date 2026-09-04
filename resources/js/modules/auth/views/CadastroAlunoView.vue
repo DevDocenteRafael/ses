@@ -41,6 +41,12 @@ function onTelefoneInput(evento) {
     evento.target.value = valorFormatado;
 }
 
+function onMatriculaInput(evento) {
+	const valor = somenteNumeros(evento.target.value).slice(0, 15);
+	formulario.matricula = valor;
+	evento.target.value = valor;
+}
+
 async function enviarCadastro() {
 	mensagemErro.value = '';
 	mensagemSucesso.value = '';
@@ -58,7 +64,7 @@ async function enviarCadastro() {
 	carregando.value = true;
 	try {
 		await alunosService.cadastrar({
-			matricula: Number(formulario.matricula),
+			matricula: somenteNumeros(formulario.matricula).slice(0, 15),
 			cpf: formulario.cpf,
 			status: formulario.aceiteLgpd,
 			nome: formulario.nome,
@@ -101,7 +107,7 @@ async function enviarCadastro() {
 						<input v-model="formulario.telefone" type="tel" inputmode="numeric" autocomplete="tel" class="form-control auth-cadastro-input" placeholder="Telefone" maxlength="16" required @input="onTelefoneInput">
 					</div>
 					<div class="col-md-6">
-						<input v-model.trim="formulario.matricula" type="text" inputmode="numeric" class="form-control auth-cadastro-input" placeholder="Matrícula Senac" required>
+					<input v-model="formulario.matricula" type="text" inputmode="numeric" class="form-control auth-cadastro-input" placeholder="Matrícula Senac" maxlength="15" required @input="onMatriculaInput">
 					</div>
 					<div class="col-md-6">
 						<input v-model.trim="formulario.cpf" type="text" class="form-control auth-cadastro-input" placeholder="CPF" maxlength="14" required>
