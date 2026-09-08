@@ -139,7 +139,7 @@ import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
 
 const auth = useAuthStore();
-const matricula = computed(() => auth.pessoa?.id_pessoa);
+const matricula = computed(() => auth.pessoa?.candidato?.matricula || auth.pessoa?.matricula);
 
 const abas = [
     { chave: 'pendentes', label: 'Pendentes' },

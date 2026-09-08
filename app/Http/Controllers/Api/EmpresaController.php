@@ -133,8 +133,10 @@ class EmpresaController extends Controller
         }
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $this->garantirAdministrativo($request);
+
         $empresas = Empresa::with([
             'pessoa',
             'responsavelContratual.pessoa',
@@ -145,8 +147,14 @@ class EmpresaController extends Controller
         return response()->json($empresas);
     }
 
-    public function show(string $cnpj): JsonResponse
+    public function show(Request $request, string $cnpj): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante) {
+            abort(403, 'Voce nao tem permissao para visualizar esta empresa.');
+        }
+
         $empresa = Empresa::with([
             'pessoa',
             'responsavelContratual.pessoa',
@@ -158,6 +166,16 @@ class EmpresaController extends Controller
             'candidatos.preferenciasDeTrabalho',
             'candidatos.dadosAcademicos',
         ])->findOrFail($cnpj);
+
+        if ($solicitante->tipo() === 'empresa') {
+            $empresaAutenticada = $this->empresaAutenticada($request);
+
+            if ((string) $empresaAutenticada->cnpj !== (string) $empresa->cnpj) {
+                abort(403, 'Voce nao tem permissao para visualizar esta empresa.');
+            }
+        } elseif ($solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Voce nao tem permissao para visualizar esta empresa.');
+        }
 
         return response()->json($empresa);
     }

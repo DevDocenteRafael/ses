@@ -154,7 +154,7 @@ const iniciais = computed(() => {
         .toUpperCase();
 });
 
-const matricula = computed(() => auth.pessoa?.id_pessoa);
+const matricula = computed(() => auth.pessoa?.candidato?.matricula || auth.pessoa?.matricula);
 
 const carregando = ref(true);
 const erro = ref('');

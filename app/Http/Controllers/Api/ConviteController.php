@@ -11,7 +11,22 @@ class ConviteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa', 'candidato'], true)) {
+            abort(403, 'Voce nao tem permissao para listar convites.');
+        }
+
         $query = Convite::with(['empresa', 'candidato.pessoa', 'vaga']);
+
+        if ($solicitante->tipo() === 'empresa') {
+            $empresa = $this->empresaAutenticada($request);
+            $query->where('empresa_cnpj', $empresa->cnpj);
+        }
+
+        if ($solicitante->tipo() === 'candidato') {
+            $query->where('candidatos_matricula', $solicitante->candidato->matricula);
+        }
 
         if ($request->has('candidatos_matricula')) {
             $query->where('candidatos_matricula', $request->query('candidatos_matricula'));
@@ -57,11 +72,25 @@ class ConviteController extends Controller
         return response()->json($convite->load(['empresa', 'candidato.pessoa', 'vaga']), 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        return response()->json(
-            Convite::with(['empresa', 'candidato.pessoa', 'vaga'])->findOrFail($id)
-        );
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa', 'candidato'], true)) {
+            abort(403, 'Voce nao tem permissao para visualizar este convite.');
+        }
+
+        $convite = Convite::with(['empresa', 'candidato.pessoa', 'vaga'])->findOrFail($id);
+
+        if ($solicitante->tipo() === 'empresa') {
+            $this->garantirConviteDaEmpresa($request, $convite);
+        }
+
+        if ($solicitante->tipo() === 'candidato') {
+            $this->garantirCandidatoDono($request, (string) $convite->candidatos_matricula);
+        }
+
+        return response()->json($convite);
     }
 
     /**

@@ -73,6 +73,113 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_admin_e_empresa_listam_candidatos_mas_aluno_recebe_403(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, , $tokenAluno] = $this->criarCandidatoAutenticado();
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos')
+            ->assertOk();
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos')
+            ->assertOk();
+
+        $this->withToken($tokenAluno)
+            ->getJson('/api/candidatos')
+            ->assertForbidden();
+    }
+
+    public function test_aluno_acessa_proprio_candidato_mas_nao_acessa_candidato_de_terceiro(): void
+    {
+        [, $candidatoA, $tokenA] = $this->criarCandidatoAutenticado();
+        [, $candidatoB] = $this->criarCandidatoAutenticado();
+
+        $this->withToken($tokenA)
+            ->getJson("/api/candidatos/{$candidatoA->matricula}")
+            ->assertOk()
+            ->assertJsonPath('matricula', $candidatoA->matricula);
+
+        $this->withToken($tokenA)
+            ->getJson("/api/candidatos/{$candidatoB->matricula}")
+            ->assertForbidden();
+    }
+
+    public function test_empresa_acessa_candidato_ativo_para_busca_de_talentos(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, $candidato] = $this->criarCandidatoAutenticado();
+
+        $this->withToken($tokenEmpresa)
+            ->getJson("/api/candidatos/{$candidato->matricula}")
+            ->assertOk()
+            ->assertJsonPath('matricula', $candidato->matricula);
+    }
+
+    public function test_empresa_nao_acessa_candidato_bloqueado(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, $candidato] = $this->criarCandidatoAutenticado();
+
+        $candidato->update(['status' => false]);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson("/api/candidatos/{$candidato->matricula}")
+            ->assertForbidden();
+    }
+
+    public function test_admin_lista_empresas_mas_aluno_e_empresa_recebem_403(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        [, , $tokenAluno] = $this->criarCandidatoAutenticado();
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas')
+            ->assertOk();
+
+        $this->withToken($tokenAluno)
+            ->getJson('/api/empresas')
+            ->assertForbidden();
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/empresas')
+            ->assertForbidden();
+    }
+
+    public function test_empresa_acessa_propria_empresa_mas_nao_acessa_empresa_de_terceiro(): void
+    {
+        [, $empresaA, $tokenA] = $this->criarEmpresaAutenticada();
+        [, $empresaB] = $this->criarEmpresaAutenticada();
+
+        $this->withToken($tokenA)
+            ->getJson("/api/empresas/{$empresaA->cnpj}")
+            ->assertOk()
+            ->assertJsonPath('cnpj', $empresaA->cnpj);
+
+        $this->withToken($tokenA)
+            ->getJson("/api/empresas/{$empresaB->cnpj}")
+            ->assertForbidden();
+    }
+
+    public function test_admin_acessa_empresa_de_qualquer_cnpj_e_aluno_recebe_403(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        [, , $tokenAluno] = $this->criarCandidatoAutenticado();
+        [, $empresa] = $this->criarEmpresaAutenticada();
+
+        $this->withToken($tokenAdmin)
+            ->getJson("/api/empresas/{$empresa->cnpj}")
+            ->assertOk()
+            ->assertJsonPath('cnpj', $empresa->cnpj);
+
+        $this->withToken($tokenAluno)
+            ->getJson("/api/empresas/{$empresa->cnpj}")
+            ->assertForbidden();
+    }
+
     public function test_empresa_cria_vaga_propria_com_cnpj_do_token(): void
     {
         [, $empresa, $token] = $this->criarEmpresaAutenticada();
@@ -94,6 +201,49 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'titulo' => 'Pessoa Desenvolvedora',
             'empresa_cnpj' => $empresa->cnpj,
         ]);
+    }
+
+    public function test_empresa_lista_somente_suas_vagas_e_nao_recebe_vaga_de_outra_empresa(): void
+    {
+        [, $empresaA, $tokenA] = $this->criarEmpresaAutenticada();
+        [, $empresaB] = $this->criarEmpresaAutenticada();
+
+        $vagaA = $this->criarVagaParaEmpresa($empresaA, 'Vaga Empresa A');
+        $vagaB = $this->criarVagaParaEmpresa($empresaB, 'Vaga Empresa B');
+
+        $this->withToken($tokenA)
+            ->getJson('/api/vagas')
+            ->assertOk()
+            ->assertJsonFragment(['id_vaga' => $vagaA->id_vaga])
+            ->assertJsonMissing(['id_vaga' => $vagaB->id_vaga]);
+    }
+
+    public function test_empresa_nao_acessa_vaga_de_outra_empresa_e_admin_mantem_acesso(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        [, $empresaA, $tokenA] = $this->criarEmpresaAutenticada();
+        [, $empresaB] = $this->criarEmpresaAutenticada();
+
+        $vagaA = $this->criarVagaParaEmpresa($empresaA, 'Vaga Empresa A');
+        $vagaB = $this->criarVagaParaEmpresa($empresaB, 'Vaga Empresa B');
+
+        $this->withToken($tokenA)
+            ->getJson("/api/vagas/{$vagaA->id_vaga}")
+            ->assertOk();
+
+        $this->withToken($tokenA)
+            ->getJson("/api/vagas/{$vagaB->id_vaga}")
+            ->assertForbidden();
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/vagas')
+            ->assertOk()
+            ->assertJsonFragment(['id_vaga' => $vagaA->id_vaga])
+            ->assertJsonFragment(['id_vaga' => $vagaB->id_vaga]);
+
+        $this->withToken($tokenAdmin)
+            ->getJson("/api/vagas/{$vagaB->id_vaga}")
+            ->assertOk();
     }
 
     public function test_aluno_nao_pode_criar_vaga(): void
@@ -187,6 +337,72 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'candidatos_matricula' => $candidato->matricula,
             'vagas_id_vaga' => $vaga->id_vaga,
         ]);
+    }
+
+    public function test_empresa_ve_somente_convites_proprios(): void
+    {
+        [, $empresaA, $tokenA] = $this->criarEmpresaAutenticada();
+        [, $empresaB] = $this->criarEmpresaAutenticada();
+        [, $candidato] = $this->criarCandidatoAutenticado();
+
+        $conviteA = $this->criarConviteParaEmpresaECandidato($empresaA, $candidato, 'Convite A');
+        $conviteB = $this->criarConviteParaEmpresaECandidato($empresaB, $candidato, 'Convite B');
+
+        $this->withToken($tokenA)
+            ->getJson('/api/convites')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $conviteA->id])
+            ->assertJsonMissing(['id' => $conviteB->id]);
+
+        $this->withToken($tokenA)
+            ->getJson("/api/convites/{$conviteB->id}")
+            ->assertForbidden();
+    }
+
+    public function test_aluno_ve_somente_convites_proprios(): void
+    {
+        [, $empresa] = $this->criarEmpresaAutenticada();
+        [, $candidatoA, $tokenA] = $this->criarCandidatoAutenticado();
+        [, $candidatoB] = $this->criarCandidatoAutenticado();
+
+        $conviteA = $this->criarConviteParaEmpresaECandidato($empresa, $candidatoA, 'Convite Aluno A');
+        $conviteB = $this->criarConviteParaEmpresaECandidato($empresa, $candidatoB, 'Convite Aluno B');
+
+        $this->withToken($tokenA)
+            ->getJson('/api/convites')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $conviteA->id])
+            ->assertJsonMissing(['id' => $conviteB->id]);
+
+        $this->withToken($tokenA)
+            ->getJson("/api/convites/{$conviteA->id}")
+            ->assertOk();
+
+        $this->withToken($tokenA)
+            ->getJson("/api/convites/{$conviteB->id}")
+            ->assertForbidden();
+    }
+
+    public function test_admin_ve_todos_os_convites(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        [, $empresaA] = $this->criarEmpresaAutenticada();
+        [, $empresaB] = $this->criarEmpresaAutenticada();
+        [, $candidatoA] = $this->criarCandidatoAutenticado();
+        [, $candidatoB] = $this->criarCandidatoAutenticado();
+
+        $conviteA = $this->criarConviteParaEmpresaECandidato($empresaA, $candidatoA, 'Convite A');
+        $conviteB = $this->criarConviteParaEmpresaECandidato($empresaB, $candidatoB, 'Convite B');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/convites')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $conviteA->id])
+            ->assertJsonFragment(['id' => $conviteB->id]);
+
+        $this->withToken($tokenAdmin)
+            ->getJson("/api/convites/{$conviteB->id}")
+            ->assertOk();
     }
 
     public function test_aluno_nao_pode_criar_convite(): void
@@ -379,5 +595,31 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
 
         return $token;
+    }
+
+    private function criarVagaParaEmpresa(Empresa $empresa, string $titulo): Vaga
+    {
+        return Vaga::query()->create([
+            'titulo' => $titulo,
+            'tipo' => 1,
+            'area' => 'Tecnologia',
+            'status' => true,
+            'data_publicacao' => '2026-09-01',
+            'empresa_cnpj' => $empresa->cnpj,
+        ]);
+    }
+
+    private function criarConviteParaEmpresaECandidato(Empresa $empresa, Candidato $candidato, string $descricao): Convite
+    {
+        $vaga = $this->criarVagaParaEmpresa($empresa, 'Vaga ' . Str::random(5));
+
+        return Convite::query()->create([
+            'descricao' => $descricao,
+            'data_envio' => now(),
+            'status' => Convite::STATUS_PENDENTE,
+            'empresa_cnpj' => $empresa->cnpj,
+            'candidatos_matricula' => $candidato->matricula,
+            'vagas_id_vaga' => $vaga->id_vaga,
+        ]);
     }
 }

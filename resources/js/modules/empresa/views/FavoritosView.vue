@@ -225,7 +225,7 @@ const modalPerfilAberto = ref(false);
 const perfilSelecionado = ref(null);
 
 onMounted(async () => {
-    const cnpj = auth.pessoa?.id_pessoa;
+    const cnpj = auth.pessoa?.cnpj;
     if (cnpj) {
         await empresa.carregarPerfil(cnpj);
     }

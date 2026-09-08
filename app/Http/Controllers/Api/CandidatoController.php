@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class CandidatoController extends Controller
@@ -111,9 +112,14 @@ class CandidatoController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
 
+            Log::error('Falha ao cadastrar candidato.', [
+                'exception' => $e,
+                'matricula' => $validated['matricula'] ?? null,
+                'email' => $validated['email'] ?? null,
+            ]);
+
             return response()->json([
                 'error' => 'Nao foi possivel cadastrar o candidato.',
-                'details' => $e->getMessage(),
             ], 500);
         }
     }
@@ -125,6 +131,12 @@ class CandidatoController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar candidatos.');
+        }
+
         $query = Candidato::query()
             ->with([
                 'pessoa',
@@ -137,8 +149,7 @@ class CandidatoController extends Controller
         // Empresas só devem ver candidatos com acesso liberado (FR16-20).
         // O administrativo precisa ver todos, inclusive os bloqueados, para
         // poder geri-los na tela "Gestão dos Candidatos" (FR37).
-        $solicitante = $this->pessoaAutenticada($request);
-        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+        if ($solicitante->tipo() === 'empresa') {
             $query->where('status', true);
         }
 
@@ -219,6 +230,12 @@ class CandidatoController extends Controller
      */
     public function show(Request $request, string $matricula): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa', 'candidato'], true)) {
+            abort(403, 'Voce nao tem permissao para visualizar este candidato.');
+        }
+
         $candidato = Candidato::with([
             'pessoa',
             'linkExterno',
@@ -232,7 +249,13 @@ class CandidatoController extends Controller
             'empresas',
         ])->findOrFail($matricula);
 
-        $solicitante = $this->pessoaAutenticada($request);
+        if ($solicitante->tipo() === 'candidato') {
+            $this->garantirCandidatoDono($request, $matricula);
+        }
+
+        if ($solicitante->tipo() === 'empresa' && ! $candidato->status) {
+            abort(403, 'Voce nao tem permissao para visualizar este candidato.');
+        }
 
         if ($solicitante && $solicitante->tipo() === 'empresa' && $solicitante->empresa) {
             VisualizacaoPerfil::create([
@@ -287,7 +310,13 @@ class CandidatoController extends Controller
             return response()->json($candidato->load('pessoa'));
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+
+            Log::error('Falha ao atualizar candidato.', [
+                'exception' => $e,
+                'matricula' => $matricula,
+            ]);
+
+            return response()->json(['error' => 'Nao foi possivel atualizar o candidato.'], 500);
         }
     }
 

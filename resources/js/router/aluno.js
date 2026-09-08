@@ -13,19 +13,9 @@ export default [
                 component: () => import('../modules/aluno/views/DashboardView.vue'),
             },
             {
-                path: 'curriculo',
-                name: 'aluno.curriculo',
-                component: () => import('../modules/aluno/views/CurriculoView.vue'),
-            },
-            {
                 path: 'convites',
                 name: 'aluno.convites',
                 component: () => import('../modules/aluno/views/ConvitesView.vue'),
-            },
-            {
-                path: 'preferencias',
-                name: 'aluno.preferencias',
-                component: () => import('../modules/aluno/views/PreferenciasView.vue'),
             },
         ],
     },

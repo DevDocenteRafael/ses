@@ -5,13 +5,13 @@ import { useAuthStore } from '../store/auth';
  * Gerencia as "Listas" de favoritos da empresa (ex: "Estagiários TI",
  * "Vendas 2026"). Ainda não existe uma tabela para isso no banco —
  * por enquanto ficam salvas no localStorage, isoladas por empresa
- * logada (id_pessoa/cnpj). Dá pra promover isso pra uma tabela própria
+ * logada (cnpj). Dá pra promover isso pra uma tabela própria
  * (`listas_favoritos` + pivô) mais adiante sem mudar quem consome
  * este composable.
  */
 export function useListasFavoritos() {
     const auth = useAuthStore();
-    const chave = `ses_listas_${auth.pessoa?.id_pessoa || 'anon'}`;
+    const chave = `ses_listas_${auth.pessoa?.cnpj || 'anon'}`;
 
     const listas = reactive(JSON.parse(localStorage.getItem(chave) || '[]'));
 

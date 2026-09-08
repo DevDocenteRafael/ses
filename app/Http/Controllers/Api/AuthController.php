@@ -113,7 +113,7 @@ class AuthController extends Controller
 
     private function pessoaParaResposta(Pessoa $pessoa, string $tipo): array
     {
-        return [
+        $resposta = [
             'id_pessoa' => $pessoa->id_pessoa,
             'matricula' => $pessoa->candidato?->matricula,
             'nome' => $pessoa->nome,
@@ -121,5 +121,11 @@ class AuthController extends Controller
             'telefone' => $pessoa->telefone,
             'tipo' => $tipo,
         ];
+
+        if ($tipo === 'empresa') {
+            $resposta['cnpj'] = $pessoa->empresa?->cnpj;
+        }
+
+        return $resposta;
     }
 }

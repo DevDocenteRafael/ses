@@ -108,7 +108,7 @@ const statusMap = {
 };
 
 onMounted(async () => {
-    const cnpj = auth.pessoa?.id_pessoa;
+    const cnpj = auth.pessoa?.cnpj;
     if (cnpj) {
         await empresa.carregarPerfil(cnpj);
     }

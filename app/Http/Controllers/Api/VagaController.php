@@ -11,7 +11,18 @@ class VagaController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar vagas.');
+        }
+
         $query = Vaga::with('empresa');
+
+        if ($solicitante->tipo() === 'empresa') {
+            $empresa = $this->empresaAutenticada($request);
+            $query->where('empresa_cnpj', $empresa->cnpj);
+        }
 
         if ($request->has('area')) {
             $query->where('area', $request->area);
@@ -45,9 +56,19 @@ class VagaController extends Controller
         return response()->json($vaga->load('empresa'), 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $vaga = Vaga::with(['empresa', 'convites.candidato.pessoa'])->findOrFail($id);
+
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para visualizar esta vaga.');
+        }
+
+        if ($solicitante->tipo() === 'empresa') {
+            $this->garantirVagaDaEmpresa($request, $vaga);
+        }
 
         return response()->json($vaga);
     }

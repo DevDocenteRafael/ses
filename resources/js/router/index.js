@@ -3,10 +3,14 @@ import { useAuthStore } from '../store/auth';
 
 import authRoutes from './auth';
 import adminRoutes from './admin';
+import empresaRoutes from './empresa';
+import alunoRoutes from './aluno';
 
 // Layouts (componentes "casca" que envolvem as views de cada área)
 const AuthLayout = () => import('../layouts/AuthLayout.vue');
 const AdminLayout = () => import('../layouts/AdminLayout.vue');
+const EmpresaLayout = () => import('../layouts/EmpresaLayout.vue');
+const AlunoLayout = () => import('../layouts/AlunoLayout.vue');
 
 /**
  * Cada grupo de rotas (admin/empresa/aluno) é "encaixado" dentro do
@@ -30,18 +34,16 @@ const routes = [
         meta: adminRoutes[0].meta,
     },
     {
-        // Páginas com cabeçalho próprio (sem sidebar), fora do EmpresaLayout.
-        path: '/empresa/buscar-talentos',
-        name: 'empresa.buscar-talentos',
-        component: () => import('../modules/empresa/views/BuscarTalentosView.vue'),
-        meta: { requiresAuth: true, role: 'empresa' },
+        path: '/empresa',
+        component: EmpresaLayout,
+        children: empresaRoutes[0].children,
+        meta: empresaRoutes[0].meta,
     },
     {
-        path: '/empresa/candidatos/:matricula',
-        name: 'empresa.candidato',
-        component: () => import('../modules/empresa/views/PerfilCandidatoView.vue'),
-        meta: { requiresAuth: true, role: 'empresa' },
-        props: true,
+        path: '/aluno',
+        component: AlunoLayout,
+        children: alunoRoutes[0].children,
+        meta: alunoRoutes[0].meta,
     },
     {
         // Única página do aluno após o login (sem Dashboard/Convites).

@@ -138,7 +138,7 @@ const form = reactive({
 });
 
 onMounted(async () => {
-    const cnpj = auth.pessoa?.id_pessoa;
+    const cnpj = auth.pessoa?.cnpj;
     if (cnpj) {
         await empresa.carregarPerfil(cnpj);
     }
@@ -188,7 +188,6 @@ async function salvarVaga() {
         } else {
             await empresa.criarVaga({
                 ...form,
-                empresa_cnpj: auth.pessoa?.id_pessoa,
             });
         }
         modalVagaAberto.value = false;

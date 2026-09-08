@@ -13,6 +13,11 @@ export default [
                 component: () => import('../modules/empresa/views/DashboardView.vue'),
             },
             {
+                path: 'buscar-talentos',
+                name: 'empresa.buscar-talentos',
+                component: () => import('../modules/empresa/views/BuscarTalentosView.vue'),
+            },
+            {
                 path: 'minhas-vagas',
                 name: 'empresa.minhas-vagas',
                 component: () => import('../modules/empresa/views/MinhasVagasView.vue'),
@@ -31,6 +36,12 @@ export default [
                 path: 'perfil',
                 name: 'empresa.perfil',
                 component: () => import('../modules/empresa/views/PerfilEmpresaView.vue'),
+            },
+            {
+                path: 'candidatos/:matricula',
+                name: 'empresa.candidato',
+                component: () => import('../modules/empresa/views/PerfilCandidatoView.vue'),
+                props: true,
             },
         ],
     },
