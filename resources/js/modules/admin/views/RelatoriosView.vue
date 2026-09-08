@@ -119,7 +119,7 @@ const linhaRef = ref(null);
 let donutChart = null;
 let linhaChart = null;
 
-const CORES = ['#0d3b66', '#f5a623', '#2e7d5b', '#1a9ab0', '#8c8c88'];
+const CORES = ['#004587', '#f5a623', '#2e7d5b', '#1a9ab0', '#8c8c88'];
 
 function formatarNumero(valor) {
     return new Intl.NumberFormat('pt-BR').format(valor || 0);
@@ -182,8 +182,8 @@ function montarGraficos() {
                     {
                         label: 'Buscas Realizadas',
                         data: montarSerieMensal(dashboard.value.buscasPorMes),
-                        borderColor: '#0d3b66',
-                        backgroundColor: 'rgba(13,59,102,0.08)',
+                        borderColor: '#004587',
+                        backgroundColor: 'rgba(0,69,135,0.08)',
                         tension: 0.3,
                         fill: true,
                     },

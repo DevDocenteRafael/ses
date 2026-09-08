@@ -63,6 +63,12 @@ export const useAdminStore = defineStore('admin', {
             if (aluno) aluno.status = status;
         },
 
+        async cadastrarAluno(dados) {
+            const { data } = await adminService.cadastrarAluno(dados);
+            this.alunos.unshift(data);
+            return data;
+        },
+
         async carregarEmpresas(params = {}) {
             this.carregando = true;
             this.erro = null;
@@ -84,6 +90,12 @@ export const useAdminStore = defineStore('admin', {
             await adminService.atualizarStatusEmpresa(cnpj, status);
             const empresa = this.empresas.find((e) => e.cnpj === cnpj);
             if (empresa) empresa.status = status;
+        },
+
+        async cadastrarEmpresa(dados) {
+            const { data } = await adminService.cadastrarEmpresa(dados);
+            this.empresas.unshift(data);
+            return data;
         },
 
         async carregarVagas(params = {}) {

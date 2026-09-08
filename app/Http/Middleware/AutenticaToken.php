@@ -38,6 +38,14 @@ class AutenticaToken
             return response()->json(['message' => 'Nao autenticado.'], 401);
         }
 
+        if ($pessoa->candidato && !$pessoa->candidato->status) {
+            return response()->json(['message' => 'Conta bloqueada.'], 403);
+        }
+
+        if ($pessoa->empresa && !$pessoa->empresa->status) {
+            return response()->json(['message' => 'Conta bloqueada.'], 403);
+        }
+
         if ($tiposPermitidos && ! in_array($pessoa->tipo(), $tiposPermitidos, true)) {
             return response()->json(['message' => 'Acesso nao autorizado para este perfil.'], 403);
         }

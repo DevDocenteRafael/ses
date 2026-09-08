@@ -26,12 +26,28 @@ class ConviteController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $empresa = $this->empresaAutenticada($request);
+
         $validated = $request->validate([
             'descricao'            => 'required|string|max:150',
-            'empresa_cnpj'         => 'required|string|exists:empresa,cnpj',
-            'candidatos_matricula' => 'required|integer|exists:candidato,matricula',
+            'candidatos_matricula' => ['required', 'string', 'min:1', 'max:15', 'regex:/^[0-9]+$/', 'exists:candidato,matricula'],
             'vagas_id_vaga'        => 'required|integer|exists:vagas,id_vaga',
+        ], [
+            'candidatos_matricula.regex' => 'O campo candidatos_matricula deve conter apenas números.',
+            'candidatos_matricula.max' => 'O campo candidatos_matricula não pode ser maior que 15 caracteres.',
+            'candidatos_matricula.string' => 'O campo candidatos_matricula deve ser um texto.',
         ]);
+
+        $validated['empresa_cnpj'] = $empresa->cnpj;
+
+        $vagaPertenceEmpresa = \App\Models\Vaga::query()
+            ->where('id_vaga', $validated['vagas_id_vaga'])
+            ->where('empresa_cnpj', $empresa->cnpj)
+            ->exists();
+
+        if (! $vagaPertenceEmpresa) {
+            abort(403, 'Voce nao tem permissao para criar convite para esta vaga.');
+        }
 
         $validated['status'] = Convite::STATUS_PENDENTE;
         $validated['data_envio'] = now();
@@ -56,7 +72,7 @@ class ConviteController extends Controller
     {
         $convite = Convite::findOrFail($id);
 
-        $this->garantirCandidatoDono($request, (int) $convite->candidatos_matricula);
+        $this->garantirCandidatoDono($request, (string) $convite->candidatos_matricula);
 
         $validated = $request->validate([
             'status'    => 'required|integer|in:' . implode(',', [
@@ -73,9 +89,13 @@ class ConviteController extends Controller
         return response()->json($convite->load(['empresa', 'candidato.pessoa', 'vaga']));
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        Convite::findOrFail($id)->delete();
+        $convite = Convite::findOrFail($id);
+
+        $this->garantirConviteDaEmpresa($request, $convite);
+
+        $convite->delete();
 
         return response()->json(['message' => 'Convite removido com sucesso.']);
     }

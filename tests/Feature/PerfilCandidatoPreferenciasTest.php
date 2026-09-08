@@ -8,11 +8,13 @@ use App\Models\PreferenciasDeTrabalho;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
 
 class PerfilCandidatoPreferenciasTest extends TestCase
 {
     use RefreshDatabase;
+    use GeneratesMatricula;
 
     public function test_api_aceita_todas_as_opcoes_validas_de_disponibilidade(): void
     {
@@ -53,6 +55,70 @@ class PerfilCandidatoPreferenciasTest extends TestCase
             $response->assertStatus(422)
                 ->assertJsonValidationErrors(['disponibilidade_de_horario']);
         }
+    }
+
+    public function test_api_aceita_regiao_administrativa_valida_da_lista_permitida(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('regiao_administrativa', 'Ceilândia');
+
+        $this->assertDatabaseHas('preferencias_de_trabalho', [
+            'candidato_matricula' => $candidato->matricula,
+            'regiao_administrativa' => 'Ceilândia',
+        ]);
+    }
+
+    public function test_api_rejeita_regiao_administrativa_fora_da_lista_permitida(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Cidade Inventada',
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['regiao_administrativa']);
+    }
+
+    public function test_candidato_pode_salvar_preferencias_na_propria_matricula(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Integral',
+            'regiao_administrativa' => 'Recanto das Emas',
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertCreated();
+    }
+
+    public function test_candidato_nao_pode_salvar_preferencias_em_matricula_de_terceiro(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+        [, $outroCandidato] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$outroCandidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Integral',
+            'regiao_administrativa' => 'Recanto das Emas',
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertForbidden();
     }
 
     public function test_api_aceita_pretensao_salarial_inteira_zero_e_nula(): void
@@ -158,7 +224,7 @@ class PerfilCandidatoPreferenciasTest extends TestCase
         $pessoa = Pessoa::query()->where('email', $pessoa->email)->firstOrFail();
 
         $candidato = Candidato::query()->create([
-            'matricula' => random_int(100000, 999999),
+            'matricula' => $this->gerarMatricula(),
             'cpf' => (string) random_int(10000000000, 99999999999),
             'status' => true,
             'pessoa_id_pessoa' => $pessoa->id_pessoa,

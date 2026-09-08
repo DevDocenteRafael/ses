@@ -1,8 +1,8 @@
 <template>
-    <div class="d-flex">
+    <div class="d-flex vh-100 overflow-hidden">
         <slideBar :items="menuItems" @sair="handleSair" />
 
-        <main class="flex-grow-1 min-vh-100 bg-body-tertiary">
+        <main class="flex-grow-1 bg-body-tertiary overflow-y-auto">
             <router-view />
         </main>
     </div>

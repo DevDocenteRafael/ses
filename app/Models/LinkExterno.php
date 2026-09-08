@@ -15,6 +15,10 @@ class LinkExterno extends Model
         'candidato_matricula',
     ];
 
+    protected $casts = [
+        'candidato_matricula' => 'string',
+    ];
+
     public function candidato()
     {
         return $this->belongsTo(Candidato::class, 'candidato_matricula', 'matricula');

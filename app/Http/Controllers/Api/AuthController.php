@@ -30,6 +30,15 @@ class AuthController extends Controller
         }
 
         $tipo = $this->resolverTipo($pessoa);
+
+        if ($tipo === 'candidato' && !$pessoa->candidato->status) {
+            return response()->json(['message' => 'Conta bloqueada.'], 403);
+        }
+        
+        if ($tipo === 'empresa' && !$pessoa->empresa->status) {
+            return response()->json(['message' => 'Conta bloqueada.'], 403);
+        }
+
         $token = Str::random(64);
 
         Cache::put($this->cacheKey($token), $pessoa->id_pessoa, now()->addDay());
@@ -106,6 +115,7 @@ class AuthController extends Controller
     {
         return [
             'id_pessoa' => $pessoa->id_pessoa,
+            'matricula' => $pessoa->candidato?->matricula,
             'nome' => $pessoa->nome,
             'email' => $pessoa->email,
             'telefone' => $pessoa->telefone,

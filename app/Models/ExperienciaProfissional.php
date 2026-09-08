@@ -22,6 +22,7 @@ class ExperienciaProfissional extends Model
     protected $casts = [
         'data_inicio' => 'date',
         'data_fim'    => 'date',
+        'candidato_matricula' => 'string',
     ];
 
     public function candidato()

@@ -18,6 +18,7 @@ class InformacoesProfissionais extends Model
 
     protected $casts = [
         'habilidades' => 'array',
+        'candidato_matricula' => 'string',
     ];
 
     public function candidato()

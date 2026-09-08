@@ -8,6 +8,7 @@ class Candidato extends Model
 {
     protected $table = 'candidato';
     protected $primaryKey = 'matricula';
+    protected $keyType = 'string';
     public $incrementing = false;
 
     protected $fillable = [
@@ -18,6 +19,7 @@ class Candidato extends Model
     ];
 
     protected $casts = [
+        'matricula' => 'string',
         'status' => 'boolean',
     ];
 

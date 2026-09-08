@@ -20,6 +20,7 @@ class DadosAcademicos extends Model
 
     protected $casts = [
         'ano_de_conclusao' => 'date',
+        'candidato_matricula' => 'string',
     ];
 
     public function candidato()

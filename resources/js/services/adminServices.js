@@ -22,6 +22,10 @@ export default {
         return api.put(`/candidatos/${matricula}`, { status });
     },
 
+    cadastrarAluno(dados) {
+        return api.post('/candidatos', dados);
+    },
+
     sincronizarAlunos(dados) {
         return api.post('/administrativo/sincronizar-alunos', dados);
     },
@@ -37,6 +41,10 @@ export default {
 
     atualizarStatusEmpresa(cnpj, status) {
         return api.put(`/empresas/${encodeURIComponent(cnpj)}`, { status });
+    },
+
+    cadastrarEmpresa(dados) {
+        return api.post('/empresas', dados);
     },
 
     // Vagas

@@ -25,6 +25,7 @@ class Convite extends Model
     protected $casts = [
         'status'     => 'integer',
         'data_envio' => 'datetime',
+        'candidatos_matricula' => 'string',
     ];
 
     public function empresa()
