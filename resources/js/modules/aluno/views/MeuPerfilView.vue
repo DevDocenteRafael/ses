@@ -212,7 +212,7 @@
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
-                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Informações Profissionais (FR5)</h2>
+                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Informações Profissionais</h2>
                             <p class="small text-secondary mb-3"><span class="text-danger fw-semibold">*</span> Campos obrigatórios</p>
 
                             <div class="mb-3">
@@ -327,7 +327,7 @@
 
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
-                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Preferências de Trabalho (FR6)</h2>
+                            <h2 class="text-uppercase text-secondary small fw-bold mb-3">Preferências de Trabalho</h2>
 
                             <div class="row g-3">
                                 <div class="col-sm-6">
