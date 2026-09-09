@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Vaga;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class VagaController extends Controller
 {
@@ -43,10 +44,12 @@ class VagaController extends Controller
 
         $validated = $request->validate([
             'titulo'          => 'required|string|max:100',
-            'tipo'            => 'required|integer',
+            'tipo'            => ['required', 'integer', Rule::in([0, 1])],
             'area'            => 'required|string|max:45',
             'status'          => 'required|boolean',
             'data_publicacao' => 'required|date',
+        ], [
+            'tipo.in' => 'O tipo de contratação informado não é permitido.',
         ]);
 
         $validated['empresa_cnpj'] = $empresa->cnpj;
@@ -81,9 +84,11 @@ class VagaController extends Controller
 
         $validated = $request->validate([
             'titulo'  => 'sometimes|string|max:100',
-            'tipo'    => 'sometimes|integer',
+            'tipo'    => ['sometimes', 'integer', Rule::in([0, 1])],
             'area'    => 'sometimes|string|max:45',
             'status'  => 'sometimes|boolean',
+        ], [
+            'tipo.in' => 'O tipo de contratação informado não é permitido.',
         ]);
 
         $vaga->update($validated);

@@ -240,85 +240,87 @@
                                     <label class="form-label">Área de Atuação <span class="text-danger">*</span></label>
                                     <select v-model="perfil.area_de_atuacao" class="form-select" :class="campoInvalido('area_de_atuacao')">
                                         <option value="">Selecione</option>
-                                        <option>Tecnologia da Informação</option>
-                                        <option>Administração</option>
-                                        <option>Marketing</option>
-                                        <option>Recursos Humanos</option>
-                                        <option>Outra</option>
+                                        <option value="Tecnologia da Informação">Tecnologia da Informação</option>
+                                        <option value="Administração">Administração</option>
+                                        <option value="Marketing">Marketing</option>
+                                        <option value="Recursos Humanos">Recursos Humanos</option>
+                                        <option value="Outra">Outra</option>
                                     </select>
                                     <div v-if="erroDeCampo('area_de_atuacao')" class="invalid-feedback d-block">{{ erroDeCampo('area_de_atuacao') }}</div>
                                 </div>
                             </div>
 
                             <div class="position-relative" ref="habilidadesDropdownContainer">
-                                <label class="form-label">Habilidades (Tags)</label>
-                                <div class="d-flex flex-column gap-2">
-                                    <div>
-                                        <div v-if="perfil.habilidades.length" class="d-flex flex-wrap align-items-center gap-2">
-                                            <span v-for="(hab, i) in perfil.habilidades" :key="`${hab}-${i}`" class="badge habilidade-chip d-inline-flex align-items-center gap-2 py-2 px-3">
-                                                <span>{{ hab }}</span>
-                                                <button type="button" class="btn-close btn-close-sm habilidade-chip-fechar" aria-label="Remover habilidade" @click="removerHabilidade(i)"></button>
-                                            </span>
-                                        </div>
-                                        <p v-else class="small text-secondary mb-0">Nenhuma habilidade adicionada.</p>
+                                <label class="form-label">Habilidades <span class="text-danger">*</span></label>
+                                <button
+                                    type="button"
+                                    class="form-select habilidades-select text-start d-flex align-items-center justify-content-between"
+                                    :aria-expanded="mostrarDropdownHabilidades"
+                                    @click.stop="alternarDropdownHabilidades"
+                                >
+                                    <span :class="perfil.habilidades.length ? 'text-body' : 'text-secondary'">
+                                        {{ rotuloHabilidadesSelecionadas }}
+                                    </span>
+                                    <i class="bi bi-chevron-down ms-2"></i>
+                                </button>
+
+                                <div v-if="mostrarDropdownHabilidades" class="habilidades-dropdown border rounded shadow-sm bg-white mt-1">
+                                    <div class="p-3 border-bottom">
+                                        <label class="form-label small text-secondary fw-semibold mb-1" for="busca-habilidade">Pesquisar habilidade...</label>
+                                        <input
+                                            id="busca-habilidade"
+                                            ref="habilidadeInput"
+                                            v-model="buscaHabilidade"
+                                            type="text"
+                                            class="form-control"
+                                            placeholder="Digite para pesquisar..."
+                                            maxlength="45"
+                                            autocomplete="off"
+                                            @keydown.enter.prevent="adicionarHabilidade"
+                                        >
                                     </div>
-                                    <div>
-                                        <button type="button" class="btn btn-outline-primary" @click="alternarDropdownHabilidades">
-                                            <i class="bi" :class="mostrarDropdownHabilidades ? 'bi-x-lg' : 'bi-plus-lg'"></i>
-                                            <span class="ms-1">{{ mostrarDropdownHabilidades ? 'Fechar habilidades' : 'Adicionar habilidade' }}</span>
-                                        </button>
-                                    </div>
-                                    <div v-if="mostrarDropdownHabilidades" class="habilidades-dropdown border rounded shadow-sm bg-white p-3">
+
+                                    <div class="habilidades-dropdown-lista p-3">
                                         <div>
-                                            <p class="small text-secondary fw-semibold mb-2">Habilidades Técnicas</p>
-                                            <div class="d-flex flex-wrap gap-2">
-                                                <button
-                                                    v-for="habilidade in sugestoesHabilidadesTecnicas"
-                                                    :key="habilidade"
-                                                    type="button"
-                                                    class="btn btn-sm sugestao-habilidade"
-                                                    :class="habilidadeSelecionada(habilidade) ? 'btn-primary' : 'btn-outline-primary'"
-                                                    @click="adicionarHabilidadeSugerida(habilidade)"
-                                                >
-                                                    {{ habilidade }}
-                                                </button>
+                                            <p class="small text-secondary fw-bold text-uppercase mb-2">Habilidades Técnicas</p>
+                                            <div v-if="habilidadesTecnicasFiltradas.length" :key="perfil.area_de_atuacao" class="d-flex flex-column gap-1">
+                                                <label v-for="habilidade in habilidadesTecnicasFiltradas" :key="habilidade" class="habilidade-opcao form-check rounded px-2 py-1 mb-0">
+                                                    <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
+                                                    <span class="form-check-label">{{ habilidade }}</span>
+                                                </label>
                                             </div>
+                                            <p v-else class="small text-secondary mb-0">Nenhuma habilidade técnica encontrada.</p>
                                         </div>
+
                                         <div class="mt-3">
-                                            <p class="small text-secondary fw-semibold mb-2">Soft Skills</p>
-                                            <div class="d-flex flex-wrap gap-2">
-                                                <button
-                                                    v-for="habilidade in sugestoesSoftSkills"
-                                                    :key="habilidade"
-                                                    type="button"
-                                                    class="btn btn-sm sugestao-habilidade"
-                                                    :class="habilidadeSelecionada(habilidade) ? 'btn-primary' : 'btn-outline-primary'"
-                                                    @click="adicionarHabilidadeSugerida(habilidade)"
-                                                >
-                                                    {{ habilidade }}
-                                                </button>
+                                            <p class="small text-secondary fw-bold text-uppercase mb-2">Soft Skills</p>
+                                            <div v-if="softSkillsFiltradas.length" class="d-flex flex-column gap-1">
+                                                <label v-for="habilidade in softSkillsFiltradas" :key="habilidade" class="habilidade-opcao form-check rounded px-2 py-1 mb-0">
+                                                    <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
+                                                    <span class="form-check-label">{{ habilidade }}</span>
+                                                </label>
+                                            </div>
+                                            <p v-else class="small text-secondary mb-0">Nenhuma soft skill encontrada.</p>
+                                        </div>
+
+                                        <div v-if="perfil.habilidades.length" class="mt-3 pt-3 border-top">
+                                            <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
+                                            <div class="d-flex flex-column gap-1">
+                                                <div v-for="(habilidade, indice) in perfil.habilidades" :key="`${habilidade}-${indice}`" class="habilidade-selecionada d-flex align-items-center justify-content-between rounded px-2 py-1">
+                                                    <span>{{ habilidade }}</span>
+                                                    <button type="button" class="btn btn-sm btn-link text-danger p-0" aria-label="Remover habilidade" @click="removerHabilidade(indice)">
+                                                        <i class="bi bi-x-lg"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="mt-3">
-                                            <p class="small text-secondary fw-semibold mb-2">Outra habilidade</p>
-                                            <div class="d-flex flex-column flex-sm-row gap-2">
-                                                <input
-                                                    ref="habilidadeInput"
-                                                    v-model="novaHabilidade"
-                                                    type="text"
-                                                    class="form-control"
-                                                    placeholder="Digite uma habilidade..."
-                                                    maxlength="45"
-                                                    @keydown.enter.prevent="adicionarHabilidade"
-                                                >
-                                                <button type="button" class="btn btn-outline-primary flex-shrink-0" @click="adicionarHabilidade">
-                                                    <i class="bi bi-plus-lg me-1"></i> Adicionar
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex justify-content-end mt-4 pt-2">
-                                            <button type="button" class="btn btn-sm btn-primary px-4" @click="fecharDropdownHabilidades">Concluir</button>
-                                        </div>
+                                    </div>
+
+                                    <div class="border-top p-3 d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-between">
+                                        <button type="button" class="btn btn-outline-primary" :disabled="!podeAdicionarHabilidadePersonalizada" @click="adicionarHabilidade">
+                                            <i class="bi bi-plus-lg me-1"></i> Adicionar nova habilidade
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-primary px-4" @click="fecharDropdownHabilidades">Concluir</button>
                                     </div>
                                 </div>
                             </div>
@@ -339,10 +341,6 @@
                                     <div class="form-check form-check-inline">
                                         <input v-model="preferencias.estagio" class="form-check-input" type="checkbox" id="tipoEstagio">
                                         <label class="form-check-label" for="tipoEstagio">Estágio</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input v-model="preferencias.jovemAprendiz" class="form-check-input" type="checkbox" id="tipoJovemAprendiz">
-                                        <label class="form-check-label" for="tipoJovemAprendiz">Jovem Aprendiz</label>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
@@ -401,6 +399,7 @@
                                             type="text"
                                             inputmode="numeric"
                                             class="form-control sem-setas"
+                                            placeholder="Ex.: R$ 1.000,00 – R$ 2.000,00"
                                             @keydown="bloquearSinalNegativo"
                                             @input="aplicarMascaraPretensaoSalarial"
                                         >
@@ -453,7 +452,6 @@
                                             <option>Estágio</option>
                                             <option>CLT</option>
                                             <option>PJ / Freelancer</option>
-                                            <option>Jovem Aprendiz</option>
                                             <option>Voluntariado</option>
                                         </select>
                                         <div v-if="erroDeCampo('tipo')" class="invalid-feedback d-block">{{ erroDeCampo('tipo') }}</div>
@@ -565,6 +563,7 @@ const mostrarFormCursoExterno = ref(false);
 const mostrarFormExperiencia = ref(false);
 const buscaRegiaoAdministrativa = ref('');
 const novaHabilidade = ref('');
+const buscaHabilidade = ref('');
 const mostrarDropdownRegiaoAdministrativa = ref(false);
 const mostrarDropdownHabilidades = ref(false);
 const indiceRegiaoAdministrativaDestacada = ref(-1);
@@ -582,25 +581,78 @@ const informacoesPessoais = reactive({
     telefone: '',
 });
 
-const sugestoesHabilidadesTecnicas = [
-    'Excel',
-    'Word',
-    'PowerPoint',
-    'Power BI',
-    'HTML',
-    'CSS',
-    'JavaScript',
-    'Vue.js',
-    'PHP',
-    'Laravel',
-    'MySQL',
-    'Git',
-    'Redes',
-    'Suporte Técnico',
-    'Pacote Office',
-    'Segurança da Informação',
-    'Banco de Dados',
-];
+const habilidadesPorArea = {
+    'Tecnologia da Informação': [
+        'HTML',
+        'CSS',
+        'JavaScript',
+        'Vue.js',
+        'PHP',
+        'Laravel',
+        'MySQL',
+        'Git',
+        'Redes',
+        'Suporte Técnico',
+        'Segurança da Informação',
+        'Banco de Dados',
+    ],
+    Administração: [
+        'Excel',
+        'Word',
+        'PowerPoint',
+        'Power BI',
+        'Pacote Office',
+        'Rotinas Administrativas',
+        'Atendimento ao Cliente',
+        'Controle de Documentos',
+        'Gestão de Processos',
+        'Emissão de Relatórios',
+        'Organização de Arquivos',
+        'Controle Financeiro',
+    ],
+    Marketing: [
+        'Marketing Digital',
+        'Redes Sociais',
+        'Copywriting',
+        'Canva',
+        'SEO',
+        'Google Analytics',
+        'Google Ads',
+        'E-mail Marketing',
+        'Criação de Conteúdo',
+        'Planejamento de Campanhas',
+        'Pesquisa de Mercado',
+        'Branding',
+    ],
+    'Recursos Humanos': [
+        'Recrutamento e Seleção',
+        'Triagem de Currículos',
+        'Entrevistas',
+        'Onboarding',
+        'Treinamento e Desenvolvimento',
+        'Folha de Pagamento',
+        'Controle de Ponto',
+        'Benefícios',
+        'Clima Organizacional',
+        'Comunicação Interna',
+        'Departamento Pessoal',
+        'Gestão de Pessoas',
+    ],
+    Outra: [
+        'Pacote Office',
+        'Excel',
+        'Atendimento ao Cliente',
+        'Rotinas Operacionais',
+        'Organização de Documentos',
+        'Controle de Estoque',
+        'Vendas',
+        'Negociação',
+        'Relatórios',
+        'Pesquisa e Análise',
+        'Suporte Administrativo',
+        'Aprendizado Contínuo',
+    ],
+};
 
 const sugestoesSoftSkills = [
     'Comunicação',
@@ -700,11 +752,42 @@ const perfil = reactive({
     habilidades: [],
 });
 
-// Bitmask: CLT=1, Estagio=2, Jovem Aprendiz=4
+function obterChaveHabilidadesPorArea(areaDeAtuacao) {
+    const areaNormalizada = normalizarTexto(areaDeAtuacao);
+
+    return Object.keys(habilidadesPorArea).find((area) => normalizarTexto(area) === areaNormalizada) || 'Outra';
+}
+
+const chaveHabilidadesTecnicasEncontrada = computed(() => obterChaveHabilidadesPorArea(perfil.area_de_atuacao));
+
+const sugestoesHabilidadesTecnicas = computed(() => habilidadesPorArea[chaveHabilidadesTecnicasEncontrada.value]);
+
+const termoBuscaHabilidade = computed(() => normalizarTexto(buscaHabilidade.value));
+
+const habilidadesTecnicasFiltradas = computed(() => filtrarHabilidades(sugestoesHabilidadesTecnicas.value));
+
+const softSkillsFiltradas = computed(() => filtrarHabilidades(sugestoesSoftSkills));
+
+const rotuloHabilidadesSelecionadas = computed(() => {
+    const total = perfil.habilidades.length;
+
+    if (!total) {
+        return 'Selecione habilidades...';
+    }
+
+    return total === 1 ? '1 habilidade selecionada' : `${total} habilidades selecionadas`;
+});
+
+const podeAdicionarHabilidadePersonalizada = computed(() => {
+    const habilidade = buscaHabilidade.value.trim();
+
+    return Boolean(habilidade) && !habilidadeSelecionada(habilidade);
+});
+
+// Bitmask: CLT=1, Estágio=2
 const preferencias = reactive({
     clt: false,
     estagio: false,
-    jovemAprendiz: false,
     disponibilidade_de_horario: 'Manhã',
     regiao_administrativa: '',
     pretensao_salarial: '',
@@ -927,7 +1010,6 @@ function aplicarTipoContratacao(valor) {
     const bitmask = valor || 0;
     preferencias.clt = Boolean(bitmask & 1);
     preferencias.estagio = Boolean(bitmask & 2);
-    preferencias.jovemAprendiz = Boolean(bitmask & 4);
 }
 
 function limparErrosFormulario() {
@@ -1021,7 +1103,7 @@ function campoInvalido(campo) {
 }
 
 function tipoContratacaoBitmask() {
-    return (preferencias.clt ? 1 : 0) + (preferencias.estagio ? 2 : 0) + (preferencias.jovemAprendiz ? 4 : 0);
+    return (preferencias.clt ? 1 : 0) + (preferencias.estagio ? 2 : 0);
 }
 
 async function carregar() {
@@ -1041,9 +1123,11 @@ async function carregar() {
         }
 
         if (data.informacoes_profissionais) {
+            const areaRecebidaCarregar = data.informacoes_profissionais.area_de_atuacao || perfil.area_de_atuacao;
+
             perfil.sobre_mim = data.informacoes_profissionais.sobre_mim || '';
             perfil.cargo_de_interesse = data.informacoes_profissionais.cargo_de_interesse || '';
-            perfil.area_de_atuacao = data.informacoes_profissionais.area_de_atuacao || perfil.area_de_atuacao;
+            perfil.area_de_atuacao = areaRecebidaCarregar;
             perfil.habilidades = data.informacoes_profissionais.habilidades || [];
         }
 
@@ -1060,13 +1144,22 @@ async function carregar() {
 }
 
 function adicionarHabilidade() {
-    const habilidade = novaHabilidade.value.trim();
+    const habilidade = buscaHabilidade.value.trim() || novaHabilidade.value.trim();
 
-    if (habilidade && !perfil.habilidades.includes(habilidade)) {
+    if (habilidade && !habilidadeSelecionada(habilidade)) {
         perfil.habilidades.push(habilidade);
+        buscaHabilidade.value = '';
         novaHabilidade.value = '';
         habilidadeInput.value?.focus();
     }
+}
+
+function filtrarHabilidades(habilidades) {
+    if (!termoBuscaHabilidade.value) {
+        return habilidades;
+    }
+
+    return habilidades.filter((habilidade) => normalizarTexto(habilidade).includes(termoBuscaHabilidade.value));
 }
 
 function alternarDropdownHabilidades() {
@@ -1081,14 +1174,24 @@ function fecharDropdownHabilidades() {
     mostrarDropdownHabilidades.value = false;
 }
 
-function adicionarHabilidadeSugerida(habilidade) {
-    if (!perfil.habilidades.includes(habilidade)) {
+function alternarHabilidade(habilidade) {
+    const indice = indiceHabilidadeSelecionada(habilidade);
+
+    if (indice >= 0) {
+        perfil.habilidades.splice(indice, 1);
+    } else {
         perfil.habilidades.push(habilidade);
     }
 }
 
+function indiceHabilidadeSelecionada(habilidade) {
+    const habilidadeNormalizada = normalizarTexto(habilidade);
+
+    return perfil.habilidades.findIndex((item) => normalizarTexto(item) === habilidadeNormalizada);
+}
+
 function habilidadeSelecionada(habilidade) {
-    return perfil.habilidades.includes(habilidade);
+    return indiceHabilidadeSelecionada(habilidade) >= 0;
 }
 
 function removerHabilidade(indice) {
@@ -1249,30 +1352,40 @@ onBeforeUnmount(() => {
     overflow-y: auto;
 }
 
-.habilidade-chip {
-    background-color: var(--bs-primary-bg-subtle);
-    color: var(--bs-primary);
-    border: 1px solid rgba(var(--bs-primary-rgb), 0.15);
-    border-radius: 999px;
-    font-weight: 500;
-}
-
-.habilidade-chip-fechar {
-    font-size: 0.55rem;
-    opacity: 0.7;
-}
-
-.habilidade-chip-fechar:hover {
-    opacity: 1;
-}
-
-.sugestao-habilidade {
-    border-radius: 999px;
-    font-weight: 500;
+.habilidades-select {
+    min-height: 38px;
+    background-image: none;
 }
 
 .habilidades-dropdown {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    z-index: 1050;
     width: 100%;
+}
+
+.habilidades-dropdown-lista {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.habilidade-opcao,
+.habilidade-selecionada {
+    transition: background-color 0.15s ease;
+}
+
+.habilidade-opcao {
+    cursor: pointer;
+}
+
+.habilidade-opcao:hover,
+.habilidade-selecionada:hover {
+    background-color: var(--bs-primary-bg-subtle);
+}
+
+.habilidade-opcao .form-check-input {
+    float: none;
 }
 
 .toast-flutuante {

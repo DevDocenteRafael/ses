@@ -246,7 +246,6 @@ const tipoContratacaoLabel = computed(() => {
     const tipos = [];
     if (mascara & 1) tipos.push('CLT');
     if (mascara & 2) tipos.push('Estágio');
-    if (mascara & 4) tipos.push('Jovem Aprendiz');
     return tipos.length ? tipos.join(' / ') : '-';
 });
 

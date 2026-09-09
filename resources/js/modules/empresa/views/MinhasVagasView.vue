@@ -79,7 +79,6 @@
                     <select v-model.number="form.tipo" class="form-select" required>
                         <option :value="0">CLT / Efetivo</option>
                         <option :value="1">Estágio</option>
-                        <option :value="2">Jovem Aprendiz</option>
                     </select>
                 </div>
 
@@ -126,7 +125,6 @@ const erroForm = ref('');
 const tiposRotulo = {
     0: 'CLT / Efetivo',
     1: 'Estágio',
-    2: 'Jovem Aprendiz',
 };
 
 const form = reactive({

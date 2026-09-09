@@ -54,10 +54,6 @@
                         <input v-model="filtros.estagio" class="form-check-input" type="checkbox" id="fEstagio">
                         <label class="form-check-label" for="fEstagio">Estágio</label>
                     </div>
-                    <div class="form-check small mb-1">
-                        <input v-model="filtros.jovemAprendiz" class="form-check-input" type="checkbox" id="fAprendiz">
-                        <label class="form-check-label" for="fAprendiz">Jovem Aprendiz</label>
-                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -186,7 +182,6 @@ const filtros = reactive({
     tipo_curso: '',
     clt: false,
     estagio: false,
-    jovemAprendiz: false,
     disponibilidade: '',
     habilidades: [],
 });
@@ -221,7 +216,7 @@ function adicionarHabilidade() {
 }
 
 function tipoContratacaoBitmask() {
-    return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0) + (filtros.jovemAprendiz ? 4 : 0);
+    return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0);
 }
 
 async function buscar() {
@@ -249,7 +244,6 @@ function limparFiltros() {
     filtros.tipo_curso = '';
     filtros.clt = false;
     filtros.estagio = false;
-    filtros.jovemAprendiz = false;
     filtros.disponibilidade = '';
     filtros.habilidades = [];
     buscar();

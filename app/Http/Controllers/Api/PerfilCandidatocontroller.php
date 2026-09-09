@@ -12,6 +12,7 @@ use App\Models\CursoExterno;
 use App\Models\ExperienciaProfissional;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 
 class PerfilCandidatoController extends Controller
 {
@@ -104,10 +105,12 @@ class PerfilCandidatoController extends Controller
         $this->garantirCandidatoDono($request, $matricula);
 
         $validated = $request->validate([
-            'tipo_de_contratacao'        => 'nullable|integer|min:0',
+            'tipo_de_contratacao'        => ['nullable', 'integer', Rule::in([0, 1, 2, 3])],
             'disponibilidade_de_horario' => ['nullable', 'string', 'in:Manhã,Tarde,Noite,Integral'],
             'regiao_administrativa'      => ['required', 'string', 'max:100', 'in:' . implode(',', self::REGIOES_ADMINISTRATIVAS_DF)],
             'pretensao_salarial'         => 'nullable|numeric|min:0',
+        ], [
+            'tipo_de_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
         ]);
 
         $pref = PreferenciasDeTrabalho::updateOrCreate(

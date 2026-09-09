@@ -92,6 +92,19 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_filtro_de_candidatos_rejeita_jovem_aprendiz_por_query_manual(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        foreach ([4, 5, 6, 7] as $tipoContratacao) {
+            $this->withToken($tokenEmpresa)
+                ->getJson("/api/candidatos?tipo_contratacao={$tipoContratacao}")
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['tipo_contratacao'])
+                ->assertJsonFragment(['O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.']);
+        }
+    }
+
     public function test_aluno_acessa_proprio_candidato_mas_nao_acessa_candidato_de_terceiro(): void
     {
         [, $candidatoA, $tokenA] = $this->criarCandidatoAutenticado();
@@ -201,6 +214,21 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'titulo' => 'Pessoa Desenvolvedora',
             'empresa_cnpj' => $empresa->cnpj,
         ]);
+    }
+
+    public function test_empresa_nao_cria_vaga_com_tipo_de_contratacao_antigo(): void
+    {
+        [, $empresa, $token] = $this->criarEmpresaAutenticada();
+
+        $this->withToken($token)->postJson('/api/vagas', [
+            'titulo' => 'Pessoa Desenvolvedora',
+            'tipo' => 2,
+            'area' => 'Tecnologia',
+            'status' => true,
+            'data_publicacao' => '2026-09-01',
+            'empresa_cnpj' => $empresa->cnpj,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['tipo']);
     }
 
     public function test_empresa_lista_somente_suas_vagas_e_nao_recebe_vaga_de_outra_empresa(): void

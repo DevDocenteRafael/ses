@@ -106,6 +106,41 @@ class PerfilCandidatoPreferenciasTest extends TestCase
         $response->assertCreated();
     }
 
+    public function test_api_aceita_clt_estagio_e_combinacao_de_ambos(): void
+    {
+        foreach ([1, 2, 3] as $tipoContratacao) {
+            [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+            $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+                'tipo_de_contratacao' => $tipoContratacao,
+                'disponibilidade_de_horario' => 'Integral',
+                'regiao_administrativa' => 'Recanto das Emas',
+                'pretensao_salarial' => 2500,
+            ]);
+
+            $response->assertCreated()
+                ->assertJsonPath('tipo_de_contratacao', $tipoContratacao);
+        }
+    }
+
+    public function test_api_rejeita_jovem_aprendiz_e_valores_com_bit_antigo(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        foreach ([4, 5, 6, 7] as $tipoContratacao) {
+            $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+                'tipo_de_contratacao' => $tipoContratacao,
+                'disponibilidade_de_horario' => 'Integral',
+                'regiao_administrativa' => 'Recanto das Emas',
+                'pretensao_salarial' => 2500,
+            ]);
+
+            $response->assertStatus(422)
+                ->assertJsonValidationErrors(['tipo_de_contratacao'])
+                ->assertJsonFragment(['O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.']);
+        }
+    }
+
     public function test_candidato_nao_pode_salvar_preferencias_em_matricula_de_terceiro(): void
     {
         [, $candidato, $token] = $this->criarCandidatoAutenticado();
@@ -209,6 +244,34 @@ class PerfilCandidatoPreferenciasTest extends TestCase
 
         $leitura->assertOk()
             ->assertJsonPath('preferencias_de_trabalho.pretensao_salarial', $valorEnviado);
+    }
+
+    public function test_migration_remove_apenas_o_bit_antigo_preservando_candidato_e_demais_preferencias(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'pretensao_salarial' => 2500,
+        ])->assertCreated();
+
+        PreferenciasDeTrabalho::where('candidato_matricula', $candidato->matricula)
+            ->update(['tipo_de_contratacao' => 5]);
+
+        $migration = include database_path('migrations/2026_09_09_123000_remove_jovem_aprendiz_from_preferencias_de_trabalho.php');
+        $migration->up();
+
+        $this->assertDatabaseHas('candidato', ['matricula' => $candidato->matricula]);
+        $this->assertDatabaseHas('preferencias_de_trabalho', [
+            'candidato_matricula' => $candidato->matricula,
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'pretensao_salarial' => 2500,
+        ]);
+        $this->assertSame(0, PreferenciasDeTrabalho::whereRaw('(tipo_de_contratacao & 4) != 0')->count());
     }
 
     private function criarCandidatoAutenticado(): array

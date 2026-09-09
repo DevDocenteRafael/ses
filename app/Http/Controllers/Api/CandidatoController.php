@@ -171,8 +171,14 @@ class CandidatoController extends Controller
             });
         }
 
-        // Bitmask: CLT=1, Estagio=2, Jovem Aprendiz=4 (ver PreferenciasDeTrabalho).
+        // Bitmask permitido: CLT=1, Estágio=2. Valores com o bit 4 são inválidos.
         if ($request->filled('tipo_contratacao')) {
+            $request->validate([
+                'tipo_contratacao' => ['integer', 'in:1,2,3'],
+            ], [
+                'tipo_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
+            ]);
+
             $mascara = (int) $request->query('tipo_contratacao');
             $query->whereHas('preferenciasDeTrabalho', function ($q) use ($mascara) {
                 $q->whereRaw('(tipo_de_contratacao & ?) != 0', [$mascara]);
