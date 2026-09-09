@@ -1,6 +1,6 @@
 <template>
     <div>
-        <topbar titulo="Gestão dos Candidatos" subtitulo="Controle de acesso e sincronização de candidatos (FR37)">
+        <topbar titulo="Gestão dos Candidatos" subtitulo="Controle de acesso e sincronização de candidatos">
             <template #acoes>
                 <button class="btn btn-outline-primary" :disabled="admin.carregando" @click="sincronizar">
                     <i class="bi bi-arrow-repeat me-1"></i>

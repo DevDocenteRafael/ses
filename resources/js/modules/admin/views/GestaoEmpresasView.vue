@@ -1,6 +1,6 @@
 <template>
     <div>
-        <topbar titulo="Gestão de Empresas" subtitulo="Aprovação e controle de acesso de parceiros corporativos (FR35)">
+        <topbar titulo="Gestão de Empresas" subtitulo="Aprovação e controle de acesso de parceiros corporativos">
             <template #acoes>
                 <button class="btn btn-outline-primary" :disabled="admin.carregando" @click="sincronizar">
                     <i class="bi bi-arrow-repeat me-1"></i>
