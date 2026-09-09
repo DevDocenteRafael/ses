@@ -2,7 +2,7 @@
     <div>
         <topbar
             titulo="Indicadores de Empregabilidade"
-            subtitulo="Acompanhamento estratégico do Portal Senac (FR38)"
+            subtitulo="Acompanhamento estratégico do Portal Senac"
         />
 
         <div class="container-fluid p-4">

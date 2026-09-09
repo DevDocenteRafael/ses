@@ -45,7 +45,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Contratação (FR18)</label>
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Contratação</label>
                     <div class="form-check small mb-1">
                         <input v-model="filtros.clt" class="form-check-input" type="checkbox" id="fCLT">
                         <label class="form-check-label" for="fCLT">CLT / Efetivo</label>
@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade (FR17)</label>
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade</label>
                     <select v-model="filtros.disponibilidade" class="form-select form-select-sm">
                         <option value="">Qualquer Horário</option>
                         <option value="Manhã">Manhã</option>
@@ -71,7 +71,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas (FR16)</label>
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas</label>
                     <input
                         v-model="novaHabilidade"
                         type="text"
