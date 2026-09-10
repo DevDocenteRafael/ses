@@ -11,6 +11,14 @@
 	width: 100%;
 	display: flex;
 	justify-content: center;
+	position: relative;
+}
+
+.auth-login-theme-toggle {
+	position: fixed;
+	top: 24px;
+	right: 24px;
+	z-index: 10;
 }
 
 .auth-login-card {
@@ -19,6 +27,40 @@
 	background: #fff;
 	overflow: hidden;
 	border-radius: 0;
+}
+
+html.dark .auth-layout {
+	background: #0f172a;
+}
+
+html.dark .auth-login-card {
+	background: var(--ses-surface);
+}
+
+html.dark .auth-login-content {
+	background: var(--ses-surface);
+	color: var(--ses-text);
+}
+
+html.dark .auth-login-input {
+	background: #0b1220;
+	border: 1px solid var(--ses-border);
+	color: var(--ses-text);
+}
+
+html.dark .auth-login-input:focus {
+	background: #0b1220;
+}
+
+html.dark .auth-login-input::placeholder,
+html.dark .auth-login-password-toggle {
+	color: #a8b3c7;
+}
+
+html.dark .auth-login-password-toggle:hover,
+html.dark .auth-login-password-toggle:focus,
+html.dark .auth-login-check .form-check-label {
+	color: var(--ses-text);
 }
 
 .auth-login-aside {

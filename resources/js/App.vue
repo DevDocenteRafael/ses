@@ -1,11 +1,14 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useAuthStore } from './store/auth';
+import { useThemeStore } from './store/theme';
 
 // Ao iniciar a aplicação (ex: usuário deu F5), tenta restaurar a sessão
 // a partir do token salvo no localStorage.
 const auth = useAuthStore();
+const theme = useThemeStore();
 onMounted(() => {
+    theme.inicializar();
     auth.restaurarSessao();
 });
 </script>

@@ -8,6 +8,7 @@
                 </p>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <ThemeToggle />
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
                     <p class="text-secondary small mb-0">Aluno</p>
@@ -140,6 +141,7 @@
 import { computed, reactive, ref, onMounted } from 'vue';
 import { useAuthStore } from '../../../store/auth';
 import CardIndicador from '../../../components/common/cardIndicador.vue';
+import ThemeToggle from '../../../components/common/ThemeToggle.vue';
 import alunosService from '../../../services/alunosServices';
 
 const auth = useAuthStore();

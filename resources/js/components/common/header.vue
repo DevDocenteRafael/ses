@@ -8,6 +8,8 @@
         <div class="d-flex align-items-center gap-3">
             <slot name="acoes" />
 
+            <ThemeToggle />
+
             <div v-if="auth.pessoa" class="d-flex align-items-center gap-3">
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">Administrador SENAC DF</p>
@@ -26,6 +28,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../../store/auth';
+import ThemeToggle from './ThemeToggle.vue';
 
 defineProps({
     titulo: { type: String, required: true },

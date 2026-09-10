@@ -11,6 +11,7 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
+                <ThemeToggle />
                 <button type="button" class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0" @click="abrirModalInformacoesPessoais">
                     <div class="text-end d-none d-sm-block">
                         <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
@@ -530,6 +531,7 @@
 import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
+import ThemeToggle from '../../../components/common/ThemeToggle.vue';
 import alunosService from '../../../services/alunosServices';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 

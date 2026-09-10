@@ -20,6 +20,130 @@
     --ses-primary-hover-rgb: 0, 51, 102;
     --ses-primary-active: #002850;
     --ses-admin-old-primary: #142a4d;
+    --ses-bg: #f8f9fa;
+    --ses-surface: #ffffff;
+    --ses-surface-rgb: 255, 255, 255;
+    --ses-border: rgba(0, 0, 0, 0.08);
+    --ses-text: #212529;
+    --ses-muted: #6c757d;
+    --ses-shadow: rgba(15, 23, 42, 0.08);
+}
+
+html.dark {
+    --bs-body-bg: #0f172a;
+    --bs-body-bg-rgb: 15, 23, 42;
+    --bs-body-color: #e5e7eb;
+    --bs-body-color-rgb: 229, 231, 235;
+    --bs-tertiary-bg: #111827;
+    --bs-tertiary-bg-rgb: 17, 24, 39;
+    --bs-secondary-color: #a8b3c7;
+    --bs-border-color: rgba(148, 163, 184, 0.24);
+    --bs-link-color: #7db7ff;
+    --bs-link-hover-color: #a9d0ff;
+    --ses-bg: #0f172a;
+    --ses-surface: #111827;
+    --ses-surface-rgb: 17, 24, 39;
+    --ses-border: rgba(148, 163, 184, 0.22);
+    --ses-text: #e5e7eb;
+    --ses-muted: #a8b3c7;
+    --ses-shadow: rgba(0, 0, 0, 0.45);
+}
+
+html,
+body,
+#app {
+    min-height: 100%;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+body,
+.card,
+.modal-content,
+.form-control,
+.form-select,
+.list-group-item,
+.dropdown-menu,
+.table,
+.page-link,
+.ses-topbar,
+.bg-white,
+.bg-body-tertiary {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+html.dark .bg-white,
+html.dark .card,
+html.dark .modal-content,
+html.dark .dropdown-menu,
+html.dark .list-group-item,
+html.dark .card-header,
+html.dark aside.bg-white {
+    background-color: var(--ses-surface) !important;
+    color: var(--ses-text) !important;
+}
+
+html.dark .bg-body-tertiary {
+    background-color: var(--ses-bg) !important;
+}
+
+html.dark .text-dark {
+    color: var(--ses-text) !important;
+}
+
+html.dark .text-secondary,
+html.dark .form-text {
+    color: var(--ses-muted) !important;
+}
+
+html.dark .border,
+html.dark .border-top,
+html.dark .border-end,
+html.dark .border-bottom,
+html.dark .border-start,
+html.dark .modal-header,
+html.dark .modal-footer,
+html.dark hr {
+    border-color: var(--ses-border) !important;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow {
+    box-shadow: 0 0.25rem 1rem var(--ses-shadow) !important;
+}
+
+html.dark .form-control,
+html.dark .form-select {
+    background-color: #0b1220;
+    border-color: var(--ses-border);
+    color: var(--ses-text);
+}
+
+html.dark .form-control:disabled,
+html.dark .form-control[readonly] {
+    background-color: #172033;
+    color: var(--ses-muted);
+}
+
+html.dark .form-control::placeholder {
+    color: #8190a8;
+}
+
+html.dark .table {
+    --bs-table-bg: var(--ses-surface);
+    --bs-table-color: var(--ses-text);
+    --bs-table-border-color: var(--ses-border);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.035);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.06);
+}
+
+html.dark .btn-light {
+    --bs-btn-bg: #1f2937;
+    --bs-btn-border-color: #334155;
+    --bs-btn-color: #f8fafc;
+    --bs-btn-hover-bg: #334155;
+    --bs-btn-hover-border-color: #475569;
+    --bs-btn-hover-color: #ffffff;
 }
 
 /* Força a atualização dos botões primários */

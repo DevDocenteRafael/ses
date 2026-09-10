@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
+import ThemeToggle from '../../../components/common/ThemeToggle.vue';
 import '../../../../css/modules/auth/login.css';
 
 const auth = useAuthStore();
@@ -56,6 +57,10 @@ async function enviarLogin() {
 
 <template>
 	<div class="auth-login-page">
+		<div class="auth-login-theme-toggle">
+			<ThemeToggle />
+		</div>
+
 		<div class="auth-login-card shadow-sm">
 			<div class="row g-0 h-100">
 				<section class="col-12 col-lg-5 auth-login-aside text-center text-white">

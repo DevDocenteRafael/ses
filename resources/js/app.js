@@ -10,6 +10,7 @@ import App from './App.vue';
 
 // Importa as rotas configuradas em router/index.js
 import router from './router';
+import { useThemeStore } from './store/theme';
 
 // Importa o CSS do Bootstrap
 // Responsável por toda a aparência dos componentes (botões, grid, cards, etc.)
@@ -46,7 +47,11 @@ const app = createApp(App);
 app.config.globalProperties.$http = axios;
 
 // Registra o Pinia na aplicação
-app.use(createPinia());
+const pinia = createPinia();
+app.use(pinia);
+
+// Aplica o tema global o quanto antes dentro do ciclo do Vue.
+useThemeStore(pinia).inicializar();
 
 // Registra o Vue Router
 app.use(router);
