@@ -317,7 +317,18 @@
                                     </div>
 
                                     <div class="border-top p-3 d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-between">
-                                        <button type="button" class="btn btn-outline-primary" :disabled="!podeAdicionarHabilidadePersonalizada" @click="adicionarHabilidade">
+                                        <input
+                                            v-if="mostrarCriacaoHabilidade"
+                                            ref="novaHabilidadeInput"
+                                            v-model.trim="novaHabilidade"
+                                            type="text"
+                                            class="form-control form-control-sm nova-habilidade-input"
+                                            placeholder="Digite uma habilidade..."
+                                            maxlength="45"
+                                            autocomplete="off"
+                                            @keydown.enter.prevent.stop="adicionarHabilidadePersonalizada"
+                                        >
+                                        <button type="button" class="btn btn-outline-primary flex-shrink-0" @click="acionarNovaHabilidade">
                                             <i class="bi bi-plus-lg me-1"></i> Adicionar nova habilidade
                                         </button>
                                         <button type="button" class="btn btn-sm btn-primary px-4" @click="fecharDropdownHabilidades">Concluir</button>
@@ -516,7 +527,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
@@ -526,6 +537,7 @@ const auth = useAuthStore();
 const router = useRouter();
 const raInput = ref(null);
 const habilidadeInput = ref(null);
+const novaHabilidadeInput = ref(null);
 const habilidadesDropdownContainer = ref(null);
 
 // Esta página não usa o AlunoLayout (sem sidebar, cabeçalho próprio),
@@ -566,6 +578,7 @@ const novaHabilidade = ref('');
 const buscaHabilidade = ref('');
 const mostrarDropdownRegiaoAdministrativa = ref(false);
 const mostrarDropdownHabilidades = ref(false);
+const mostrarCriacaoHabilidade = ref(false);
 const indiceRegiaoAdministrativaDestacada = ref(-1);
 let timeoutFechamentoDropdownRegiaoAdministrativa = null;
 
@@ -776,12 +789,6 @@ const rotuloHabilidadesSelecionadas = computed(() => {
     }
 
     return total === 1 ? '1 habilidade selecionada' : `${total} habilidades selecionadas`;
-});
-
-const podeAdicionarHabilidadePersonalizada = computed(() => {
-    const habilidade = buscaHabilidade.value.trim();
-
-    return Boolean(habilidade) && !habilidadeSelecionada(habilidade);
 });
 
 // Bitmask: CLT=1, Estágio=2
@@ -1143,15 +1150,47 @@ async function carregar() {
     }
 }
 
-function adicionarHabilidade() {
-    const habilidade = buscaHabilidade.value.trim() || novaHabilidade.value.trim();
+function registrarHabilidade(habilidade) {
+    const habilidadeTratada = String(habilidade ?? '').trim();
 
-    if (habilidade && !habilidadeSelecionada(habilidade)) {
-        perfil.habilidades.push(habilidade);
-        buscaHabilidade.value = '';
-        novaHabilidade.value = '';
-        habilidadeInput.value?.focus();
+    if (!habilidadeTratada) {
+        return false;
     }
+
+    if (habilidadeSelecionada(habilidadeTratada)) {
+        mostrarMensagem('aviso', 'Essa habilidade já foi adicionada.');
+        return false;
+    }
+
+    perfil.habilidades.push(habilidadeTratada);
+    return true;
+}
+
+function adicionarHabilidade() {
+    if (registrarHabilidade(buscaHabilidade.value)) {
+        buscaHabilidade.value = '';
+    }
+
+    habilidadeInput.value?.focus();
+}
+
+function adicionarHabilidadePersonalizada() {
+    if (registrarHabilidade(novaHabilidade.value)) {
+        novaHabilidade.value = '';
+        mostrarCriacaoHabilidade.value = false;
+    } else {
+        novaHabilidadeInput.value?.focus();
+    }
+}
+
+function acionarNovaHabilidade() {
+    if (!mostrarCriacaoHabilidade.value) {
+        mostrarCriacaoHabilidade.value = true;
+        nextTick(() => novaHabilidadeInput.value?.focus());
+        return;
+    }
+
+    adicionarHabilidadePersonalizada();
 }
 
 function filtrarHabilidades(habilidades) {
@@ -1172,6 +1211,8 @@ function alternarDropdownHabilidades() {
 
 function fecharDropdownHabilidades() {
     mostrarDropdownHabilidades.value = false;
+    novaHabilidade.value = '';
+    mostrarCriacaoHabilidade.value = false;
 }
 
 function alternarHabilidade(habilidade) {
@@ -1368,6 +1409,10 @@ onBeforeUnmount(() => {
 .habilidades-dropdown-lista {
     max-height: 320px;
     overflow-y: auto;
+}
+
+.nova-habilidade-input {
+    min-width: 0;
 }
 
 .habilidade-opcao,
