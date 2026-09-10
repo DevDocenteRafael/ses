@@ -83,18 +83,19 @@ html.dark .auth-login-check .form-check-label {
 	width: 180px;
 	height: auto;
 	max-width: 100%;
-	margin-bottom: 1.5rem;
+	margin: 1.25rem 0 1.5rem;
 }
 
 .auth-login-title {
-	font-size: clamp(2rem, 3vw, 2.7rem);
+	font-size: clamp(1.75rem, 2.3vw, 1.875rem);
 	line-height: 1.05;
-	font-weight: 700;
+	font-weight: 600;
 }
 
 .auth-login-subtitle {
-	font-size: 0.98rem;
+	font-size: 1rem;
 	line-height: 1.35;
+	font-weight: 400;
 	opacity: 0.95;
 }
 
@@ -218,7 +219,11 @@ html.dark .auth-login-check .form-check-label {
 
 	.auth-login-logo {
 		width: 160px;
-		margin-bottom: 1.25rem;
+		margin: 1rem 0 1.25rem;
+	}
+
+	.auth-login-title {
+		font-size: clamp(1.625rem, 7vw, 1.75rem);
 	}
 
 	.auth-login-content {
