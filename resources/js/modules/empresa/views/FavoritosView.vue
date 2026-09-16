@@ -188,7 +188,7 @@
                 <h3 class="h6 fw-bold">{{ perfilSelecionado.pessoa?.nome }}</h3>
                 <p class="text-secondary small">{{ perfilSelecionado.informacoes_profissionais?.sobre_mim || 'Sem descrição.' }}</p>
                 <p class="mb-1"><strong>Cargo de interesse:</strong> {{ perfilSelecionado.informacoes_profissionais?.cargo_de_interesse || '—' }}</p>
-                <p class="mb-1"><strong>Pretensão salarial:</strong> {{ perfilSelecionado.preferencias_de_trabalho?.pretensao_salarial ?? '—' }}</p>
+                <p class="mb-1"><strong>Pretensão salarial:</strong> {{ formatarPretensao(perfilSelecionado.preferencias_de_trabalho?.pretensao_salarial) }}</p>
                 <div class="d-flex flex-wrap gap-2 mt-2">
                     <span
                         v-for="h in perfilSelecionado.informacoes_profissionais?.habilidades || []"
@@ -208,6 +208,7 @@ import modal from '../../../components/common/modal.vue';
 import { useEmpresaStore } from '../../../store/empresa';
 import { useAuthStore } from '../../../store/auth';
 import { useListasFavoritos } from '../../../composables/useListasFavoritos';
+import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 
 const auth = useAuthStore();
 const empresa = useEmpresaStore();
@@ -223,6 +224,10 @@ const modalGerenciarAberto = ref(false);
 const modalComparacaoAberto = ref(false);
 const modalPerfilAberto = ref(false);
 const perfilSelecionado = ref(null);
+
+function formatarPretensao(valor) {
+    return formatarFaixaPretensaoSalarial(valor, '—');
+}
 
 onMounted(async () => {
     const cnpj = auth.pessoa?.cnpj;

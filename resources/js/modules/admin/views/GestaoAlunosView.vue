@@ -250,6 +250,7 @@ import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
+import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 
 const DURACAO_NOTIFICACAO_SUCESSO = 4000;
 
@@ -443,8 +444,7 @@ function alternarDetalhes(matricula) {
 }
 
 function formatarPretensao(valor) {
-    if (valor === null || valor === undefined || valor === '') return 'Não informado';
-    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return formatarFaixaPretensaoSalarial(valor, 'Não informado');
 }
 
 const alunosFiltrados = computed(() => {

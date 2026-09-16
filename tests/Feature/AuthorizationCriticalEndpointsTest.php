@@ -11,6 +11,7 @@ use App\Models\Empresa;
 use App\Models\Pessoa;
 use App\Models\ResponsavelContratual;
 use App\Models\Vaga;
+use App\Support\HabilidadesCatalogo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -150,24 +151,33 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonPath('data.0.matricula', $alvo->matricula);
     }
 
-    public function test_empresa_lista_habilidades_persistidas_unicas_incluindo_personalizadas(): void
+    public function test_empresa_lista_catalogo_de_habilidades_padrao_mais_persistidas_unicas_incluindo_personalizadas(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
-        $this->criarCandidatoParaBusca('Aluno Docker A', habilidades: [' Docker ', 'Laravel']);
-        $this->criarCandidatoParaBusca('Aluno Docker B', habilidades: ['docker', 'Vue.js']);
+        $this->criarCandidatoParaBusca('Aluno Docker A', habilidades: [' Docker ', 'javascript']);
+        $this->criarCandidatoParaBusca('Aluno Docker B', habilidades: ['docker', ' JavaScript ']);
         $this->criarCandidatoParaBusca('Aluno Bloqueado Skill', status: false, habilidades: ['Kubernetes']);
 
-        $this->withToken($tokenEmpresa)
+        $catalogoEsperado = HabilidadesCatalogo::ordenar(HabilidadesCatalogo::deduplicar([
+            ...HabilidadesCatalogo::padrao(),
+            ' Docker ',
+            'javascript',
+            'docker',
+            ' JavaScript ',
+        ]));
+
+        $resposta = $this->withToken($tokenEmpresa)
             ->getJson('/api/candidatos/habilidades')
             ->assertOk()
-            ->assertJson(fn ($json) => $json
-                ->has(3)
-                ->where(0, 'Docker')
-                ->where(1, 'Laravel')
-                ->where(2, 'Vue.js')
-            )
+            ->assertExactJson($catalogoEsperado)
+            ->assertJsonCount(HabilidadesCatalogo::totalPadrao() + 1)
+            ->assertJsonMissing(['javascript'])
+            ->assertJsonMissing([' JavaScript '])
             ->assertJsonMissing(['Kubernetes']);
+
+        $this->assertContains('Docker', $resposta->json());
+        $this->assertContains('JavaScript', $resposta->json());
     }
 
     public function test_empresa_filtra_por_varias_habilidades_com_semantica_and_antes_da_paginacao(): void
@@ -187,6 +197,73 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonPath('total', 1)
             ->assertJsonPath('last_page', 1)
             ->assertJsonPath('data.0.matricula', $alvo->matricula);
+    }
+
+    public function test_empresa_filtra_candidatos_por_regiao_incluindo_quem_aceita_todas(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $taguatinga = $this->criarCandidatoParaBusca('Aluno Taguatinga');
+        \App\Models\RegiaoPreferidaTrabalho::query()->create([
+            'candidato_matricula' => $taguatinga->matricula,
+            'codigo_regiao' => 3,
+        ]);
+
+        $todas = $this->criarCandidatoParaBusca('Aluno Todas Regioes');
+        \App\Models\PreferenciasDeTrabalho::query()
+            ->where('candidato_matricula', $todas->matricula)
+            ->update([
+                'aceita_todas_regioes' => true,
+                'regiao_administrativa' => 'Todas as regiões',
+            ]);
+
+        $guara = $this->criarCandidatoParaBusca('Aluno Guara');
+        \App\Models\RegiaoPreferidaTrabalho::query()->create([
+            'candidato_matricula' => $guara->matricula,
+            'codigo_regiao' => 10,
+        ]);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?regioes_administrativas[]=3&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonFragment(['matricula' => $taguatinga->matricula])
+            ->assertJsonFragment(['matricula' => $todas->matricula])
+            ->assertJsonMissing(['matricula' => $guara->matricula]);
+    }
+
+    public function test_empresa_filtra_por_multiplas_regioes_administrativas(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $taguatinga = $this->criarCandidatoParaBusca('Aluno Multi Taguatinga');
+        \App\Models\RegiaoPreferidaTrabalho::query()->create([
+            'candidato_matricula' => $taguatinga->matricula,
+            'codigo_regiao' => 3,
+        ]);
+
+        $guara = $this->criarCandidatoParaBusca('Aluno Multi Guara');
+        \App\Models\RegiaoPreferidaTrabalho::query()->create([
+            'candidato_matricula' => $guara->matricula,
+            'codigo_regiao' => 10,
+        ]);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?regioes_administrativas[]=3&regioes_administrativas[]=10&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonFragment(['matricula' => $taguatinga->matricula])
+            ->assertJsonFragment(['matricula' => $guara->matricula]);
+    }
+
+    public function test_filtro_de_regiao_administrativa_rejeita_codigo_invalido(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?regioes_administrativas[]=999')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['regioes_administrativas.0']);
     }
 
     public function test_filtro_atualiza_total_e_last_page_da_paginacao_para_empresa(): void

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Candidato;
 use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
+use App\Models\RegiaoPreferidaTrabalho;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -244,6 +245,110 @@ class PerfilCandidatoPreferenciasTest extends TestCase
 
         $leitura->assertOk()
             ->assertJsonPath('preferencias_de_trabalho.pretensao_salarial', $valorEnviado);
+    }
+
+    public function test_salva_regioes_preferidas_especificas_e_retorna_na_leitura(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $salvar = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'aceita_todas_regioes' => false,
+            'regioes_preferidas' => [1, 3, 10],
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $salvar->assertCreated()
+            ->assertJsonPath('aceita_todas_regioes', false)
+            ->assertJsonPath('regioes_preferidas.0.codigo', 1)
+            ->assertJsonPath('regioes_preferidas.1.codigo', 3)
+            ->assertJsonPath('regioes_preferidas.2.codigo', 10);
+
+        foreach ([1, 3, 10] as $codigoRegiao) {
+            $this->assertDatabaseHas('regioes_preferidas_trabalho', [
+                'candidato_matricula' => $candidato->matricula,
+                'codigo_regiao' => $codigoRegiao,
+            ]);
+        }
+
+        $leitura = $this->withToken($token)->getJson("/api/candidatos/{$candidato->matricula}");
+
+        $leitura->assertOk()
+            ->assertJsonPath('preferencias_de_trabalho.aceita_todas_regioes', false)
+            ->assertJsonPath('regioes_preferidas_trabalho.0.codigo', 1)
+            ->assertJsonPath('regioes_preferidas_trabalho.1.nome', 'Taguatinga')
+            ->assertJsonPath('regioes_preferidas_trabalho.2.codigo', 10);
+    }
+
+    public function test_todas_as_regioes_eh_estado_especial_e_nao_grava_37_associacoes(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $salvar = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Integral',
+            'regiao_administrativa' => 'Taguatinga',
+            'aceita_todas_regioes' => true,
+            'regioes_preferidas' => [1, 3, 10],
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $salvar->assertCreated()
+            ->assertJsonPath('aceita_todas_regioes', true)
+            ->assertJsonCount(0, 'regioes_preferidas');
+
+        $this->assertDatabaseHas('preferencias_de_trabalho', [
+            'candidato_matricula' => $candidato->matricula,
+            'aceita_todas_regioes' => true,
+        ]);
+        $this->assertSame(0, RegiaoPreferidaTrabalho::where('candidato_matricula', $candidato->matricula)->count());
+    }
+
+    public function test_salvamento_de_regioes_preferidas_substitui_estado_anterior(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'aceita_todas_regioes' => false,
+            'regioes_preferidas' => [1, 3],
+            'pretensao_salarial' => 2500,
+        ])->assertCreated();
+
+        $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'aceita_todas_regioes' => false,
+            'regioes_preferidas' => [10],
+            'pretensao_salarial' => 2500,
+        ])->assertCreated();
+
+        $this->assertSame([10], RegiaoPreferidaTrabalho::where('candidato_matricula', $candidato->matricula)
+            ->orderBy('codigo_regiao')
+            ->pluck('codigo_regiao')
+            ->all());
+    }
+
+    public function test_regioes_preferidas_rejeita_codigo_invalido(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => 'Manhã',
+            'regiao_administrativa' => 'Ceilândia',
+            'aceita_todas_regioes' => false,
+            'regioes_preferidas' => [999],
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['regioes_preferidas.0']);
     }
 
     public function test_migration_remove_apenas_o_bit_antigo_preservando_candidato_e_demais_preferencias(): void

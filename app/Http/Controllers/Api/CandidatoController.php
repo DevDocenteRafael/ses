@@ -10,12 +10,13 @@ use App\Models\DadosAcademicos;
 use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
+use App\Support\HabilidadesCatalogo;
+use App\Support\RegioesAdministrativasDf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CandidatoController extends Controller
@@ -145,6 +146,7 @@ class CandidatoController extends Controller
                 'linkExterno',
                 'informacoesProfissionais',
                 'preferenciasDeTrabalho',
+                'regioesPreferidasTrabalho',
                 'dadosAcademicos',
             ]);
 
@@ -184,6 +186,28 @@ class CandidatoController extends Controller
             $mascara = (int) $request->query('tipo_contratacao');
             $query->whereHas('preferenciasDeTrabalho', function ($q) use ($mascara) {
                 $q->whereRaw('(tipo_de_contratacao & ?) != 0', [$mascara]);
+            });
+        }
+
+        if ($request->filled('regioes_administrativas')) {
+            $request->validate([
+                'regioes_administrativas' => ['array'],
+                'regioes_administrativas.*' => ['integer', Rule::in(RegioesAdministrativasDf::codigos())],
+            ]);
+
+            $codigosRegioes = array_values(array_unique(array_map('intval', (array) $request->query('regioes_administrativas'))));
+            $nomesRegioes = array_filter(array_map(fn (int $codigo) => RegioesAdministrativasDf::nome($codigo), $codigosRegioes));
+
+            $query->where(function ($q) use ($codigosRegioes, $nomesRegioes) {
+                $q->whereHas('preferenciasDeTrabalho', function ($preferencias) {
+                    $preferencias->where('aceita_todas_regioes', true);
+                })
+                    ->orWhereHas('regioesPreferidasTrabalho', function ($regioes) use ($codigosRegioes) {
+                        $regioes->whereIn('codigo_regiao', $codigosRegioes);
+                    })
+                    ->orWhereHas('preferenciasDeTrabalho', function ($preferencias) use ($nomesRegioes) {
+                        $preferencias->whereIn('regiao_administrativa', $nomesRegioes);
+                    });
             });
         }
 
@@ -233,22 +257,17 @@ class CandidatoController extends Controller
             });
         }
 
-        $habilidades = [];
+        $habilidades = HabilidadesCatalogo::padrao();
 
         $query->get()->each(function (InformacoesProfissionais $info) use (&$habilidades) {
             foreach ((array) $info->habilidades as $habilidade) {
-                $rotulo = $this->normalizarRotuloHabilidade($habilidade);
-                $chave = $this->normalizarChaveHabilidade($rotulo);
-
-                if ($rotulo !== '' && ! isset($habilidades[$chave])) {
-                    $habilidades[$chave] = $rotulo;
-                }
+                $habilidades[] = $habilidade;
             }
         });
 
-        uasort($habilidades, fn (string $a, string $b) => strnatcasecmp($a, $b));
+        $habilidades = HabilidadesCatalogo::ordenar(HabilidadesCatalogo::deduplicar($habilidades));
 
-        return response()->json(array_values($habilidades));
+        return response()->json($habilidades);
     }
 
     /**
@@ -268,6 +287,7 @@ class CandidatoController extends Controller
             'tipo_curso'       => $request->query('tipo_curso'),
             'disponibilidade'  => $request->query('disponibilidade'),
             'tipo_contratacao' => $request->query('tipo_contratacao'),
+            'regioes_administrativas' => $request->query('regioes_administrativas'),
             'habilidades'      => $request->query('habilidades'),
         ]);
 
@@ -280,19 +300,6 @@ class CandidatoController extends Controller
             'filtros'      => $filtros,
             'buscado_em'   => now(),
         ]);
-    }
-
-    private function normalizarRotuloHabilidade(mixed $habilidade): string
-    {
-        return preg_replace('/\s+/u', ' ', trim((string) $habilidade)) ?: '';
-    }
-
-    private function normalizarChaveHabilidade(mixed $habilidade): string
-    {
-        return Str::of($this->normalizarRotuloHabilidade($habilidade))
-            ->ascii()
-            ->lower()
-            ->toString();
     }
 
     /**
@@ -312,6 +319,7 @@ class CandidatoController extends Controller
             'linkExterno',
             'informacoesProfissionais',
             'preferenciasDeTrabalho',
+            'regioesPreferidasTrabalho',
             'dadosAcademicos',
             'cursosSenac',
             'cursosExternos',
@@ -336,7 +344,7 @@ class CandidatoController extends Controller
             ]);
         }
 
-        return response()->json($candidato);
+        return response()->json($this->formatarCandidato($candidato));
     }
 
     /**
@@ -462,5 +470,21 @@ class CandidatoController extends Controller
         $preenchidos = count(array_filter($itens));
 
         return (int) round(($preenchidos / count($itens)) * 100);
+    }
+
+    private function formatarCandidato(Candidato $candidato): Candidato
+    {
+        $candidato->setRelation(
+            'regioesPreferidasTrabalho',
+            $candidato->regioesPreferidasTrabalho
+                ->sortBy('codigo_regiao')
+                ->values()
+                ->map(fn ($regiao) => [
+                    'codigo' => (int) $regiao->codigo_regiao,
+                    'nome' => RegioesAdministrativasDf::nome((int) $regiao->codigo_regiao),
+                ])
+        );
+
+        return $candidato;
     }
 }

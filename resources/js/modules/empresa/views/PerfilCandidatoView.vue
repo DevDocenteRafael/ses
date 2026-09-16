@@ -199,6 +199,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import { formatarTelefone } from '../../../utils/telefone';
+import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 
 const props = defineProps({
     matricula: { type: [String, Number], required: true },
@@ -252,7 +253,7 @@ const tipoContratacaoLabel = computed(() => {
 const pretensaoFormatada = computed(() => {
     const valor = candidato.value.preferencias_de_trabalho?.pretensao_salarial;
     if (!valor) return 'A combinar';
-    return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return formatarFaixaPretensaoSalarial(valor, 'A combinar');
 });
 
 function formatarData(data) {

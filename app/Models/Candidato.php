@@ -44,6 +44,11 @@ class Candidato extends Model
         return $this->hasOne(PreferenciasDeTrabalho::class, 'candidato_matricula', 'matricula');
     }
 
+    public function regioesPreferidasTrabalho()
+    {
+        return $this->hasMany(RegiaoPreferidaTrabalho::class, 'candidato_matricula', 'matricula');
+    }
+
     public function dadosAcademicos()
     {
         return $this->hasMany(DadosAcademicos::class, 'candidato_matricula', 'matricula');

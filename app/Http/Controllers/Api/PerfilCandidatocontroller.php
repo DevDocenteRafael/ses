@@ -10,52 +10,15 @@ use App\Models\DadosAcademicos;
 use App\Models\CursoSenac;
 use App\Models\CursoExterno;
 use App\Models\ExperienciaProfissional;
+use App\Models\RegiaoPreferidaTrabalho;
+use App\Support\RegioesAdministrativasDf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PerfilCandidatoController extends Controller
 {
-    private const REGIOES_ADMINISTRATIVAS_DF = [
-        'Plano Piloto',
-        'Gama',
-        'Taguatinga',
-        'Brazlândia',
-        'Sobradinho',
-        'Planaltina',
-        'Paranoá',
-        'Núcleo Bandeirante',
-        'Ceilândia',
-        'Guará',
-        'Cruzeiro',
-        'Samambaia',
-        'Santa Maria',
-        'São Sebastião',
-        'Recanto das Emas',
-        'Lago Sul',
-        'Riacho Fundo',
-        'Lago Norte',
-        'Candangolândia',
-        'Águas Claras',
-        'Riacho Fundo II',
-        'Sudoeste/Octogonal',
-        'Varjão',
-        'Park Way',
-        'SCIA / Estrutural',
-        'Sobradinho II',
-        'Jardim Botânico',
-        'Itapoã',
-        'SIA (Setor de Indústria e Abastecimento)',
-        'Vicente Pires',
-        'Fercal',
-        'Sol Nascente / Pôr do Sol',
-        'Arniqueira',
-        'Arapoanga',
-        'Água Quente',
-        '26 de Setembro',
-        'Ponte Alta',
-    ];
-
     // ── Links Externos ───────────────────────────────────────────
 
     public function storeLink(Request $request, string $matricula): JsonResponse
@@ -107,18 +70,78 @@ class PerfilCandidatoController extends Controller
         $validated = $request->validate([
             'tipo_de_contratacao'        => ['nullable', 'integer', Rule::in([0, 1, 2, 3])],
             'disponibilidade_de_horario' => ['nullable', 'string', 'in:Manhã,Tarde,Noite,Integral'],
-            'regiao_administrativa'      => ['required', 'string', 'max:100', 'in:' . implode(',', self::REGIOES_ADMINISTRATIVAS_DF)],
+            'regiao_administrativa'      => ['nullable', 'string', 'max:100', Rule::in([...RegioesAdministrativasDf::nomes(), 'Todas as regiões'])],
+            'aceita_todas_regioes'       => ['nullable', 'boolean'],
+            'regioes_preferidas'         => ['nullable', 'array'],
+            'regioes_preferidas.*'       => ['integer', Rule::in(RegioesAdministrativasDf::codigos())],
             'pretensao_salarial'         => 'nullable|numeric|min:0',
         ], [
             'tipo_de_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
         ]);
 
-        $pref = PreferenciasDeTrabalho::updateOrCreate(
-            ['candidato_matricula' => $matricula],
-            $validated
-        );
+        $aceitaTodasRegioes = (bool) ($validated['aceita_todas_regioes'] ?? false);
+        $codigosRegioes = array_values(array_unique(array_map('intval', $validated['regioes_preferidas'] ?? [])));
 
-        return response()->json($pref, 201);
+        if (! $aceitaTodasRegioes && empty($codigosRegioes)) {
+            $codigoLegado = RegioesAdministrativasDf::codigoPorNome($validated['regiao_administrativa'] ?? null);
+
+            if ($codigoLegado !== null) {
+                $codigosRegioes = [$codigoLegado];
+            }
+        }
+
+        if (! $aceitaTodasRegioes && empty($codigosRegioes)) {
+            return response()->json([
+                'message' => 'Os dados informados são inválidos.',
+                'errors' => [
+                    'regiao_administrativa' => ['Selecione pelo menos uma Região Administrativa ou Todas as regiões.'],
+                ],
+            ], 422);
+        }
+
+        if ($aceitaTodasRegioes) {
+            $codigosRegioes = [];
+        }
+
+        unset($validated['regioes_preferidas']);
+        $validated['aceita_todas_regioes'] = $aceitaTodasRegioes;
+        $validated['regiao_administrativa'] = $aceitaTodasRegioes
+            ? 'Todas as regiões'
+            : RegioesAdministrativasDf::nome($codigosRegioes[0]);
+
+        $pref = DB::transaction(function () use ($matricula, $validated, $codigosRegioes) {
+            $preferencia = PreferenciasDeTrabalho::updateOrCreate(
+                ['candidato_matricula' => $matricula],
+                $validated
+            );
+
+            RegiaoPreferidaTrabalho::query()
+                ->where('candidato_matricula', $matricula)
+                ->delete();
+
+            foreach ($codigosRegioes as $codigoRegiao) {
+                RegiaoPreferidaTrabalho::query()->create([
+                    'candidato_matricula' => $matricula,
+                    'codigo_regiao' => $codigoRegiao,
+                ]);
+            }
+
+            return $preferencia;
+        });
+
+        $regioesPreferidas = RegiaoPreferidaTrabalho::query()
+            ->where('candidato_matricula', $matricula)
+            ->orderBy('codigo_regiao')
+            ->get()
+            ->map(fn (RegiaoPreferidaTrabalho $regiao): array => [
+                'codigo' => (int) $regiao->codigo_regiao,
+                'nome' => RegioesAdministrativasDf::nome((int) $regiao->codigo_regiao),
+            ])
+            ->values();
+
+        return response()->json(array_merge($pref->toArray(), [
+            'regioes_preferidas' => $regioesPreferidas,
+        ]), 201);
     }
 
     // ── Dados Acadêmicos ─────────────────────────────────────────

@@ -11,6 +11,7 @@ import App from './App.vue';
 // Importa as rotas configuradas em router/index.js
 import router from './router';
 import { useThemeStore } from './store/theme';
+import { registrarValidacaoPtBr } from './utils/validacaoPtBr';
 
 // Importa o CSS do Bootstrap
 // Responsável por toda a aparência dos componentes (botões, grid, cards, etc.)
@@ -40,6 +41,10 @@ axios.defaults.withCredentials = true;
 
 // Cria a aplicação Vue usando App.vue como componente principal
 const app = createApp(App);
+
+// Padroniza as mensagens da validação HTML5 nativa em pt-BR,
+// independentemente do idioma do navegador ou sistema operacional.
+registrarValidacaoPtBr();
 
 // Disponibiliza o axios em todos os componentes.
 // Assim podemos usar:

@@ -363,58 +363,86 @@
                                         <option>Integral</option>
                                     </select>
                                 </div>
-                                <div class="col-sm-6 position-relative">
+                                <div class="col-12 position-relative" ref="regioesTrabalhoDropdownContainer">
                                     <label class="form-label">Região Administrativa (RA) <span class="text-danger">*</span></label>
-                                    <input
-                                        ref="raInput"
-                                        v-model="buscaRegiaoAdministrativa"
-                                        type="text"
-                                        class="form-control"
-                                        :class="campoInvalido('regiao_administrativa')"
-                                        placeholder="Pesquisar Região Administrativa..."
-                                        autocomplete="off"
-                                        @focus="abrirDropdownRegiaoAdministrativa"
-                                        @input="aoDigitarRegiaoAdministrativa"
-                                        @keydown.down.prevent="destacarProximaRegiaoAdministrativa"
-                                        @keydown.up.prevent="destacarRegiaoAdministrativaAnterior"
-                                        @keydown.enter.prevent="selecionarRegiaoAdministrativaDestacada"
-                                        @keydown.esc="fecharDropdownRegiaoAdministrativa"
-                                        @blur="agendarFechamentoDropdownRegiaoAdministrativa"
+                                    <p class="form-text mt-0 mb-2">Selecione uma ou mais regiões onde você tem preferência em trabalhar.</p>
+                                    <button
+                                        type="button"
+                                        class="form-select regioes-trabalho-select text-start d-flex align-items-center justify-content-between"
+                                        :class="campoInvalido('regiao_administrativa') || campoInvalido('regioes_preferidas') || campoInvalido('regioes_preferidas.0')"
+                                        :aria-expanded="mostrarDropdownRegioesTrabalho"
+                                        aria-haspopup="listbox"
+                                        @click.stop="alternarDropdownRegioesTrabalho"
+                                        @keydown.down.prevent="abrirDropdownRegioesTrabalho"
+                                        @keydown.enter.prevent="alternarDropdownRegioesTrabalho"
+                                        @keydown.space.prevent="alternarDropdownRegioesTrabalho"
                                     >
-                                    <div
-                                        v-if="mostrarDropdownRegiaoAdministrativa"
-                                        class="dropdown-menu d-block w-100 mt-1 shadow-sm ra-dropdown"
-                                    >
-                                        <button
-                                            v-for="(opcao, index) in regioesAdministrativasFiltradas"
-                                            :key="opcao.value"
-                                            type="button"
-                                            class="dropdown-item"
-                                            :class="{ active: index === indiceRegiaoAdministrativaDestacada }"
-                                            @mousedown.prevent="selecionarRegiaoAdministrativa(opcao)"
-                                        >
-                                            {{ opcao.label }}
-                                        </button>
-                                        <span v-if="!regioesAdministrativasFiltradas.length" class="dropdown-item-text text-secondary small">
-                                            Nenhuma Região Administrativa encontrada.
+                                        <span :class="rotuloRegioesTrabalhoSelecionadas === 'Selecione uma ou mais regiões...' ? 'text-secondary' : 'text-body'">
+                                            {{ rotuloRegioesTrabalhoSelecionadas }}
                                         </span>
+                                        <i class="bi bi-chevron-down ms-2"></i>
+                                    </button>
+
+                                    <div v-if="mostrarDropdownRegioesTrabalho" class="regioes-trabalho-dropdown border rounded shadow-sm bg-white mt-1">
+                                        <div class="p-3 border-bottom">
+                                            <label class="form-label small text-secondary fw-semibold mb-1" for="busca-regiao-trabalho">Pesquisar região...</label>
+                                            <input
+                                                id="busca-regiao-trabalho"
+                                                ref="regiaoTrabalhoInput"
+                                                v-model="buscaRegiaoTrabalho"
+                                                type="text"
+                                                class="form-control"
+                                                placeholder="Digite para pesquisar..."
+                                                maxlength="80"
+                                                autocomplete="off"
+                                                @keydown.esc="fecharDropdownRegioesTrabalho"
+                                            >
+                                        </div>
+                                        <div class="regioes-trabalho-dropdown-lista p-3" role="listbox" aria-multiselectable="true">
+                                            <label class="regiao-trabalho-opcao form-check rounded px-2 py-1 mb-2">
+                                                <input
+                                                    class="form-check-input ms-0 me-2"
+                                                    type="checkbox"
+                                                    :checked="preferencias.aceita_todas_regioes"
+                                                    @change="alternarTodasRegioesTrabalho"
+                                                >
+                                                <span class="form-check-label fw-semibold">Todas as regiões</span>
+                                            </label>
+                                            <hr class="my-2">
+                                            <div v-if="regioesTrabalhoFiltradas.length" class="d-flex flex-column gap-1">
+                                                <label v-for="regiao in regioesTrabalhoFiltradas" :key="regiao.codigo" class="regiao-trabalho-opcao form-check rounded px-2 py-1 mb-0">
+                                                    <input
+                                                        class="form-check-input ms-0 me-2"
+                                                        type="checkbox"
+                                                        :checked="regiaoTrabalhoSelecionada(regiao.codigo)"
+                                                        @change="alternarRegiaoTrabalho(regiao.codigo)"
+                                                    >
+                                                    <span class="form-check-label">{{ regiao.label }}</span>
+                                                </label>
+                                            </div>
+                                            <p v-else class="small text-secondary mb-0">Nenhuma região encontrada.</p>
+                                        </div>
+                                        <div class="border-top p-3 d-flex justify-content-end">
+                                            <button type="button" class="btn btn-sm btn-primary px-4" @click="fecharDropdownRegioesTrabalho">Concluir</button>
+                                        </div>
                                     </div>
-                                    <div v-if="erroDeCampo('regiao_administrativa')" class="invalid-feedback d-block">{{ erroDeCampo('regiao_administrativa') }}</div>
+                                    <div v-if="erroDeCampo('regiao_administrativa') || erroDeCampo('regioes_preferidas') || erroDeCampo('regioes_preferidas.0')" class="invalid-feedback d-block">
+                                        {{ erroDeCampo('regiao_administrativa') || erroDeCampo('regioes_preferidas') || erroDeCampo('regioes_preferidas.0') }}
+                                    </div>
                                 </div>
                                 <div class="col-sm-6">
                                     <label class="form-label">Pretensão Salarial (Opcional)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">R$</span>
-                                        <input
-                                            :value="preferencias.pretensao_salarial"
-                                            type="text"
-                                            inputmode="numeric"
-                                            class="form-control sem-setas"
-                                            placeholder="Ex.: R$ 1.000,00 – R$ 2.000,00"
-                                            @keydown="bloquearSinalNegativo"
-                                            @input="aplicarMascaraPretensaoSalarial"
+                                    <select v-model="preferencias.pretensao_salarial" class="form-select" :class="campoInvalido('pretensao_salarial')">
+                                        <option value="">Selecione uma faixa salarial...</option>
+                                        <option
+                                            v-for="faixa in faixasPretensaoSalarial"
+                                            :key="faixa.value"
+                                            :value="faixa.value"
                                         >
-                                    </div>
+                                            {{ faixa.label }}
+                                        </option>
+                                    </select>
+                                    <div v-if="erroDeCampo('pretensao_salarial')" class="invalid-feedback d-block">{{ erroDeCampo('pretensao_salarial') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -532,13 +560,21 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
+import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
+import { habilidadesPorArea, sugestoesSoftSkills } from '../../../utils/habilidadesCatalogo';
+import {
+    converterFaixaPretensaoSalarialParaPayload,
+    converterPretensaoSalarialApiParaFaixa,
+    faixasPretensaoSalarial,
+} from '../../../utils/faixasPretensaoSalarial';
 
 const auth = useAuthStore();
 const router = useRouter();
-const raInput = ref(null);
 const habilidadeInput = ref(null);
 const novaHabilidadeInput = ref(null);
 const habilidadesDropdownContainer = ref(null);
+const regioesTrabalhoDropdownContainer = ref(null);
+const regiaoTrabalhoInput = ref(null);
 
 // Esta página não usa o AlunoLayout (sem sidebar, cabeçalho próprio),
 // então precisa resolver iniciais/logout localmente.
@@ -573,14 +609,12 @@ const salvandoInformacoesPessoais = ref(false);
 
 const mostrarFormCursoExterno = ref(false);
 const mostrarFormExperiencia = ref(false);
-const buscaRegiaoAdministrativa = ref('');
+const buscaRegiaoTrabalho = ref('');
 const novaHabilidade = ref('');
 const buscaHabilidade = ref('');
-const mostrarDropdownRegiaoAdministrativa = ref(false);
 const mostrarDropdownHabilidades = ref(false);
+const mostrarDropdownRegioesTrabalho = ref(false);
 const mostrarCriacaoHabilidade = ref(false);
-const indiceRegiaoAdministrativaDestacada = ref(-1);
-let timeoutFechamentoDropdownRegiaoAdministrativa = null;
 
 const links = reactive({
     linkedin: '',
@@ -594,157 +628,7 @@ const informacoesPessoais = reactive({
     telefone: '',
 });
 
-const habilidadesPorArea = {
-    'Tecnologia da Informação': [
-        'HTML',
-        'CSS',
-        'JavaScript',
-        'Vue.js',
-        'PHP',
-        'Laravel',
-        'MySQL',
-        'Git',
-        'Redes',
-        'Suporte Técnico',
-        'Segurança da Informação',
-        'Banco de Dados',
-    ],
-    Administração: [
-        'Excel',
-        'Word',
-        'PowerPoint',
-        'Power BI',
-        'Pacote Office',
-        'Rotinas Administrativas',
-        'Atendimento ao Cliente',
-        'Controle de Documentos',
-        'Gestão de Processos',
-        'Emissão de Relatórios',
-        'Organização de Arquivos',
-        'Controle Financeiro',
-    ],
-    Marketing: [
-        'Marketing Digital',
-        'Redes Sociais',
-        'Copywriting',
-        'Canva',
-        'SEO',
-        'Google Analytics',
-        'Google Ads',
-        'E-mail Marketing',
-        'Criação de Conteúdo',
-        'Planejamento de Campanhas',
-        'Pesquisa de Mercado',
-        'Branding',
-    ],
-    'Recursos Humanos': [
-        'Recrutamento e Seleção',
-        'Triagem de Currículos',
-        'Entrevistas',
-        'Onboarding',
-        'Treinamento e Desenvolvimento',
-        'Folha de Pagamento',
-        'Controle de Ponto',
-        'Benefícios',
-        'Clima Organizacional',
-        'Comunicação Interna',
-        'Departamento Pessoal',
-        'Gestão de Pessoas',
-    ],
-    Outra: [
-        'Pacote Office',
-        'Excel',
-        'Atendimento ao Cliente',
-        'Rotinas Operacionais',
-        'Organização de Documentos',
-        'Controle de Estoque',
-        'Vendas',
-        'Negociação',
-        'Relatórios',
-        'Pesquisa e Análise',
-        'Suporte Administrativo',
-        'Aprendizado Contínuo',
-    ],
-};
-
-const sugestoesSoftSkills = [
-    'Comunicação',
-    'Trabalho em Equipe',
-    'Organização',
-    'Proatividade',
-    'Liderança',
-    'Criatividade',
-    'Adaptabilidade',
-    'Resolução de Problemas',
-    'Pensamento Crítico',
-    'Inteligência Emocional',
-    'Gestão do Tempo',
-    'Empatia',
-    'Responsabilidade',
-    'Comprometimento',
-    'Flexibilidade',
-    'Autonomia',
-    'Atenção aos Detalhes',
-    'Capacidade de Aprendizado',
-    'Relacionamento Interpessoal',
-    'Tomada de Decisão',
-];
-
-const regioesAdministrativas = [
-    { label: 'RA 1º - Plano Piloto', value: 'Plano Piloto' },
-    { label: 'RA 2º - Gama', value: 'Gama' },
-    { label: 'RA 3º - Taguatinga', value: 'Taguatinga' },
-    { label: 'RA 4º - Brazlândia', value: 'Brazlândia' },
-    { label: 'RA 5º - Sobradinho', value: 'Sobradinho' },
-    { label: 'RA 6º - Planaltina', value: 'Planaltina' },
-    { label: 'RA 7º - Paranoá', value: 'Paranoá' },
-    { label: 'RA 8º - Núcleo Bandeirante', value: 'Núcleo Bandeirante' },
-    { label: 'RA 9º - Ceilândia', value: 'Ceilândia' },
-    { label: 'RA 10º - Guará', value: 'Guará' },
-    { label: 'RA 11º - Cruzeiro', value: 'Cruzeiro' },
-    { label: 'RA 12º - Samambaia', value: 'Samambaia' },
-    { label: 'RA 13º - Santa Maria', value: 'Santa Maria' },
-    { label: 'RA 14º - São Sebastião', value: 'São Sebastião' },
-    { label: 'RA 15º - Recanto das Emas', value: 'Recanto das Emas' },
-    { label: 'RA 16º - Lago Sul', value: 'Lago Sul' },
-    { label: 'RA 17º - Riacho Fundo', value: 'Riacho Fundo' },
-    { label: 'RA 18º - Lago Norte', value: 'Lago Norte' },
-    { label: 'RA 19º - Candangolândia', value: 'Candangolândia' },
-    { label: 'RA 20º - Águas Claras', value: 'Águas Claras' },
-    { label: 'RA 21º - Riacho Fundo II', value: 'Riacho Fundo II' },
-    { label: 'RA 22º - Sudoeste/Octogonal', value: 'Sudoeste/Octogonal' },
-    { label: 'RA 23º - Varjão', value: 'Varjão' },
-    { label: 'RA 24º - Park Way', value: 'Park Way' },
-    { label: 'RA 25º - SCIA / Estrutural', value: 'SCIA / Estrutural' },
-    { label: 'RA 26º - Sobradinho II', value: 'Sobradinho II' },
-    { label: 'RA 27º - Jardim Botânico', value: 'Jardim Botânico' },
-    { label: 'RA 28º - Itapoã', value: 'Itapoã' },
-    { label: 'RA 29º - SIA (Setor de Indústria e Abastecimento)', value: 'SIA (Setor de Indústria e Abastecimento)' },
-    { label: 'RA 30º - Vicente Pires', value: 'Vicente Pires' },
-    { label: 'RA 31º - Fercal', value: 'Fercal' },
-    { label: 'RA 32º - Sol Nascente / Pôr do Sol', value: 'Sol Nascente / Pôr do Sol' },
-    { label: 'RA 33º - Arniqueira', value: 'Arniqueira' },
-    { label: 'RA 34º - Arapoanga', value: 'Arapoanga' },
-    { label: 'RA 35º - Água Quente', value: 'Água Quente' },
-    { label: 'RA 36º - 26 de Setembro', value: '26 de Setembro' },
-    { label: 'RA 37º - Ponte Alta', value: 'Ponte Alta' },
-];
-
-const regioesAdministrativasPermitidas = regioesAdministrativas.map((regiao) => regiao.value);
-
-const regioesAdministrativasFiltradas = computed(() => {
-    const termo = normalizarTexto(buscaRegiaoAdministrativa.value);
-
-    if (!termo) {
-        return regioesAdministrativas;
-    }
-
-    return regioesAdministrativas.filter((opcao) => {
-        const labelNormalizado = normalizarTexto(opcao.label);
-        const valueNormalizado = normalizarTexto(opcao.value);
-        return labelNormalizado.includes(termo) || valueNormalizado.includes(termo);
-    });
-});
+const regioesAdministrativas = regioesAdministrativasDf;
 
 const iconeToast = computed(() => {
     if (mensagem.value?.tipo === 'sucesso') {
@@ -791,29 +675,48 @@ const rotuloHabilidadesSelecionadas = computed(() => {
     return total === 1 ? '1 habilidade selecionada' : `${total} habilidades selecionadas`;
 });
 
+const regioesTrabalhoFiltradas = computed(() => {
+    const termo = normalizarTexto(buscaRegiaoTrabalho.value);
+    const termoSemEspacos = termo.replace(/\s+/g, '');
+
+    if (!termo) {
+        return regioesAdministrativas;
+    }
+
+    return regioesAdministrativas.filter((regiao) => {
+        const texto = normalizarTexto(`${regiao.label} ${regiao.nome}`);
+        return texto.includes(termo) || texto.replace(/\s+/g, '').includes(termoSemEspacos);
+    });
+});
+
+const rotuloRegioesTrabalhoSelecionadas = computed(() => {
+    if (preferencias.aceita_todas_regioes) {
+        return 'Todas as regiões';
+    }
+
+    const total = preferencias.regioes_preferidas.length;
+
+    if (!total) {
+        return 'Selecione uma ou mais regiões...';
+    }
+
+    if (total === 1) {
+        return regioesAdministrativas.find((regiao) => regiao.codigo === preferencias.regioes_preferidas[0])?.label || '1 região selecionada';
+    }
+
+    return `${total} regiões selecionadas`;
+});
+
 // Bitmask: CLT=1, Estágio=2
 const preferencias = reactive({
     clt: false,
     estagio: false,
     disponibilidade_de_horario: 'Manhã',
     regiao_administrativa: '',
+    aceita_todas_regioes: false,
+    regioes_preferidas: [],
     pretensao_salarial: '',
 });
-
-function formatarPretensaoSalarial(valor) {
-    const apenasDigitos = String(valor ?? '').replace(/\D/g, '');
-
-    if (!apenasDigitos) {
-        return '';
-    }
-
-    const valorEmCentavos = Number(apenasDigitos) / 100;
-
-    return valorEmCentavos.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
 
 function formatarDataParaApi(valor) {
     if (!valor) {
@@ -839,108 +742,67 @@ function normalizarTexto(valor) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
-function obterLabelRegiaoAdministrativa(valor) {
-    return regioesAdministrativas.find((regiao) => regiao.value === valor)?.label || valor || '';
+function abrirDropdownRegioesTrabalho() {
+    mostrarDropdownRegioesTrabalho.value = true;
+    nextTick(() => regiaoTrabalhoInput.value?.focus());
 }
 
-function sincronizarBuscaRegiaoAdministrativa() {
-    buscaRegiaoAdministrativa.value = obterLabelRegiaoAdministrativa(preferencias.regiao_administrativa);
-}
+function alternarDropdownRegioesTrabalho() {
+    mostrarDropdownRegioesTrabalho.value = !mostrarDropdownRegioesTrabalho.value;
 
-function abrirDropdownRegiaoAdministrativa() {
-    if (timeoutFechamentoDropdownRegiaoAdministrativa) {
-        clearTimeout(timeoutFechamentoDropdownRegiaoAdministrativa);
-        timeoutFechamentoDropdownRegiaoAdministrativa = null;
+    if (mostrarDropdownRegioesTrabalho.value) {
+        nextTick(() => regiaoTrabalhoInput.value?.focus());
     }
-    mostrarDropdownRegiaoAdministrativa.value = true;
-    indiceRegiaoAdministrativaDestacada.value = regioesAdministrativasFiltradas.value.length ? 0 : -1;
 }
 
-function fecharDropdownRegiaoAdministrativa() {
-    mostrarDropdownRegiaoAdministrativa.value = false;
-    indiceRegiaoAdministrativaDestacada.value = -1;
-    sincronizarBuscaRegiaoAdministrativa();
+function fecharDropdownRegioesTrabalho() {
+    mostrarDropdownRegioesTrabalho.value = false;
+    buscaRegiaoTrabalho.value = '';
 }
 
-function agendarFechamentoDropdownRegiaoAdministrativa() {
-    timeoutFechamentoDropdownRegiaoAdministrativa = setTimeout(() => {
-        fecharDropdownRegiaoAdministrativa();
-    }, 150);
+function alternarTodasRegioesTrabalho() {
+    preferencias.aceita_todas_regioes = !preferencias.aceita_todas_regioes;
+
+    if (preferencias.aceita_todas_regioes) {
+        preferencias.regioes_preferidas = [];
+    }
 }
 
-function aoDigitarRegiaoAdministrativa() {
-    mostrarDropdownRegiaoAdministrativa.value = true;
-    indiceRegiaoAdministrativaDestacada.value = regioesAdministrativasFiltradas.value.length ? 0 : -1;
-    preferencias.regiao_administrativa = '';
-}
+function alternarRegiaoTrabalho(codigo) {
+    preferencias.aceita_todas_regioes = false;
 
-function selecionarRegiaoAdministrativa(opcao) {
-    preferencias.regiao_administrativa = opcao.value;
-    buscaRegiaoAdministrativa.value = opcao.label;
-    mostrarDropdownRegiaoAdministrativa.value = false;
-    indiceRegiaoAdministrativaDestacada.value = -1;
-}
+    const codigoNumerico = Number(codigo);
+    const indice = preferencias.regioes_preferidas.indexOf(codigoNumerico);
 
-function destacarProximaRegiaoAdministrativa() {
-    if (!mostrarDropdownRegiaoAdministrativa.value) {
-        abrirDropdownRegiaoAdministrativa();
+    if (indice >= 0) {
+        preferencias.regioes_preferidas.splice(indice, 1);
         return;
     }
 
-    if (!regioesAdministrativasFiltradas.value.length) {
-        indiceRegiaoAdministrativaDestacada.value = -1;
-        return;
-    }
-
-    indiceRegiaoAdministrativaDestacada.value = indiceRegiaoAdministrativaDestacada.value < regioesAdministrativasFiltradas.value.length - 1
-        ? indiceRegiaoAdministrativaDestacada.value + 1
-        : 0;
+    preferencias.regioes_preferidas.push(codigoNumerico);
+    preferencias.regioes_preferidas.sort((a, b) => a - b);
 }
 
-function destacarRegiaoAdministrativaAnterior() {
-    if (!mostrarDropdownRegiaoAdministrativa.value) {
-        abrirDropdownRegiaoAdministrativa();
-        return;
-    }
-
-    if (!regioesAdministrativasFiltradas.value.length) {
-        indiceRegiaoAdministrativaDestacada.value = -1;
-        return;
-    }
-
-    indiceRegiaoAdministrativaDestacada.value = indiceRegiaoAdministrativaDestacada.value > 0
-        ? indiceRegiaoAdministrativaDestacada.value - 1
-        : regioesAdministrativasFiltradas.value.length - 1;
-}
-
-function selecionarRegiaoAdministrativaDestacada() {
-    const opcao = regioesAdministrativasFiltradas.value[indiceRegiaoAdministrativaDestacada.value];
-    if (opcao) {
-        selecionarRegiaoAdministrativa(opcao);
-    }
-}
-
-function converterPretensaoSalarialParaNumero(valor) {
-    const apenasDigitos = String(valor ?? '').replace(/\D/g, '');
-
-    if (!apenasDigitos) {
-        return null;
-    }
-
-    return Number(apenasDigitos) / 100;
-}
-
-function aplicarMascaraPretensaoSalarial(evento) {
-    preferencias.pretensao_salarial = formatarPretensaoSalarial(evento.target.value);
+function regiaoTrabalhoSelecionada(codigo) {
+    return preferencias.regioes_preferidas.includes(Number(codigo));
 }
 
 function bloquearSinalNegativo(evento) {
     if (evento.key === '-') {
         evento.preventDefault();
     }
+}
+
+function obterRegiaoAdministrativaLegadaParaApi() {
+    if (preferencias.aceita_todas_regioes) {
+        return 'Todas as regiões';
+    }
+
+    return regioesAdministrativas.find((regiao) => regiao.codigo === preferencias.regioes_preferidas[0])?.value || '';
 }
 
 function normalizarCargaHorariaCursoExterno(evento) {
@@ -1142,8 +1004,17 @@ async function carregar() {
             aplicarTipoContratacao(data.preferencias_de_trabalho.tipo_de_contratacao);
             preferencias.disponibilidade_de_horario = data.preferencias_de_trabalho.disponibilidade_de_horario || preferencias.disponibilidade_de_horario;
             preferencias.regiao_administrativa = data.preferencias_de_trabalho.regiao_administrativa || '';
-            preferencias.pretensao_salarial = formatarPretensaoSalarial(data.preferencias_de_trabalho.pretensao_salarial);
-            sincronizarBuscaRegiaoAdministrativa();
+            preferencias.aceita_todas_regioes = Boolean(data.preferencias_de_trabalho.aceita_todas_regioes);
+            preferencias.regioes_preferidas = preferencias.aceita_todas_regioes
+                ? []
+                : (data.regioes_preferidas_trabalho || []).map((regiao) => Number(regiao.codigo)).filter(Boolean);
+
+            if (!preferencias.aceita_todas_regioes && !preferencias.regioes_preferidas.length && preferencias.regiao_administrativa) {
+                const regiaoLegada = regioesAdministrativas.find((regiao) => regiao.value === preferencias.regiao_administrativa);
+                preferencias.regioes_preferidas = regiaoLegada ? [regiaoLegada.codigo] : [];
+            }
+
+            preferencias.pretensao_salarial = converterPretensaoSalarialApiParaFaixa(data.preferencias_de_trabalho.pretensao_salarial);
         }
     } finally {
         carregando.value = false;
@@ -1249,6 +1120,10 @@ function aoClicarForaDosDropdowns(evento) {
     if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
         fecharDropdownHabilidades();
     }
+
+    if (regioesTrabalhoDropdownContainer.value && !regioesTrabalhoDropdownContainer.value.contains(evento.target)) {
+        fecharDropdownRegioesTrabalho();
+    }
 }
 
 function cancelarCursoExterno() {
@@ -1333,11 +1208,13 @@ async function salvar() {
     mensagem.value = null;
     limparErrosFormulario();
     try {
-        if (preferencias.regiao_administrativa && !regioesAdministrativasPermitidas.includes(preferencias.regiao_administrativa)) {
+        if (!preferencias.aceita_todas_regioes && !preferencias.regioes_preferidas.length) {
             definirErrosFormulario({ regiao_administrativa: ['Selecione uma Região Administrativa válida.'] });
             mostrarMensagem('erro', 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
             return;
         }
+
+        preferencias.regiao_administrativa = obterRegiaoAdministrativaLegadaParaApi();
 
         await Promise.all([
             alunosService.salvarLinks(matricula.value, { ...links }),
@@ -1345,8 +1222,10 @@ async function salvar() {
             alunosService.salvarPreferencias(matricula.value, {
                 tipo_de_contratacao: tipoContratacaoBitmask(),
                 disponibilidade_de_horario: preferencias.disponibilidade_de_horario,
-                regiao_administrativa: preferencias.regiao_administrativa,
-                pretensao_salarial: converterPretensaoSalarialParaNumero(preferencias.pretensao_salarial),
+                regiao_administrativa: obterRegiaoAdministrativaLegadaParaApi(),
+                aceita_todas_regioes: preferencias.aceita_todas_regioes,
+                regioes_preferidas: preferencias.aceita_todas_regioes ? [] : preferencias.regioes_preferidas,
+                pretensao_salarial: converterFaixaPretensaoSalarialParaPayload(preferencias.pretensao_salarial),
             }),
         ]);
         mostrarMensagem('sucesso', 'Perfil atualizado com sucesso.');
@@ -1377,28 +1256,14 @@ onBeforeUnmount(() => {
     border-style: dashed !important;
 }
 
-.sem-setas::-webkit-outer-spin-button,
-.sem-setas::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.sem-setas[type='number'] {
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-.ra-dropdown {
-    max-height: 240px;
-    overflow-y: auto;
-}
-
-.habilidades-select {
+.habilidades-select,
+.regioes-trabalho-select {
     min-height: 38px;
     background-image: none;
 }
 
-.habilidades-dropdown {
+.habilidades-dropdown,
+.regioes-trabalho-dropdown {
     position: absolute;
     left: 0;
     top: 100%;
@@ -1406,9 +1271,15 @@ onBeforeUnmount(() => {
     width: 100%;
 }
 
-.habilidades-dropdown-lista {
+.habilidades-dropdown-lista,
+.regioes-trabalho-dropdown-lista {
     max-height: 320px;
     overflow-y: auto;
+}
+
+.regioes-trabalho-dropdown {
+    max-height: min(520px, 70vh);
+    overflow: hidden;
 }
 
 .nova-habilidade-input {
@@ -1416,20 +1287,24 @@ onBeforeUnmount(() => {
 }
 
 .habilidade-opcao,
+.regiao-trabalho-opcao,
 .habilidade-selecionada {
     transition: background-color 0.15s ease;
 }
 
-.habilidade-opcao {
+.habilidade-opcao,
+.regiao-trabalho-opcao {
     cursor: pointer;
 }
 
 .habilidade-opcao:hover,
+.regiao-trabalho-opcao:hover,
 .habilidade-selecionada:hover {
     background-color: var(--bs-primary-bg-subtle);
 }
 
-.habilidade-opcao .form-check-input {
+.habilidade-opcao .form-check-input,
+.regiao-trabalho-opcao .form-check-input {
     float: none;
 }
 

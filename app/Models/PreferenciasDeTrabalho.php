@@ -12,12 +12,14 @@ class PreferenciasDeTrabalho extends Model
         'tipo_de_contratacao',
         'disponibilidade_de_horario',
         'regiao_administrativa',
+        'aceita_todas_regioes',
         'pretensao_salarial',
         'candidato_matricula',
     ];
 
     protected $casts = [
         'candidato_matricula' => 'string',
+        'aceita_todas_regioes' => 'boolean',
     ];
 
     public function candidato()

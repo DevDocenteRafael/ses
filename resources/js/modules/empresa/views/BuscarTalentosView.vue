@@ -56,6 +56,48 @@
                     </div>
                 </div>
 
+                <div class="mb-4 position-relative" ref="regioesDropdownContainer">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Região Administrativa</label>
+                    <button
+                        type="button"
+                        class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
+                        :aria-expanded="mostrarDropdownRegioes"
+                        @click.stop="alternarDropdownRegioes"
+                    >
+                        <span class="text-truncate" :class="filtros.regioes_administrativas.length ? 'text-body' : 'text-secondary'">
+                            {{ rotuloFiltroRegioes }}
+                        </span>
+                        <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                    </button>
+
+                    <div v-if="mostrarDropdownRegioes" class="filtro-multiselect-dropdown border rounded shadow-sm bg-white mt-1">
+                        <div class="p-2 border-bottom">
+                            <label class="form-label small text-secondary mb-1" for="busca-regiao-filtro">
+                                <i class="bi bi-search me-1"></i> Pesquisar região...
+                            </label>
+                            <input
+                                id="busca-regiao-filtro"
+                                ref="regiaoBuscaInput"
+                                v-model="buscaRegiao"
+                                type="text"
+                                class="form-control form-control-sm"
+                                placeholder="Digite parte do nome..."
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <div class="filtro-multiselect-lista p-2">
+                            <template v-if="regioesFiltradas.length">
+                                <label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)">
+                                    <span class="form-check-label text-truncate">{{ regiao.label }}</span>
+                                </label>
+                            </template>
+                            <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade</label>
                     <select v-model="filtros.disponibilidade" class="form-select form-select-sm">
@@ -189,7 +231,7 @@
                                                 </span>
                                             </div>
                                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                                <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }}, DF</small>
+                                                <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }} - DF</small>
                                                 <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '-' }}</small>
                                             </div>
                                         </div>
@@ -228,6 +270,8 @@ import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount, watch } 
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
+import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
+import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -256,6 +300,7 @@ const filtros = reactive({
     tipo_curso: '',
     clt: false,
     estagio: false,
+    regioes_administrativas: [],
     disponibilidade: '',
     habilidades: [],
 });
@@ -266,9 +311,13 @@ const carregandoHabilidades = ref(false);
 const candidatos = ref([]);
 const habilidadesDisponiveis = ref([]);
 const buscaHabilidade = ref('');
+const buscaRegiao = ref('');
 const mostrarDropdownHabilidades = ref(false);
+const mostrarDropdownRegioes = ref(false);
 const habilidadeBuscaInput = ref(null);
+const regiaoBuscaInput = ref(null);
 const habilidadesDropdownContainer = ref(null);
+const regioesDropdownContainer = ref(null);
 const paginacao = reactive({
     current_page: 1,
     last_page: 1,
@@ -295,6 +344,19 @@ const rotuloFiltroHabilidades = computed(() => {
 
     return total === 1 ? '1 habilidade selecionada' : `${total} habilidades selecionadas`;
 });
+const rotuloFiltroRegioes = computed(() => {
+    const total = filtros.regioes_administrativas.length;
+
+    if (!total) {
+        return 'Selecione regiões...';
+    }
+
+    if (total === 1) {
+        return regioesAdministrativasDf.find((regiao) => regiao.codigo === filtros.regioes_administrativas[0])?.label || '1 região selecionada';
+    }
+
+    return `${total} regiões selecionadas`;
+});
 const habilidadesFiltradas = computed(() => {
     const termo = normalizarTexto(buscaHabilidade.value);
 
@@ -304,8 +366,25 @@ const habilidadesFiltradas = computed(() => {
 
     return habilidadesDisponiveis.value.filter((habilidade) => normalizarTexto(habilidade).includes(termo));
 });
+const regioesFiltradas = computed(() => {
+    const termo = normalizarTexto(buscaRegiao.value);
+    const termoSemEspacos = termo.replace(/\s+/g, '');
+
+    if (!termo) {
+        return regioesAdministrativasDf;
+    }
+
+    return regioesAdministrativasDf.filter((regiao) => {
+        const texto = normalizarTexto(`${regiao.label} ${regiao.nome}`);
+        return texto.includes(termo) || texto.replace(/\s+/g, '').includes(termoSemEspacos);
+    });
+});
 
 watch(() => [...filtros.habilidades], () => {
+    paginacao.current_page = 1;
+});
+
+watch(() => [...filtros.regioes_administrativas], () => {
     paginacao.current_page = 1;
 });
 
@@ -336,7 +415,25 @@ function normalizarTexto(valor) {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
+        .replace(/\s+/g, ' ')
         .trim();
+}
+
+function regiaoSelecionada(codigo) {
+    return filtros.regioes_administrativas.includes(Number(codigo));
+}
+
+function alternarRegiao(codigo) {
+    const codigoNumerico = Number(codigo);
+    const indice = filtros.regioes_administrativas.indexOf(codigoNumerico);
+
+    if (indice >= 0) {
+        filtros.regioes_administrativas.splice(indice, 1);
+        return;
+    }
+
+    filtros.regioes_administrativas.push(codigoNumerico);
+    filtros.regioes_administrativas.sort((a, b) => a - b);
 }
 
 function habilidadeSelecionada(habilidade) {
@@ -378,9 +475,26 @@ function fecharDropdownHabilidades() {
     buscaHabilidade.value = '';
 }
 
+function alternarDropdownRegioes() {
+    mostrarDropdownRegioes.value = !mostrarDropdownRegioes.value;
+
+    if (mostrarDropdownRegioes.value) {
+        nextTick(() => regiaoBuscaInput.value?.focus());
+    }
+}
+
+function fecharDropdownRegioes() {
+    mostrarDropdownRegioes.value = false;
+    buscaRegiao.value = '';
+}
+
 function aoClicarForaDosDropdowns(evento) {
     if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
         fecharDropdownHabilidades();
+    }
+
+    if (regioesDropdownContainer.value && !regioesDropdownContainer.value.contains(evento.target)) {
+        fecharDropdownRegioes();
     }
 }
 
@@ -388,7 +502,10 @@ async function carregarHabilidadesDisponiveis() {
     carregandoHabilidades.value = true;
     try {
         const { data } = await empresaService.listarHabilidadesCandidatos();
-        habilidadesDisponiveis.value = Array.isArray(data) ? data : [];
+        habilidadesDisponiveis.value = deduplicarHabilidades([
+            ...habilidadesPadrao,
+            ...(Array.isArray(data) ? data : []),
+        ]).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
     } finally {
         carregandoHabilidades.value = false;
     }
@@ -409,6 +526,7 @@ async function buscar(pagina = 1) {
         if (filtros.segmento) params.segmento = filtros.segmento;
         if (filtros.tipo_curso) params.tipo_curso = filtros.tipo_curso;
         if (filtros.disponibilidade) params.disponibilidade = filtros.disponibilidade;
+        if (filtros.regioes_administrativas.length) params.regioes_administrativas = filtros.regioes_administrativas;
         if (filtros.habilidades.length) params.habilidades = filtros.habilidades;
         const mascara = tipoContratacaoBitmask();
         if (mascara) params.tipo_contratacao = mascara;
@@ -442,10 +560,13 @@ function limparFiltros() {
     filtros.tipo_curso = '';
     filtros.clt = false;
     filtros.estagio = false;
+    filtros.regioes_administrativas = [];
     filtros.disponibilidade = '';
     filtros.habilidades = [];
     buscaHabilidade.value = '';
+    buscaRegiao.value = '';
     fecharDropdownHabilidades();
+    fecharDropdownRegioes();
     buscar(1);
 }
 
@@ -481,13 +602,15 @@ onBeforeUnmount(() => {
 .buscar-talentos-content {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .buscar-talentos-filtros {
     width: 300px;
     flex: 0 0 300px;
     min-height: 0;
+    position: relative;
+    z-index: 20;
     overflow: visible;
 }
 
@@ -518,14 +641,16 @@ onBeforeUnmount(() => {
     min-width: 0;
 }
 
-.habilidades-filtro-select {
+.habilidades-filtro-select,
+.filtro-multiselect {
     background-image: none;
     min-width: 0;
     padding-right: 2.25rem;
     position: relative;
 }
 
-.habilidades-filtro-seta {
+.habilidades-filtro-seta,
+.filtro-multiselect-seta {
     position: absolute;
     right: 12px;
     top: 50%;
@@ -535,7 +660,8 @@ onBeforeUnmount(() => {
     pointer-events: none;
 }
 
-.habilidades-filtro-dropdown {
+.habilidades-filtro-dropdown,
+.filtro-multiselect-dropdown {
     position: absolute;
     left: 0;
     top: 100%;
@@ -544,23 +670,33 @@ onBeforeUnmount(() => {
     max-width: 100%;
 }
 
-.habilidades-filtro-lista {
+.habilidades-filtro-dropdown {
+    top: auto;
+    bottom: calc(100% + 0.25rem);
+    margin-top: 0 !important;
+}
+
+.habilidades-filtro-lista,
+.filtro-multiselect-lista {
     max-height: 230px;
     overflow-y: auto;
 }
 
-.habilidade-filtro-opcao {
+.habilidade-filtro-opcao,
+.filtro-multiselect-opcao {
     cursor: pointer;
     display: flex;
     align-items: center;
     transition: background-color 0.15s ease;
 }
 
-.habilidade-filtro-opcao:hover {
+.habilidade-filtro-opcao:hover,
+.filtro-multiselect-opcao:hover {
     background-color: var(--bs-primary-bg-subtle);
 }
 
-.habilidade-filtro-opcao .form-check-input {
+.habilidade-filtro-opcao .form-check-input,
+.filtro-multiselect-opcao .form-check-input {
     float: none;
     flex-shrink: 0;
 }
