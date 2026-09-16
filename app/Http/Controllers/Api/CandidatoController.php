@@ -7,6 +7,7 @@ use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
 use App\Models\DadosAcademicos;
+use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CandidatoController extends Controller
@@ -196,7 +198,57 @@ class CandidatoController extends Controller
 
         $this->registrarBuscaDeTalentos($request, $solicitante);
 
+        if ($solicitante->tipo() === 'empresa') {
+            $perPage = (int) $request->query('per_page', 10);
+            $perPage = min(max($perPage, 1), 10);
+
+            return response()->json(
+                $query->orderBy('matricula')->paginate($perPage)
+            );
+        }
+
         return response()->json($query->get());
+    }
+
+    /**
+     * Lista apenas os nomes únicos de habilidades persistidas nos perfis dos
+     * candidatos, sem expor dados pessoais. Empresas recebem habilidades de
+     * candidatos liberados, coerente com a busca de talentos.
+     */
+    public function habilidades(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar habilidades de candidatos.');
+        }
+
+        $query = InformacoesProfissionais::query()
+            ->whereNotNull('habilidades')
+            ->select('habilidades', 'candidato_matricula');
+
+        if ($solicitante->tipo() === 'empresa') {
+            $query->whereHas('candidato', function ($q) {
+                $q->where('status', true);
+            });
+        }
+
+        $habilidades = [];
+
+        $query->get()->each(function (InformacoesProfissionais $info) use (&$habilidades) {
+            foreach ((array) $info->habilidades as $habilidade) {
+                $rotulo = $this->normalizarRotuloHabilidade($habilidade);
+                $chave = $this->normalizarChaveHabilidade($rotulo);
+
+                if ($rotulo !== '' && ! isset($habilidades[$chave])) {
+                    $habilidades[$chave] = $rotulo;
+                }
+            }
+        });
+
+        uasort($habilidades, fn (string $a, string $b) => strnatcasecmp($a, $b));
+
+        return response()->json(array_values($habilidades));
     }
 
     /**
@@ -228,6 +280,19 @@ class CandidatoController extends Controller
             'filtros'      => $filtros,
             'buscado_em'   => now(),
         ]);
+    }
+
+    private function normalizarRotuloHabilidade(mixed $habilidade): string
+    {
+        return preg_replace('/\s+/u', ' ', trim((string) $habilidade)) ?: '';
+    }
+
+    private function normalizarChaveHabilidade(mixed $habilidade): string
+    {
+        return Str::of($this->normalizarRotuloHabilidade($habilidade))
+            ->ascii()
+            ->lower()
+            ->toString();
     }
 
     /**

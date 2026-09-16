@@ -57,6 +57,26 @@ body,
     color: var(--bs-body-color);
 }
 
+html.ses-font-scale-100 {
+    font-size: 100%;
+}
+
+html.ses-font-scale-125 {
+    font-size: 125%;
+}
+
+html.ses-font-scale-150 {
+    font-size: 150%;
+}
+
+html.ses-font-scale-175 {
+    font-size: 175%;
+}
+
+html.ses-font-scale-200 {
+    font-size: 200%;
+}
+
 body,
 .card,
 .modal-content,

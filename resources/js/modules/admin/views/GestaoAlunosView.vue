@@ -54,7 +54,6 @@
                             tabindex="-1"
                             role="dialog"
                             aria-modal="true"
-                            @click.self="fecharModalCadastro"
                         >
                             <div class="modal-dialog modal-lg modal-dialog-centered app-modal-dialog-animated">
                                 <div class="modal-content">

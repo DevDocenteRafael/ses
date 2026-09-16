@@ -31,6 +31,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('empresas', [EmpresaController::class, 'store']);
 
     // Candidatos
+    Route::get('candidatos/habilidades', [CandidatoController::class, 'habilidades']);
     Route::apiResource('candidatos', CandidatoController::class)
         ->except(['store'])
         ->parameters(['candidatos' => 'matricula']);

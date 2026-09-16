@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted } from 'vue';
+import AccessibilityMenu from './components/common/AccessibilityMenu.vue';
 import { useAuthStore } from './store/auth';
 import { useThemeStore } from './store/theme';
 
@@ -22,4 +23,5 @@ onMounted(() => {
         página específica.
     -->
     <router-view />
+    <AccessibilityMenu />
 </template>

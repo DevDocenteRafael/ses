@@ -8,7 +8,6 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <ThemeToggle />
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Empresa' }}</p>
                     <p class="small mb-0 opacity-75">{{ auth.pessoa?.email }}</p>
@@ -198,7 +197,6 @@
 import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
-import ThemeToggle from '../../../components/common/ThemeToggle.vue';
 import empresaService from '../../../services/empresaServices';
 import { formatarTelefone } from '../../../utils/telefone';
 

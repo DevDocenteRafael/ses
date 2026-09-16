@@ -105,6 +105,142 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         }
     }
 
+    public function test_empresa_lista_candidatos_paginados_com_dez_por_pagina(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 23; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Paginado ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT));
+        }
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 23)
+            ->assertJsonPath('last_page', 3)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?page=3&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
+    }
+
+    public function test_empresa_encontra_candidato_fora_dos_primeiros_dez_apos_filtro(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Sem Match ' . $i, habilidades: ['php']);
+        }
+
+        $alvo = $this->criarCandidatoParaBusca('Aluno Encontrado', habilidades: ['laravel-especial']);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?habilidades[]=laravel-especial&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('last_page', 1)
+            ->assertJsonPath('data.0.matricula', $alvo->matricula);
+    }
+
+    public function test_empresa_lista_habilidades_persistidas_unicas_incluindo_personalizadas(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $this->criarCandidatoParaBusca('Aluno Docker A', habilidades: [' Docker ', 'Laravel']);
+        $this->criarCandidatoParaBusca('Aluno Docker B', habilidades: ['docker', 'Vue.js']);
+        $this->criarCandidatoParaBusca('Aluno Bloqueado Skill', status: false, habilidades: ['Kubernetes']);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos/habilidades')
+            ->assertOk()
+            ->assertJson(fn ($json) => $json
+                ->has(3)
+                ->where(0, 'Docker')
+                ->where(1, 'Laravel')
+                ->where(2, 'Vue.js')
+            )
+            ->assertJsonMissing(['Kubernetes']);
+    }
+
+    public function test_empresa_filtra_por_varias_habilidades_com_semantica_and_antes_da_paginacao(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 10; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Sem Docker ' . $i, habilidades: ['Laravel']);
+        }
+
+        $this->criarCandidatoParaBusca('Aluno Docker Sem Vue', habilidades: ['Docker', 'Laravel']);
+        $alvo = $this->criarCandidatoParaBusca('Aluno Docker Vue', habilidades: ['Docker', 'Vue.js', 'Laravel']);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?habilidades[]=Docker&habilidades[]=Vue.js&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('last_page', 1)
+            ->assertJsonPath('data.0.matricula', $alvo->matricula);
+    }
+
+    public function test_filtro_atualiza_total_e_last_page_da_paginacao_para_empresa(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Tecnologia ' . $i, segmento: 'tecnologia-e-games');
+        }
+
+        for ($i = 1; $i <= 5; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Moda ' . $i, segmento: 'moda-e-costura');
+        }
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?segmento=moda-e-costura&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 5)
+            ->assertJsonPath('last_page', 1)
+            ->assertJsonCount(5, 'data');
+    }
+
+    public function test_empresa_lista_apenas_candidatos_liberados_mesmo_com_paginacao(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 11; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Liberado ' . $i, status: true);
+        }
+
+        $bloqueado = $this->criarCandidatoParaBusca('Aluno Bloqueado', status: false);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 11)
+            ->assertJsonMissing(['matricula' => $bloqueado->matricula]);
+    }
+
+    public function test_admin_continua_recebendo_lista_simples_de_candidatos_sem_paginacao(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        $this->criarCandidatoParaBusca('Aluno Admin 1');
+        $this->criarCandidatoParaBusca('Aluno Admin 2');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonIsArray()
+            ->assertJsonMissingPath('data')
+            ->assertJsonCount(2);
+    }
+
     public function test_aluno_acessa_proprio_candidato_mas_nao_acessa_candidato_de_terceiro(): void
     {
         [, $candidatoA, $tokenA] = $this->criarCandidatoAutenticado();
@@ -583,6 +719,58 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         ]);
 
         return [$pessoa, $candidato, $this->gerarTokenParaPessoa($pessoa)];
+    }
+
+    private function criarCandidatoParaBusca(
+        string $nome,
+        bool $status = true,
+        string $segmento = 'tecnologia-e-games',
+        string $tipoCurso = 'tecnico',
+        string $disponibilidade = 'Manhã',
+        array $habilidades = ['php']
+    ): Candidato {
+        $pessoa = Pessoa::query()->create([
+            'nome' => $nome,
+            'email' => Str::slug($nome) . Str::random(6) . '@teste.com',
+            'telefone' => (string) random_int(10000000000, 99999999999),
+            'senha' => bcrypt('123456'),
+            'data_cadastro' => now(),
+        ]);
+
+        $candidato = Candidato::query()->create([
+            'matricula' => $this->gerarMatricula(),
+            'cpf' => (string) random_int(10000000000, 99999999999),
+            'status' => $status,
+            'pessoa_id_pessoa' => $pessoa->id_pessoa,
+        ]);
+
+        DadosAcademicos::query()->create([
+            'instituicao' => 'Senac',
+            'curso' => 'Curso Teste',
+            'segmento' => $segmento,
+            'tipo_curso' => $tipoCurso,
+            'unidade' => 'Asa Sul',
+            'ano_de_conclusao' => now(),
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        \App\Models\PreferenciasDeTrabalho::query()->create([
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => $disponibilidade,
+            'regiao_administrativa' => 'Plano Piloto',
+            'pretensao_salarial' => 2500,
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        \App\Models\InformacoesProfissionais::query()->create([
+            'sobre_mim' => 'Perfil de teste',
+            'cargo_de_interesse' => 'Desenvolvedor',
+            'area_de_atuacao' => 'Tecnologia',
+            'habilidades' => $habilidades,
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        return $candidato;
     }
 
     private function criarEmpresaAutenticada(): array

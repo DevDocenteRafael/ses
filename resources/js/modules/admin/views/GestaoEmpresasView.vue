@@ -50,7 +50,6 @@
                             tabindex="-1"
                             role="dialog"
                             aria-modal="true"
-                            @click.self="fecharModalCadastro"
                         >
                             <transition appear name="app-modal-panel">
                                 <div v-if="modalCadastroAberto" class="modal-dialog modal-lg modal-dialog-centered mb-0 app-modal-panel">

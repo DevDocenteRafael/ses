@@ -35,6 +35,10 @@ export default {
         return api.get('/candidatos', { params });
     },
 
+    listarHabilidadesCandidatos() {
+        return api.get('/candidatos/habilidades');
+    },
+
     verTalento(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

@@ -1,19 +1,17 @@
 <template>
-    <header class="ses-topbar d-flex align-items-center justify-content-between px-4 py-3 bg-white">
+    <header class="ses-topbar d-flex align-items-center justify-content-between px-4 py-3 text-white">
         <div>
             <h1 class="h4 fw-bold mb-0">{{ titulo }}</h1>
-            <p v-if="subtitulo" class="text-secondary small mb-0">{{ subtitulo }}</p>
+            <p v-if="subtitulo" class="ses-topbar-subtitle small mb-0">{{ subtitulo }}</p>
         </div>
 
         <div class="d-flex align-items-center gap-3">
             <slot name="acoes" />
 
-            <ThemeToggle />
-
             <div v-if="auth.pessoa" class="d-flex align-items-center gap-3">
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">Administrador SENAC DF</p>
-                    <p class="text-secondary small mb-0">{{ cargoLabel }}</p>
+                    <p class="ses-topbar-subtitle small mb-0">{{ cargoLabel }}</p>
                 </div>
                 <span
                     class="ses-avatar rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
@@ -28,7 +26,6 @@
 <script setup>
 import { computed } from 'vue';
 import { useAuthStore } from '../../store/auth';
-import ThemeToggle from './ThemeToggle.vue';
 
 defineProps({
     titulo: { type: String, required: true },
@@ -58,11 +55,16 @@ const iniciais = computed(() => {
 
 <style scoped>
 .ses-topbar {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 1px 8px rgba(15, 23, 42, 0.04);
+    background-color: var(--ses-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 8px rgba(15, 23, 42, 0.12);
     position: sticky;
     top: 0;
     z-index: 1020;
+}
+
+.ses-topbar-subtitle {
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .ses-avatar {
