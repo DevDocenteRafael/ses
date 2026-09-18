@@ -37,16 +37,6 @@
                         </div>
                     </div>
 
-                    <div
-                        v-if="mensagemSucesso"
-                        class="alert alert-success py-2 px-3 mb-3 d-inline-flex align-items-center gap-2"
-                        role="status"
-                        aria-live="polite"
-                    >
-                        <i class="bi bi-check-circle"></i>
-                        <span>{{ mensagemSucesso }}</span>
-                    </div>
-
                     <transition name="app-modal">
                         <div
                             v-if="modalCadastroAberto"
@@ -249,12 +239,12 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
+import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 
-const DURACAO_NOTIFICACAO_SUCESSO = 4000;
-
 const admin = useAdminStore();
+const toast = useToast();
 const carregouUmaVez = ref(false);
 const busca = ref('');
 const alterando = ref(null);
@@ -262,8 +252,6 @@ const alunoExpandido = ref(null);
 const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
 const mensagemErro = ref('');
-const mensagemSucesso = ref('');
-const timeoutMensagemSucesso = ref(null);
 const formularioInicial = () => ({
     nome: '',
     email: '',
@@ -299,21 +287,8 @@ function limparFormulario() {
     Object.assign(formulario, formularioInicial());
 }
 
-function limparMensagemSucesso() {
-    if (timeoutMensagemSucesso.value) {
-        clearTimeout(timeoutMensagemSucesso.value);
-        timeoutMensagemSucesso.value = null;
-    }
-    mensagemSucesso.value = '';
-}
-
 function exibirMensagemSucesso(texto) {
-    limparMensagemSucesso();
-    mensagemSucesso.value = texto;
-    timeoutMensagemSucesso.value = setTimeout(() => {
-        mensagemSucesso.value = '';
-        timeoutMensagemSucesso.value = null;
-    }, DURACAO_NOTIFICACAO_SUCESSO);
+    toast.success(texto);
 }
 
 function abrirModalCadastro() {
@@ -400,6 +375,7 @@ async function salvarNovoCandidato() {
 
     if (formulario.senha !== formulario.confirmarSenha) {
         mensagemErro.value = 'As senhas informadas não coincidem.';
+        toast.error(mensagemErro.value);
         return;
     }
 
@@ -425,6 +401,7 @@ async function salvarNovoCandidato() {
         exibirMensagemSucesso('Candidato cadastrado com sucesso.');
     } catch (error) {
         mensagemErro.value = obterMensagemErro(error);
+        toast.error(mensagemErro.value);
     } finally {
         salvandoCadastro.value = false;
     }
@@ -434,6 +411,9 @@ async function alternarStatus(aluno) {
     alterando.value = aluno.matricula;
     try {
         await admin.atualizarStatusAluno(aluno.matricula, !aluno.status);
+        toast.info(`Acesso do candidato ${!aluno.status ? 'liberado' : 'bloqueado'} com sucesso.`);
+    } catch (error) {
+        toast.error('Não foi possível alterar o status do candidato.');
     } finally {
         alterando.value = null;
     }

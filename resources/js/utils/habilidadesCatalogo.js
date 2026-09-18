@@ -2,6 +2,8 @@ import catalogoHabilidades from '../../catalogos/habilidades.json';
 
 export const habilidadesPorArea = catalogoHabilidades.habilidadesPorArea;
 
+export const areasAtuacao = Object.keys(habilidadesPorArea);
+
 export const sugestoesSoftSkills = catalogoHabilidades.sugestoesSoftSkills;
 
 export function normalizarChaveHabilidade(valor) {

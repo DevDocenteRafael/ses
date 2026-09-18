@@ -2,14 +2,14 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import empresaService from '../../../services/empresaServices';
+import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import '../../../../css/modules/auth/cadastro.css';
 
 const router = useRouter();
+const toast = useToast();
 
 const carregando = ref(false);
-const mensagemErro = ref('');
-const mensagemSucesso = ref('');
 
 const formulario = reactive({
 	cnpj: '',
@@ -46,11 +46,8 @@ function onTelefoneInput(campo, evento) {
 }
 
 async function enviarCadastro() {
-	mensagemErro.value = '';
-	mensagemSucesso.value = '';
-
 	if (formulario.senha !== formulario.confirmarSenha) {
-		mensagemErro.value = 'As senhas de acesso da empresa não coincidem.';
+		toast.error('As senhas de acesso da empresa não coincidem.');
 		return;
 	}
 
@@ -70,10 +67,10 @@ async function enviarCadastro() {
 			responsavel_senha: formulario.responsavelSenha,
 		});
 
-		mensagemSucesso.value = 'Empresa cadastrada! Redirecionando para o login...';
+		toast.success('Empresa cadastrada! Redirecionando para o login...');
 		setTimeout(() => router.push({ name: 'login' }), 1500);
 	} catch (error) {
-		mensagemErro.value = obterMensagemErro(error);
+		toast.error(obterMensagemErro(error));
 	} finally {
 		carregando.value = false;
 	}
@@ -87,9 +84,6 @@ async function enviarCadastro() {
 			<p class="auth-cadastro-subtitle mb-4">
 				Seu cadastro passa por uma revisão da equipe do Senac DF antes de aparecer como parceiro ativo.
 			</p>
-
-			<div v-if="mensagemErro" class="alert alert-danger py-2 mb-4">{{ mensagemErro }}</div>
-			<div v-if="mensagemSucesso" class="alert alert-success py-2 mb-4">{{ mensagemSucesso }}</div>
 
 			<form @submit.prevent="enviarCadastro" novalidate>
 				<p class="auth-cadastro-section-title">Dados da empresa</p>
