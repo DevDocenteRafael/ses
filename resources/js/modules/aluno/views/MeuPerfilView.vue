@@ -27,15 +27,6 @@
         </header>
 
         <div class="container-fluid p-4">
-        <transition name="toast-fade">
-            <div v-if="mensagem" class="toast-flutuante shadow-sm" :class="`toast-${mensagem.tipo || 'aviso'}`" role="status" aria-live="polite">
-                <div class="d-flex align-items-start gap-2">
-                    <i :class="iconeToast"></i>
-                    <div class="flex-grow-1 toast-texto">{{ mensagem.texto }}</div>
-                    <button type="button" class="btn-close btn-close-sm" aria-label="Fechar notificação" @click="fecharMensagem"></button>
-                </div>
-            </div>
-        </transition>
 
         <transition name="app-modal">
             <div
@@ -240,11 +231,7 @@
                                     <label class="form-label">Área de Atuação <span class="text-danger">*</span></label>
                                     <select v-model="perfil.area_de_atuacao" class="form-select" :class="campoInvalido('area_de_atuacao')">
                                         <option value="">Selecione</option>
-                                        <option value="Tecnologia da Informação">Tecnologia da Informação</option>
-                                        <option value="Administração">Administração</option>
-                                        <option value="Marketing">Marketing</option>
-                                        <option value="Recursos Humanos">Recursos Humanos</option>
-                                        <option value="Outra">Outra</option>
+                                        <option v-for="area in areasAtuacao" :key="area" :value="area">{{ area }}</option>
                                     </select>
                                     <div v-if="erroDeCampo('area_de_atuacao')" class="invalid-feedback d-block">{{ erroDeCampo('area_de_atuacao') }}</div>
                                 </div>
@@ -258,7 +245,7 @@
                                     :aria-expanded="mostrarDropdownHabilidades"
                                     @click.stop="alternarDropdownHabilidades"
                                 >
-                                    <span :class="perfil.habilidades.length ? 'text-body' : 'text-secondary'">
+                                    <span :class="habilidadesDaAreaAtual.length ? 'text-body' : 'text-secondary'">
                                         {{ rotuloHabilidadesSelecionadas }}
                                     </span>
                                     <i class="bi bi-chevron-down ms-2"></i>
@@ -303,10 +290,10 @@
                                             <p v-else class="small text-secondary mb-0">Nenhuma soft skill encontrada.</p>
                                         </div>
 
-                                        <div v-if="perfil.habilidades.length" class="mt-3 pt-3 border-top">
-                                            <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
+                                        <div v-if="habilidadesDaAreaAtual.length" class="mt-3 pt-3 border-top">
+                                            <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas em {{ perfil.area_de_atuacao }}</p>
                                             <div class="d-flex flex-column gap-1">
-                                                <div v-for="(habilidade, indice) in perfil.habilidades" :key="`${habilidade}-${indice}`" class="habilidade-selecionada d-flex align-items-center justify-content-between rounded px-2 py-1">
+                                                <div v-for="(habilidade, indice) in habilidadesDaAreaAtual" :key="`${habilidade}-${indice}`" class="habilidade-selecionada d-flex align-items-center justify-content-between rounded px-2 py-1">
                                                     <span>{{ habilidade }}</span>
                                                     <button type="button" class="btn btn-sm btn-link text-danger p-0" aria-label="Remover habilidade" @click="removerHabilidade(indice)">
                                                         <i class="bi bi-x-lg"></i>
@@ -559,9 +546,10 @@ import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount } from 'v
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
+import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
-import { habilidadesPorArea, sugestoesSoftSkills } from '../../../utils/habilidadesCatalogo';
+import { areasAtuacao, habilidadesPorArea, sugestoesSoftSkills } from '../../../utils/habilidadesCatalogo';
 import {
     converterFaixaPretensaoSalarialParaPayload,
     converterPretensaoSalarialApiParaFaixa,
@@ -570,6 +558,7 @@ import {
 
 const auth = useAuthStore();
 const router = useRouter();
+const toast = useToast();
 const habilidadeInput = ref(null);
 const novaHabilidadeInput = ref(null);
 const habilidadesDropdownContainer = ref(null);
@@ -596,9 +585,7 @@ const matricula = computed(() => auth.pessoa?.candidato?.matricula || auth.pesso
 
 const carregando = ref(true);
 const salvando = ref(false);
-const mensagem = ref(null);
 const errosFormulario = ref({});
-let timeoutMensagem = null;
 
 const dadosAcademicos = ref(null);
 const cursosSenac = ref([]);
@@ -630,23 +617,12 @@ const informacoesPessoais = reactive({
 
 const regioesAdministrativas = regioesAdministrativasDf;
 
-const iconeToast = computed(() => {
-    if (mensagem.value?.tipo === 'sucesso') {
-        return 'bi bi-check-circle-fill toast-icone';
-    }
-
-    if (mensagem.value?.tipo === 'aviso') {
-        return 'bi bi-exclamation-triangle-fill toast-icone';
-    }
-
-    return 'bi bi-exclamation-octagon-fill toast-icone';
-});
-
 const perfil = reactive({
     sobre_mim: '',
     cargo_de_interesse: '',
     area_de_atuacao: 'Tecnologia da Informação',
     habilidades: [],
+    habilidades_por_area: {},
 });
 
 function obterChaveHabilidadesPorArea(areaDeAtuacao) {
@@ -665,8 +641,10 @@ const habilidadesTecnicasFiltradas = computed(() => filtrarHabilidades(sugestoes
 
 const softSkillsFiltradas = computed(() => filtrarHabilidades(sugestoesSoftSkills));
 
+const habilidadesDaAreaAtual = computed(() => habilidadesPorAreaSelecionada(perfil.area_de_atuacao));
+
 const rotuloHabilidadesSelecionadas = computed(() => {
-    const total = perfil.habilidades.length;
+    const total = habilidadesDaAreaAtual.value.length;
 
     if (!total) {
         return 'Selecione habilidades...';
@@ -744,6 +722,46 @@ function normalizarTexto(valor) {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function habilidadesPorAreaSelecionada(area = perfil.area_de_atuacao) {
+    const areaTratada = String(area || '').trim();
+
+    if (!areaTratada) {
+        return [];
+    }
+
+    if (!Array.isArray(perfil.habilidades_por_area[areaTratada])) {
+        perfil.habilidades_por_area[areaTratada] = [];
+    }
+
+    return perfil.habilidades_por_area[areaTratada];
+}
+
+function sincronizarHabilidadesPlanas() {
+    perfil.habilidades = Object.values(perfil.habilidades_por_area)
+        .flat()
+        .filter((habilidade, indice, lista) => {
+            const habilidadeNormalizada = normalizarTexto(habilidade);
+            return habilidadeNormalizada && lista.findIndex((item) => normalizarTexto(item) === habilidadeNormalizada) === indice;
+        });
+}
+
+function normalizarHabilidadesPorAreaRecebidas(informacoesProfissionais) {
+    const porArea = informacoesProfissionais?.habilidades_por_area;
+
+    if (porArea && typeof porArea === 'object' && !Array.isArray(porArea)) {
+        return Object.fromEntries(
+            Object.entries(porArea)
+                .map(([area, habilidades]) => [String(area).trim(), Array.isArray(habilidades) ? habilidades.filter(Boolean) : []])
+                .filter(([area, habilidades]) => area && habilidades.length)
+        );
+    }
+
+    const areaLegada = informacoesProfissionais?.area_de_atuacao || perfil.area_de_atuacao;
+    const habilidadesLegadas = Array.isArray(informacoesProfissionais?.habilidades) ? informacoesProfissionais.habilidades : [];
+
+    return habilidadesLegadas.length ? { [areaLegada]: habilidadesLegadas } : {};
 }
 
 function abrirDropdownRegioesTrabalho() {
@@ -886,16 +904,7 @@ function limparErrosFormulario() {
 }
 
 function mostrarMensagem(tipo, texto) {
-    mensagem.value = { tipo, texto };
-
-    if (timeoutMensagem) {
-        clearTimeout(timeoutMensagem);
-    }
-
-    timeoutMensagem = setTimeout(() => {
-        mensagem.value = null;
-        timeoutMensagem = null;
-    }, 4500);
+    toast.showToast(tipo, texto);
 }
 
 function sincronizarInformacoesPessoais() {
@@ -948,15 +957,6 @@ async function salvarInformacoesPessoais() {
     }
 }
 
-function fecharMensagem() {
-    if (timeoutMensagem) {
-        clearTimeout(timeoutMensagem);
-        timeoutMensagem = null;
-    }
-
-    mensagem.value = null;
-}
-
 function definirErrosFormulario(erros = {}) {
     errosFormulario.value = Object.fromEntries(
         Object.entries(erros).map(([campo, mensagens]) => [campo, Array.isArray(mensagens) ? mensagens[0] : mensagens])
@@ -997,7 +997,8 @@ async function carregar() {
             perfil.sobre_mim = data.informacoes_profissionais.sobre_mim || '';
             perfil.cargo_de_interesse = data.informacoes_profissionais.cargo_de_interesse || '';
             perfil.area_de_atuacao = areaRecebidaCarregar;
-            perfil.habilidades = data.informacoes_profissionais.habilidades || [];
+            perfil.habilidades_por_area = normalizarHabilidadesPorAreaRecebidas(data.informacoes_profissionais);
+            sincronizarHabilidadesPlanas();
         }
 
         if (data.preferencias_de_trabalho) {
@@ -1033,7 +1034,8 @@ function registrarHabilidade(habilidade) {
         return false;
     }
 
-    perfil.habilidades.push(habilidadeTratada);
+    habilidadesPorAreaSelecionada().push(habilidadeTratada);
+    sincronizarHabilidadesPlanas();
     return true;
 }
 
@@ -1090,16 +1092,18 @@ function alternarHabilidade(habilidade) {
     const indice = indiceHabilidadeSelecionada(habilidade);
 
     if (indice >= 0) {
-        perfil.habilidades.splice(indice, 1);
+        habilidadesPorAreaSelecionada().splice(indice, 1);
     } else {
-        perfil.habilidades.push(habilidade);
+        habilidadesPorAreaSelecionada().push(habilidade);
     }
+
+    sincronizarHabilidadesPlanas();
 }
 
 function indiceHabilidadeSelecionada(habilidade) {
     const habilidadeNormalizada = normalizarTexto(habilidade);
 
-    return perfil.habilidades.findIndex((item) => normalizarTexto(item) === habilidadeNormalizada);
+    return habilidadesPorAreaSelecionada().findIndex((item) => normalizarTexto(item) === habilidadeNormalizada);
 }
 
 function habilidadeSelecionada(habilidade) {
@@ -1107,7 +1111,8 @@ function habilidadeSelecionada(habilidade) {
 }
 
 function removerHabilidade(indice) {
-    perfil.habilidades.splice(indice, 1);
+    habilidadesPorAreaSelecionada().splice(indice, 1);
+    sincronizarHabilidadesPlanas();
 }
 
 function alternarExperienciaAtual() {
@@ -1205,7 +1210,6 @@ async function removerExperiencia(id) {
 
 async function salvar() {
     salvando.value = true;
-    mensagem.value = null;
     limparErrosFormulario();
     try {
         if (!preferencias.aceita_todas_regioes && !preferencias.regioes_preferidas.length) {
@@ -1218,7 +1222,10 @@ async function salvar() {
 
         await Promise.all([
             alunosService.salvarLinks(matricula.value, { ...links }),
-            alunosService.salvarInfoProfissional(matricula.value, { ...perfil }),
+            alunosService.salvarInfoProfissional(matricula.value, {
+                ...perfil,
+                habilidades_por_area: { ...perfil.habilidades_por_area },
+            }),
             alunosService.salvarPreferencias(matricula.value, {
                 tipo_de_contratacao: tipoContratacaoBitmask(),
                 disponibilidade_de_horario: preferencias.disponibilidade_de_horario,
@@ -1245,9 +1252,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', aoClicarForaDosDropdowns);
-    if (timeoutMensagem) {
-        clearTimeout(timeoutMensagem);
-    }
 });
 </script>
 
@@ -1306,54 +1310,6 @@ onBeforeUnmount(() => {
 .habilidade-opcao .form-check-input,
 .regiao-trabalho-opcao .form-check-input {
     float: none;
-}
-
-.toast-flutuante {
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    z-index: 1080;
-    max-width: min(380px, calc(100vw - 32px));
-    padding: 0.9rem 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid transparent;
-}
-
-.toast-erro {
-    background: #fdeaea;
-    color: #842029;
-    border-color: #f5c2c7;
-}
-
-.toast-sucesso {
-    background: #e8f6ec;
-    color: #0f5132;
-    border-color: #badbcc;
-}
-
-.toast-aviso {
-    background: #fff3cd;
-    color: #664d03;
-    border-color: #ffecb5;
-}
-
-.toast-icone {
-    margin-top: 0.1rem;
-}
-
-.toast-texto {
-    word-break: break-word;
-}
-
-.toast-fade-enter-active,
-.toast-fade-leave-active {
-    transition: opacity 0.35s ease, transform 0.35s ease;
-}
-
-.toast-fade-enter-from,
-.toast-fade-leave-to {
-    opacity: 0;
-    transform: translateY(12px);
 }
 
 .perfil-pessoal-botao {

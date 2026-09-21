@@ -32,7 +32,7 @@
                         <label class="form-label small text-secondary mb-1">Segmento</label>
                         <select v-model="filtros.segmento" class="form-select form-select-sm">
                             <option value="">Todos os Segmentos</option>
-                            <option v-for="s in segmentos" :key="s.value" :value="s.value">{{ s.label }}</option>
+                            <option v-for="segmento in segmentos" :key="segmento" :value="segmento">{{ segmento }}</option>
                         </select>
                     </div>
                     <div class="mb-2">
@@ -271,21 +271,12 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
-import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
+import { areasAtuacao, deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 
 const auth = useAuthStore();
 const router = useRouter();
 
-const segmentos = [
-    { value: 'beleza-e-cuidado-pessoal', label: 'Beleza e Cuidado Pessoal' },
-    { value: 'economia-criativa-e-design', label: 'Economia Criativa e Design' },
-    { value: 'gastronomia-e-turismo', label: 'Gastronomia e Turismo' },
-    { value: 'gestao-de-empresas-e-negocios', label: 'Gestão, Comércio e Moda' },
-    { value: 'moda-e-costura', label: 'Moda e Costura' },
-    { value: 'saude-massagem-e-estetica', label: 'Saúde, Massagem e Estética' },
-    { value: 'seguranca-no-trabalho', label: 'Segurança no Trabalho' },
-    { value: 'tecnologia-e-games', label: 'Tecnologia e Economia Criativa' },
-];
+const segmentos = areasAtuacao;
 
 const tiposCurso = [
     { value: 'livres', label: 'Cursos Livres' },
@@ -403,11 +394,26 @@ function cursoPrincipal(candidato) {
 }
 
 function habilidadesVisiveis(candidato) {
-    return (candidato.informacoes_profissionais?.habilidades || []).slice(0, 3);
+    return habilidadesPlanas(candidato).slice(0, 3);
 }
 
 function habilidadesExtras(candidato) {
-    return Math.max((candidato.informacoes_profissionais?.habilidades || []).length - 3, 0);
+    return Math.max(habilidadesPlanas(candidato).length - 3, 0);
+}
+
+function habilidadesPlanas(candidato) {
+    const info = candidato.informacoes_profissionais || {};
+    const porArea = info.habilidades_por_area;
+    const areaAtual = info.area_de_atuacao;
+
+    if (porArea && typeof porArea === 'object' && !Array.isArray(porArea)) {
+        const entradaAreaAtual = Object.entries(porArea)
+            .find(([area]) => normalizarTexto(area) === normalizarTexto(areaAtual));
+
+        return Array.isArray(entradaAreaAtual?.[1]) ? entradaAreaAtual[1].filter(Boolean) : [];
+    }
+
+    return info.habilidades || [];
 }
 
 function normalizarTexto(valor) {

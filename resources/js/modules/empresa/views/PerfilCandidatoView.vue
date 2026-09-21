@@ -75,14 +75,19 @@
                                 {{ candidato.informacoes_profissionais?.sobre_mim || 'Candidato ainda não preencheu esta seção.' }}
                             </p>
 
-                            <h2 class="h6 mb-3 border-bottom pb-2">Habilidades Técnicas</h2>
+                            <h2 class="h6 mb-3 border-bottom pb-2">Habilidades</h2>
                             <div class="mb-4">
-                                <p v-if="!habilidades.length" class="text-secondary small mb-0">Nenhuma habilidade cadastrada.</p>
-                                <ul v-else class="list-unstyled mb-0">
-                                    <li v-for="h in habilidades" :key="h" class="mb-2">
-                                        <i class="bi bi-check text-success me-2"></i>{{ h }}
-                                    </li>
-                                </ul>
+                                <p v-if="!habilidadesPorArea.length" class="text-secondary small mb-0">Nenhuma habilidade cadastrada.</p>
+                                <div v-else class="d-flex flex-column gap-3">
+                                    <div v-for="grupo in habilidadesPorArea" :key="grupo.area">
+                                        <p class="fw-semibold mb-2">{{ grupo.area }}</p>
+                                        <ul class="list-unstyled mb-0">
+                                            <li v-for="h in grupo.habilidades" :key="`${grupo.area}-${h}`" class="mb-2">
+                                                <i class="bi bi-check text-success me-2"></i>{{ h }}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
 
                             <h2 class="h6 mb-3 border-bottom pb-2">Experiências Profissionais</h2>
@@ -225,6 +230,27 @@ const cursoPrincipal = computed(() => (candidato.value.dados_academicos || [])[0
 
 const habilidades = computed(() => candidato.value.informacoes_profissionais?.habilidades || []);
 
+const habilidadesPorArea = computed(() => {
+    const info = candidato.value.informacoes_profissionais || {};
+    const porArea = info.habilidades_por_area;
+    const areaAtual = info.area_de_atuacao;
+
+    if (porArea && typeof porArea === 'object' && !Array.isArray(porArea)) {
+        const entradaAreaAtual = Object.entries(porArea)
+            .find(([area]) => normalizarTexto(area) === normalizarTexto(areaAtual));
+
+        if (!entradaAreaAtual || !Array.isArray(entradaAreaAtual[1]) || !entradaAreaAtual[1].length) {
+            return [];
+        }
+
+        return [{ area: entradaAreaAtual[0], habilidades: entradaAreaAtual[1] }];
+    }
+
+    return habilidades.value.length
+        ? [{ area: areaAtual || 'Área de atuação', habilidades: habilidades.value }]
+        : [];
+});
+
 const experienciasProfissionais = computed(() => candidato.value.experiencias_profissionais || []);
 
 const cursosExternos = computed(() => candidato.value.cursos_externos || []);
@@ -259,6 +285,15 @@ const pretensaoFormatada = computed(() => {
 function formatarData(data) {
     if (!data) return '-';
     return new Date(data).toLocaleDateString('pt-BR');
+}
+
+function normalizarTexto(valor) {
+    return String(valor ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 function dataLocalNormalizada(data) {

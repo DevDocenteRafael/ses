@@ -130,7 +130,8 @@ class CandidatoController extends Controller
     /**
      * Lista candidatos. Uso principal: busca de talentos pela empresa —
      * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são
-     * aplicados aqui no servidor, e não no cliente.
+     * aplicados aqui no servidor, e não no cliente. O filtro "segmento"
+     * representa a área de atuação profissional escolhida pelo candidato.
      */
     public function index(Request $request): JsonResponse
     {
@@ -158,8 +159,8 @@ class CandidatoController extends Controller
         }
 
         if ($request->filled('segmento')) {
-            $query->whereHas('dadosAcademicos', function ($q) use ($request) {
-                $q->where('segmento', $request->query('segmento'));
+            $query->whereHas('informacoesProfissionais', function ($q) use ($request) {
+                $q->where('area_de_atuacao', $request->query('segmento'));
             });
         }
 
@@ -260,7 +261,7 @@ class CandidatoController extends Controller
         $habilidades = HabilidadesCatalogo::padrao();
 
         $query->get()->each(function (InformacoesProfissionais $info) use (&$habilidades) {
-            foreach ((array) $info->habilidades as $habilidade) {
+            foreach ($this->habilidadesDaInfoProfissional($info) as $habilidade) {
                 $habilidades[] = $habilidade;
             }
         });
@@ -463,7 +464,7 @@ class CandidatoController extends Controller
             (bool) $candidato->linkExterno?->github,
             (bool) $candidato->informacoesProfissionais?->sobre_mim,
             (bool) $candidato->informacoesProfissionais?->cargo_de_interesse,
-            ! empty($candidato->informacoesProfissionais?->habilidades),
+            ! empty($this->habilidadesDaInfoProfissional($candidato->informacoesProfissionais)),
             (bool) $candidato->preferenciasDeTrabalho,
         ];
 
@@ -486,5 +487,23 @@ class CandidatoController extends Controller
         );
 
         return $candidato;
+    }
+
+    private function habilidadesDaInfoProfissional(?InformacoesProfissionais $info): array
+    {
+        if (! $info) {
+            return [];
+        }
+
+        $habilidadesPorArea = (array) ($info->habilidades_por_area ?? []);
+
+        if (! empty($habilidadesPorArea)) {
+            return array_values(array_unique(array_merge(...array_map(
+                fn ($habilidades) => (array) $habilidades,
+                array_values($habilidadesPorArea)
+            ))));
+        }
+
+        return (array) ($info->habilidades ?? []);
     }
 }

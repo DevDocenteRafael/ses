@@ -33,16 +33,6 @@
                         </div>
                     </div>
 
-                    <div
-                        v-if="mensagemSucesso"
-                        class="alert alert-success py-2 px-3 mb-3 d-inline-flex align-items-center gap-2"
-                        role="status"
-                        aria-live="polite"
-                    >
-                        <i class="bi bi-check-circle"></i>
-                        <span>{{ mensagemSucesso }}</span>
-                    </div>
-
                     <transition name="app-modal-overlay">
                         <div
                             v-if="modalCadastroAberto"
@@ -225,18 +215,17 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
+import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 
-const DURACAO_NOTIFICACAO_SUCESSO = 4000;
 const admin = useAdminStore();
+const toast = useToast();
 const carregouUmaVez = ref(false);
 const busca = ref('');
 const alterando = ref(null);
 const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
 const mensagemErro = ref('');
-const mensagemSucesso = ref('');
-const timeoutMensagemSucesso = ref(null);
 const formularioInicial = () => ({
     razaoSocial: '',
     cnpj: '',
@@ -268,21 +257,8 @@ function limparFormulario() {
     Object.assign(formulario, formularioInicial());
 }
 
-function limparMensagemSucesso() {
-    if (timeoutMensagemSucesso.value) {
-        clearTimeout(timeoutMensagemSucesso.value);
-        timeoutMensagemSucesso.value = null;
-    }
-    mensagemSucesso.value = '';
-}
-
 function exibirMensagemSucesso(texto) {
-    limparMensagemSucesso();
-    mensagemSucesso.value = texto;
-    timeoutMensagemSucesso.value = setTimeout(() => {
-        mensagemSucesso.value = '';
-        timeoutMensagemSucesso.value = null;
-    }, DURACAO_NOTIFICACAO_SUCESSO);
+    toast.success(texto);
 }
 
 function abrirModalCadastro() {
@@ -350,6 +326,7 @@ async function salvarNovaEmpresa() {
 
     if (formulario.senha !== formulario.confirmarSenha) {
         mensagemErro.value = 'As senhas não coincidem.';
+        toast.error(mensagemErro.value);
         return;
     }
 
@@ -377,6 +354,7 @@ async function salvarNovaEmpresa() {
         exibirMensagemSucesso('Empresa cadastrada com sucesso.');
     } catch (error) {
         mensagemErro.value = obterMensagemErro(error);
+        toast.error(mensagemErro.value);
     } finally {
         salvandoCadastro.value = false;
     }
@@ -386,6 +364,9 @@ async function alternarStatus(empresa) {
     alterando.value = empresa.cnpj;
     try {
         await admin.atualizarStatusEmpresa(empresa.cnpj, !empresa.status);
+        toast.info(`Acesso da empresa ${!empresa.status ? 'liberado' : 'bloqueado'} com sucesso.`);
+    } catch (error) {
+        toast.error('Não foi possível alterar o status da empresa.');
     } finally {
         alterando.value = null;
     }

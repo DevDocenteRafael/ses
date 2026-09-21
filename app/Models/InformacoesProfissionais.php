@@ -13,11 +13,13 @@ class InformacoesProfissionais extends Model
         'cargo_de_interesse',
         'area_de_atuacao',
         'habilidades',
+        'habilidades_por_area',
         'candidato_matricula',
     ];
 
     protected $casts = [
         'habilidades' => 'array',
+        'habilidades_por_area' => 'array',
         'candidato_matricula' => 'string',
     ];
 
