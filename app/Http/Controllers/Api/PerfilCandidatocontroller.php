@@ -51,7 +51,19 @@ class PerfilCandidatoController extends Controller
             'area_de_atuacao'    => 'required|string|max:45',
             'habilidades'        => 'nullable|array',
             'habilidades.*'      => 'string|max:45',
+            'habilidades_por_area'        => 'nullable|array',
+            'habilidades_por_area.*'      => 'array',
+            'habilidades_por_area.*.*'    => 'string|max:45',
         ]);
+
+        $habilidadesPorArea = $this->normalizarHabilidadesPorArea(
+            $validated['habilidades_por_area'] ?? [],
+            $validated['area_de_atuacao'],
+            $validated['habilidades'] ?? []
+        );
+
+        $validated['habilidades_por_area'] = $habilidadesPorArea;
+        $validated['habilidades'] = $this->habilidadesPlanas($habilidadesPorArea);
 
         $info = InformacoesProfissionais::updateOrCreate(
             ['candidato_matricula' => $matricula],
@@ -59,6 +71,58 @@ class PerfilCandidatoController extends Controller
         );
 
         return response()->json($info, 201);
+    }
+
+    private function normalizarHabilidadesPorArea(array $habilidadesPorArea, string $areaPrincipal, array $habilidadesLegadas = []): array
+    {
+        if (empty($habilidadesPorArea) && ! empty($habilidadesLegadas)) {
+            $habilidadesPorArea = [$areaPrincipal => $habilidadesLegadas];
+        }
+
+        $normalizadas = [];
+
+        foreach ($habilidadesPorArea as $area => $habilidades) {
+            $areaTratada = trim((string) $area);
+
+            if ($areaTratada === '' || ! is_array($habilidades)) {
+                continue;
+            }
+
+            $habilidadesUnicas = [];
+
+            foreach ($habilidades as $habilidade) {
+                $habilidadeTratada = trim((string) $habilidade);
+
+                if ($habilidadeTratada === '') {
+                    continue;
+                }
+
+                $chaveNormalizada = mb_strtolower($habilidadeTratada);
+
+                if (! array_key_exists($chaveNormalizada, $habilidadesUnicas)) {
+                    $habilidadesUnicas[$chaveNormalizada] = $habilidadeTratada;
+                }
+            }
+
+            if (! empty($habilidadesUnicas)) {
+                $normalizadas[$areaTratada] = array_values($habilidadesUnicas);
+            }
+        }
+
+        return $normalizadas;
+    }
+
+    private function habilidadesPlanas(array $habilidadesPorArea): array
+    {
+        $habilidades = [];
+
+        foreach ($habilidadesPorArea as $lista) {
+            foreach ((array) $lista as $habilidade) {
+                $habilidades[] = $habilidade;
+            }
+        }
+
+        return array_values(array_unique($habilidades));
     }
 
     // ── Preferências de Trabalho ─────────────────────────────────

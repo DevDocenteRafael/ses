@@ -2,14 +2,14 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import alunosService from '../../../services/alunosServices';
+import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import '../../../../css/modules/auth/cadastro.css';
 
 const router = useRouter();
+const toast = useToast();
 
 const carregando = ref(false);
-const mensagemErro = ref('');
-const mensagemSucesso = ref('');
 
 const formulario = reactive({
 	nome: '',
@@ -48,16 +48,13 @@ function onMatriculaInput(evento) {
 }
 
 async function enviarCadastro() {
-	mensagemErro.value = '';
-	mensagemSucesso.value = '';
-
 	if (formulario.senha !== formulario.confirmarSenha) {
-		mensagemErro.value = 'As senhas informadas não coincidem.';
+		toast.error('As senhas informadas não coincidem.');
 		return;
 	}
 
 	if (!formulario.aceiteLgpd) {
-		mensagemErro.value = 'É preciso aceitar os termos de uso de dados (LGPD) para continuar.';
+		toast.warning('É preciso aceitar os termos de uso de dados (LGPD) para continuar.');
 		return;
 	}
 
@@ -73,10 +70,10 @@ async function enviarCadastro() {
 			senha: formulario.senha,
 		});
 
-		mensagemSucesso.value = 'Cadastro realizado! Redirecionando para o login...';
+		toast.success('Cadastro realizado! Redirecionando para o login...');
 		setTimeout(() => router.push({ name: 'login' }), 1500);
 	} catch (error) {
-		mensagemErro.value = obterMensagemErro(error);
+		toast.error(obterMensagemErro(error));
 	} finally {
 		carregando.value = false;
 	}
@@ -90,9 +87,6 @@ async function enviarCadastro() {
 			<p class="auth-cadastro-subtitle mb-4">
 				Use a matrícula do seu curso no Senac DF para ativar seu perfil no portal de empregabilidade.
 			</p>
-
-			<div v-if="mensagemErro" class="alert alert-danger py-2 mb-4">{{ mensagemErro }}</div>
-			<div v-if="mensagemSucesso" class="alert alert-success py-2 mb-4">{{ mensagemSucesso }}</div>
 
 			<form @submit.prevent="enviarCadastro" novalidate>
 				<p class="auth-cadastro-section-title">Dados pessoais</p>

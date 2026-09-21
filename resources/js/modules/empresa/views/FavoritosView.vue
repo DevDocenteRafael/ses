@@ -175,7 +175,7 @@
                 <p class="small mb-1"><strong>Disponibilidade:</strong> {{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '—' }}</p>
                 <div class="d-flex flex-wrap gap-1">
                     <span
-                        v-for="h in c.informacoes_profissionais?.habilidades || []"
+                        v-for="h in habilidadesPlanas(c)"
                         :key="h"
                         class="badge text-bg-primary-subtle text-primary-emphasis"
                     >{{ h }}</span>
@@ -191,7 +191,7 @@
                 <p class="mb-1"><strong>Pretensão salarial:</strong> {{ formatarPretensao(perfilSelecionado.preferencias_de_trabalho?.pretensao_salarial) }}</p>
                 <div class="d-flex flex-wrap gap-2 mt-2">
                     <span
-                        v-for="h in perfilSelecionado.informacoes_profissionais?.habilidades || []"
+                        v-for="h in habilidadesPlanas(perfilSelecionado)"
                         :key="h"
                         class="badge text-bg-primary-subtle text-primary-emphasis"
                     >{{ h }}</span>
@@ -217,6 +217,30 @@ const { listas, criarLista, removerLista, adicionarNaLista } = useListasFavorito
 const categoriaAtiva = ref('todos');
 const busca = ref('');
 const selecionados = ref([]);
+
+function habilidadesPlanas(candidato) {
+    const info = candidato?.informacoes_profissionais || {};
+    const porArea = info.habilidades_por_area;
+    const areaAtual = info.area_de_atuacao;
+
+    if (porArea && typeof porArea === 'object' && !Array.isArray(porArea)) {
+        const entradaAreaAtual = Object.entries(porArea)
+            .find(([area]) => normalizarTexto(area) === normalizarTexto(areaAtual));
+
+        return Array.isArray(entradaAreaAtual?.[1]) ? entradaAreaAtual[1].filter(Boolean) : [];
+    }
+
+    return info.habilidades || [];
+}
+
+function normalizarTexto(valor) {
+    return String(valor ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 const modalNovaListaAberto = ref(false);
 const nomeNovaLista = ref('');
