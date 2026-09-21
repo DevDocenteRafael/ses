@@ -30,15 +30,31 @@ class PerfilCandidatoPreferenciasTest extends TestCase
             ]);
 
             $response->assertCreated()
-                ->assertJsonPath('disponibilidade_de_horario', $disponibilidade)
+                ->assertJsonPath('disponibilidade_de_horario', [$disponibilidade])
                 ->assertJsonPath('pretensao_salarial', 2500);
 
-            $this->assertDatabaseHas('preferencias_de_trabalho', [
-                'candidato_matricula' => $candidato->matricula,
-                'disponibilidade_de_horario' => $disponibilidade,
-                'pretensao_salarial' => 2500,
-            ]);
+            $preferencia = PreferenciasDeTrabalho::where('candidato_matricula', $candidato->matricula)->firstOrFail();
+            $this->assertSame([$disponibilidade], $preferencia->disponibilidade_de_horario);
+            $this->assertSame(2500, $preferencia->pretensao_salarial);
         }
+    }
+
+    public function test_api_aceita_multiplas_disponibilidades_de_horario(): void
+    {
+        [, $candidato, $token] = $this->criarCandidatoAutenticado();
+
+        $response = $this->withToken($token)->postJson("/api/candidatos/{$candidato->matricula}/perfil/preferencias", [
+            'tipo_de_contratacao' => 1,
+            'disponibilidade_de_horario' => ['Manhã', 'Tarde', 'Noite'],
+            'regiao_administrativa' => 'Ceilândia',
+            'pretensao_salarial' => 2500,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('disponibilidade_de_horario', ['Manhã', 'Tarde', 'Noite']);
+
+        $preferencia = PreferenciasDeTrabalho::where('candidato_matricula', $candidato->matricula)->firstOrFail();
+        $this->assertSame(['Manhã', 'Tarde', 'Noite'], $preferencia->disponibilidade_de_horario);
     }
 
     public function test_api_rejeita_disponibilidade_fora_da_lista_permitida(): void
@@ -54,7 +70,7 @@ class PerfilCandidatoPreferenciasTest extends TestCase
             ]);
 
             $response->assertStatus(422)
-                ->assertJsonValidationErrors(['disponibilidade_de_horario']);
+                ->assertJsonValidationErrors(['disponibilidade_de_horario.0']);
         }
     }
 
@@ -200,7 +216,7 @@ class PerfilCandidatoPreferenciasTest extends TestCase
 
         $payload = [
             'tipo_de_contratacao' => 3,
-            'disponibilidade_de_horario' => 'Integral',
+            'disponibilidade_de_horario' => ['Manhã', 'Noite'],
             'regiao_administrativa' => 'Plano Piloto',
             'pretensao_salarial' => 3200,
         ];
@@ -209,16 +225,14 @@ class PerfilCandidatoPreferenciasTest extends TestCase
 
         $salvar->assertCreated();
 
-        $this->assertDatabaseHas('preferencias_de_trabalho', [
-            'candidato_matricula' => $candidato->matricula,
-            'disponibilidade_de_horario' => 'Integral',
-            'pretensao_salarial' => 3200,
-        ]);
+        $preferencia = PreferenciasDeTrabalho::where('candidato_matricula', $candidato->matricula)->firstOrFail();
+        $this->assertSame(['Manhã', 'Noite'], $preferencia->disponibilidade_de_horario);
+        $this->assertSame(3200, $preferencia->pretensao_salarial);
 
         $leitura = $this->withToken($token)->getJson("/api/candidatos/{$candidato->matricula}");
 
         $leitura->assertOk()
-            ->assertJsonPath('preferencias_de_trabalho.disponibilidade_de_horario', 'Integral')
+            ->assertJsonPath('preferencias_de_trabalho.disponibilidade_de_horario', ['Manhã', 'Noite'])
             ->assertJsonPath('preferencias_de_trabalho.pretensao_salarial', 3200);
     }
 
@@ -372,10 +386,11 @@ class PerfilCandidatoPreferenciasTest extends TestCase
         $this->assertDatabaseHas('preferencias_de_trabalho', [
             'candidato_matricula' => $candidato->matricula,
             'tipo_de_contratacao' => 1,
-            'disponibilidade_de_horario' => 'Manhã',
             'regiao_administrativa' => 'Ceilândia',
             'pretensao_salarial' => 2500,
         ]);
+        $preferencia = PreferenciasDeTrabalho::where('candidato_matricula', $candidato->matricula)->firstOrFail();
+        $this->assertSame(['Manhã'], $preferencia->disponibilidade_de_horario);
         $this->assertSame(0, PreferenciasDeTrabalho::whereRaw('(tipo_de_contratacao & 4) != 0')->count());
     }
 

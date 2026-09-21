@@ -21,6 +21,11 @@ class HabilidadesCatalogo
         return count(self::padrao());
     }
 
+    public static function areas(): array
+    {
+        return array_keys(self::catalogo()['habilidadesPorArea'] ?? []);
+    }
+
     public static function deduplicar(array $habilidades): array
     {
         $mapa = [];

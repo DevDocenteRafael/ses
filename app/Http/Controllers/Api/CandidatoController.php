@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
+use App\Models\CursoSenac;
 use App\Models\DadosAcademicos;
 use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
+use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\HabilidadesCatalogo;
 use App\Support\RegioesAdministrativasDf;
 use Illuminate\Http\Request;
@@ -131,7 +133,8 @@ class CandidatoController extends Controller
      * Lista candidatos. Uso principal: busca de talentos pela empresa —
      * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são
      * aplicados aqui no servidor, e não no cliente. O filtro "segmento"
-     * representa a área de atuação profissional escolhida pelo candidato.
+     * representa a classificação acadêmica/curricular em dados_academicos,
+     * não a área de atuação profissional do candidato.
      */
     public function index(Request $request): JsonResponse
     {
@@ -158,21 +161,79 @@ class CandidatoController extends Controller
             $query->where('status', true);
         }
 
-        if ($request->filled('segmento')) {
-            $query->whereHas('informacoesProfissionais', function ($q) use ($request) {
-                $q->where('area_de_atuacao', $request->query('segmento'));
+        if ($request->filled('busca')) {
+            $termo = trim((string) $request->query('busca'));
+            $termoNumerico = preg_replace('/\D+/', '', $termo) ?? '';
+
+            $query->where(function ($q) use ($termo, $termoNumerico) {
+                $q->whereHas('pessoa', function ($pessoa) use ($termo) {
+                    $pessoa->where('nome', 'like', '%' . $termo . '%');
+                });
+
+                if ($termoNumerico !== '') {
+                    $q->orWhere('cpf', 'like', '%' . $termoNumerico . '%');
+                } else {
+                    $q->orWhere('cpf', 'like', '%' . $termo . '%');
+                }
             });
         }
 
-        if ($request->filled('tipo_curso')) {
-            $query->whereHas('dadosAcademicos', function ($q) use ($request) {
-                $q->where('tipo_curso', $request->query('tipo_curso'));
+        if ($request->filled('status')) {
+            $request->validate([
+                'status' => ['boolean'],
+            ]);
+
+            $query->where('status', $request->boolean('status'));
+        }
+
+        if ($request->filled('unidade')) {
+            $request->validate([
+                'unidade' => ['string', 'max:100'],
+            ]);
+
+            $unidade = trim((string) $request->query('unidade'));
+
+            $query->where(function ($q) use ($unidade) {
+                $q->whereHas('dadosAcademicos', function ($academico) use ($unidade) {
+                    $academico->where('unidade', $unidade);
+                })->orWhereHas('cursosSenac', function ($cursoSenac) use ($unidade) {
+                    $cursoSenac->where('unidade', $unidade);
+                });
+            });
+        }
+
+        $tipoCurso = $request->filled('tipo_curso') ? trim((string) $request->query('tipo_curso')) : null;
+        $segmento = $request->filled('segmento') ? trim((string) $request->query('segmento')) : null;
+
+        if ($tipoCurso !== null && ! CatalogoAcademicoSenacDf::tipoExiste($tipoCurso)) {
+            return response()->json(['message' => 'Tipo de curso inválido.'], 422);
+        }
+
+        if ($segmento !== null) {
+            if (! CatalogoAcademicoSenacDf::segmentoExiste($segmento)) {
+                return response()->json(['message' => 'Segmento inválido.'], 422);
+            }
+
+            if ($tipoCurso === null || ! CatalogoAcademicoSenacDf::segmentoPertenceAoTipo($segmento, $tipoCurso)) {
+                return response()->json(['message' => 'Segmento não pertence ao tipo de curso informado.'], 422);
+            }
+        }
+
+        if ($tipoCurso !== null || $segmento !== null) {
+            $query->whereHas('dadosAcademicos', function ($q) use ($tipoCurso, $segmento) {
+                if ($tipoCurso !== null) {
+                    $q->whereIn('tipo_curso', CatalogoAcademicoSenacDf::valoresLegadosTipo($tipoCurso));
+                }
+
+                if ($segmento !== null) {
+                    $q->whereIn('segmento', CatalogoAcademicoSenacDf::valoresLegadosSegmento($segmento));
+                }
             });
         }
 
         if ($request->filled('disponibilidade')) {
             $query->whereHas('preferenciasDeTrabalho', function ($q) use ($request) {
-                $q->where('disponibilidade_de_horario', $request->query('disponibilidade'));
+                $q->whereJsonContains('disponibilidade_de_horario', $request->query('disponibilidade'));
             });
         }
 
@@ -215,9 +276,7 @@ class CandidatoController extends Controller
         if ($request->filled('habilidades')) {
             $habilidades = array_filter((array) $request->query('habilidades'));
             foreach ($habilidades as $habilidade) {
-                $query->whereHas('informacoesProfissionais', function ($q) use ($habilidade) {
-                    $q->where('habilidades', 'like', '%' . $habilidade . '%');
-                });
+                $this->aplicarFiltroHabilidadeNaAreaAtiva($query, $habilidade);
             }
         }
 
@@ -232,7 +291,72 @@ class CandidatoController extends Controller
             );
         }
 
-        return response()->json($query->get());
+        return response()->json($query->orderBy('matricula')->get());
+    }
+
+    public function tiposCurso(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar tipos de curso.');
+        }
+
+        return response()->json(CatalogoAcademicoSenacDf::tipos());
+    }
+
+    public function segmentosAcademicos(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar segmentos acadêmicos.');
+        }
+
+        $request->validate([
+            'tipo_curso' => ['required', 'string', Rule::in(array_column(CatalogoAcademicoSenacDf::tipos(), 'id'))],
+        ]);
+
+        return response()->json(CatalogoAcademicoSenacDf::segmentos((string) $request->query('tipo_curso')));
+    }
+
+    /**
+     * Lista unidades reais vinculadas aos candidatos, obtidas dos registros
+     * acadêmicos e dos cursos Senac já persistidos, sem catálogo hardcoded.
+     */
+    public function unidades(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar unidades de candidatos.');
+        }
+
+        $unidadesAcademicas = DadosAcademicos::query()
+            ->whereNotNull('unidade')
+            ->where('unidade', '<>', '')
+            ->when($solicitante->tipo() === 'empresa', function ($query) {
+                $query->whereHas('candidato', fn ($candidato) => $candidato->where('status', true));
+            })
+            ->pluck('unidade');
+
+        $unidadesCursosSenac = CursoSenac::query()
+            ->whereNotNull('unidade')
+            ->where('unidade', '<>', '')
+            ->when($solicitante->tipo() === 'empresa', function ($query) {
+                $query->whereHas('candidato', fn ($candidato) => $candidato->where('status', true));
+            })
+            ->pluck('unidade');
+
+        $unidades = $unidadesAcademicas
+            ->merge($unidadesCursosSenac)
+            ->map(fn ($unidade) => trim((string) $unidade))
+            ->filter()
+            ->unique()
+            ->sort(fn ($a, $b) => strcasecmp($a, $b))
+            ->values();
+
+        return response()->json($unidades);
     }
 
     /**
@@ -505,5 +629,26 @@ class CandidatoController extends Controller
         }
 
         return (array) ($info->habilidades ?? []);
+    }
+
+    private function aplicarFiltroHabilidadeNaAreaAtiva($query, string $habilidade): void
+    {
+        $query->whereHas('informacoesProfissionais', function ($q) use ($habilidade) {
+            $q->where('habilidades', 'like', '%' . $habilidade . '%')
+                ->where(function ($ativo) use ($habilidade) {
+                    $ativo->whereNull('habilidades_por_area')
+                        ->orWhere('habilidades_por_area', '')
+                        ->orWhere('habilidades_por_area', '[]')
+                        ->orWhere('habilidades_por_area', '{}')
+                        ->orWhere(function ($json) use ($habilidade) {
+                            foreach (HabilidadesCatalogo::areas() as $area) {
+                                $json->orWhere(function ($areaAtiva) use ($area, $habilidade) {
+                                    $areaAtiva->where('area_de_atuacao', $area)
+                                        ->whereJsonContains('habilidades_por_area->' . $area, $habilidade);
+                                });
+                            }
+                        });
+                });
+        });
     }
 }

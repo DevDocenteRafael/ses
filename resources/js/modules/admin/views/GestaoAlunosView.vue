@@ -20,7 +20,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                         <h2 class="h6 fw-bold text-primary mb-0">Candidatos Cadastrados</h2>
-                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 520px;">
+                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 900px;">
                             <div class="input-group flex-grow-1" style="min-width: 240px;">
                                 <input
                                     v-model="busca"
@@ -30,6 +30,17 @@
                                 >
                                 <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
                             </div>
+                            <select v-model="statusFiltro" class="form-select" aria-label="Filtrar candidatos por status" style="max-width: 180px;">
+                                <option value="">Todos os status</option>
+                                <option value="1">Liberado</option>
+                                <option value="0">Bloqueado</option>
+                            </select>
+                            <select v-model="unidadeFiltro" class="form-select" aria-label="Filtrar candidatos por unidade" style="max-width: 220px;">
+                                <option value="">Todas as unidades</option>
+                                <option v-for="unidade in admin.unidadesAlunos" :key="unidade" :value="unidade">
+                                    {{ unidade }}
+                                </option>
+                            </select>
                             <button class="btn btn-primary" type="button" @click="abrirModalCadastro">
                                 <i class="bi bi-plus-lg me-1"></i>
                                 Novo Candidato
@@ -138,7 +149,7 @@
                         <div v-if="modalCadastroAberto" class="modal-backdrop fade show"></div>
                     </transition>
 
-                    <p v-if="!alunosFiltrados.length" class="text-secondary small mb-0">
+                    <p v-if="!admin.alunos.length" class="text-secondary small mb-0">
                         Nenhum candidato encontrado.
                     </p>
 
@@ -154,7 +165,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <template v-for="aluno in alunosFiltrados" :key="aluno.matricula">
+                                <template v-for="aluno in admin.alunos" :key="aluno.matricula">
                                     <tr>
                                         <td>
                                             <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
@@ -210,7 +221,7 @@
                                                     </div>
                                                     <div class="col-md-6 col-lg-4">
                                                         <small class="text-secondary d-block">Disponibilidade de horário</small>
-                                                        <span>{{ aluno.preferencias_de_trabalho?.disponibilidade_de_horario || 'Não informado' }}</span>
+                                                        <span>{{ formatarDisponibilidade(aluno.preferencias_de_trabalho?.disponibilidade_de_horario) }}</span>
                                                     </div>
                                                     <div class="col-md-6 col-lg-4">
                                                         <small class="text-secondary d-block">Região administrativa</small>
@@ -235,7 +246,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
@@ -247,6 +258,8 @@ const admin = useAdminStore();
 const toast = useToast();
 const carregouUmaVez = ref(false);
 const busca = ref('');
+const statusFiltro = ref('');
+const unidadeFiltro = ref('');
 const alterando = ref(null);
 const alunoExpandido = ref(null);
 const modalCadastroAberto = ref(false);
@@ -268,11 +281,34 @@ const formulario = reactive(formularioInicial());
 
 onMounted(async () => {
     try {
-        await admin.carregarAlunos();
+        await Promise.all([
+            admin.carregarUnidadesAlunos(),
+            carregarAlunosFiltrados(),
+        ]);
     } finally {
         carregouUmaVez.value = true;
     }
 });
+
+let temporizadorFiltro = null;
+watch([busca, statusFiltro, unidadeFiltro], () => {
+    clearTimeout(temporizadorFiltro);
+    temporizadorFiltro = setTimeout(() => {
+        carregarAlunosFiltrados();
+    }, 300);
+});
+
+function parametrosFiltro() {
+    return {
+        ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
+        ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
+        ...(unidadeFiltro.value !== '' ? { unidade: unidadeFiltro.value } : {}),
+    };
+}
+
+async function carregarAlunosFiltrados() {
+    await admin.carregarAlunos(parametrosFiltro());
+}
 
 // "Sincronizar SIG": no protótipo simula uma re-importação de candidatos.
 // TODO(back-end): expor um endpoint de sincronização em lote com o SIG;
@@ -280,7 +316,7 @@ onMounted(async () => {
 // por vez. Por enquanto, o botão apenas atualiza a lista com os dados mais
 // recentes já cadastrados.
 async function sincronizar() {
-    await admin.carregarAlunos();
+    await carregarAlunosFiltrados();
 }
 
 function limparFormulario() {
@@ -394,7 +430,8 @@ async function salvarNovoCandidato() {
             status: formulario.status,
         });
 
-        await admin.carregarAlunos();
+        await admin.carregarUnidadesAlunos();
+        await carregarAlunosFiltrados();
         modalCadastroAberto.value = false;
         fecharModalCadastro({ limpar: false });
         limparFormulario();
@@ -409,9 +446,11 @@ async function salvarNovoCandidato() {
 
 async function alternarStatus(aluno) {
     alterando.value = aluno.matricula;
+    const novoStatus = !aluno.status;
     try {
-        await admin.atualizarStatusAluno(aluno.matricula, !aluno.status);
-        toast.info(`Acesso do candidato ${!aluno.status ? 'liberado' : 'bloqueado'} com sucesso.`);
+        await admin.atualizarStatusAluno(aluno.matricula, novoStatus);
+        await carregarAlunosFiltrados();
+        toast.info(`Acesso do candidato ${novoStatus ? 'liberado' : 'bloqueado'} com sucesso.`);
     } catch (error) {
         toast.error('Não foi possível alterar o status do candidato.');
     } finally {
@@ -427,15 +466,9 @@ function formatarPretensao(valor) {
     return formatarFaixaPretensaoSalarial(valor, 'Não informado');
 }
 
-const alunosFiltrados = computed(() => {
-    const termo = busca.value.trim().toLowerCase();
-    if (!termo) return admin.alunos;
-    const termoSemMascara = removerMascara(termo);
+function formatarDisponibilidade(valor) {
+    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+    return lista.length ? lista.join(' + ') : 'Não informado';
+}
 
-    return admin.alunos.filter(
-        (a) => a.pessoa?.nome?.toLowerCase().includes(termo)
-            || a.cpf?.includes(termo)
-            || removerMascara(a.cpf).includes(termoSemMascara),
-    );
-});
 </script>

@@ -142,7 +142,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <small class="text-secondary d-block">Disponibilidade</small>
-                                    <span class="fw-bold">{{ candidato.preferencias_de_trabalho?.disponibilidade_de_horario || '-' }}</span>
+                                    <span class="fw-bold">{{ formatarDisponibilidade(candidato.preferencias_de_trabalho?.disponibilidade_de_horario) }}</span>
                                 </div>
                                 <div class="col-md-4">
                                     <small class="text-secondary d-block">Pretensão</small>
@@ -294,6 +294,11 @@ function normalizarTexto(valor) {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function formatarDisponibilidade(valor) {
+    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+    return lista.length ? lista.join(' + ') : '-';
 }
 
 function dataLocalNormalizada(data) {

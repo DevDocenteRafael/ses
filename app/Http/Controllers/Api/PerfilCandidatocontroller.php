@@ -131,9 +131,16 @@ class PerfilCandidatoController extends Controller
     {
         $this->garantirCandidatoDono($request, $matricula);
 
+        if ($request->has('disponibilidade_de_horario') && ! is_array($request->input('disponibilidade_de_horario'))) {
+            $request->merge([
+                'disponibilidade_de_horario' => [$request->input('disponibilidade_de_horario')],
+            ]);
+        }
+
         $validated = $request->validate([
             'tipo_de_contratacao'        => ['nullable', 'integer', Rule::in([0, 1, 2, 3])],
-            'disponibilidade_de_horario' => ['nullable', 'string', 'in:Manhã,Tarde,Noite,Integral'],
+            'disponibilidade_de_horario' => ['nullable', 'array'],
+            'disponibilidade_de_horario.*' => ['string', Rule::in(['Manhã', 'Tarde', 'Noite', 'Integral'])],
             'regiao_administrativa'      => ['nullable', 'string', 'max:100', Rule::in([...RegioesAdministrativasDf::nomes(), 'Todas as regiões'])],
             'aceita_todas_regioes'       => ['nullable', 'boolean'],
             'regioes_preferidas'         => ['nullable', 'array'],
@@ -142,6 +149,9 @@ class PerfilCandidatoController extends Controller
         ], [
             'tipo_de_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
         ]);
+        $validated['disponibilidade_de_horario'] = $this->normalizarDisponibilidadesHorario(
+            $validated['disponibilidade_de_horario'] ?? []
+        );
 
         $aceitaTodasRegioes = (bool) ($validated['aceita_todas_regioes'] ?? false);
         $codigosRegioes = array_values(array_unique(array_map('intval', $validated['regioes_preferidas'] ?? [])));
@@ -206,6 +216,17 @@ class PerfilCandidatoController extends Controller
         return response()->json(array_merge($pref->toArray(), [
             'regioes_preferidas' => $regioesPreferidas,
         ]), 201);
+    }
+
+    private function normalizarDisponibilidadesHorario(mixed $valor): array
+    {
+        $itens = is_array($valor) ? $valor : [$valor];
+        $permitidos = ['Manhã', 'Tarde', 'Noite', 'Integral'];
+
+        return array_values(array_intersect($permitidos, array_unique(array_filter(array_map(
+            fn ($item) => trim((string) $item),
+            $itens
+        )))));
     }
 
     // ── Dados Acadêmicos ─────────────────────────────────────────

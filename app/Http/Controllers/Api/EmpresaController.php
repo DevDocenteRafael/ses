@@ -137,12 +137,40 @@ class EmpresaController extends Controller
     {
         $this->garantirAdministrativo($request);
 
-        $empresas = Empresa::with([
+        $query = Empresa::with([
             'pessoa',
             'responsavelContratual.pessoa',
             'vagas',
             'historicoDeEngajamento',
-        ])->get();
+        ]);
+
+        if ($request->filled('busca')) {
+            $termo = trim((string) $request->query('busca'));
+            $termoNumerico = preg_replace('/\D+/', '', $termo) ?? '';
+
+            $query->where(function ($q) use ($termo, $termoNumerico) {
+                $q->where('razao_social', 'like', '%' . $termo . '%')
+                    ->orWhereHas('responsavelContratual.pessoa', function ($pessoa) use ($termo) {
+                        $pessoa->where('nome', 'like', '%' . $termo . '%');
+                    });
+
+                if ($termoNumerico !== '') {
+                    $q->orWhere('cnpj', 'like', '%' . $termoNumerico . '%');
+                } else {
+                    $q->orWhere('cnpj', 'like', '%' . $termo . '%');
+                }
+            });
+        }
+
+        if ($request->filled('status')) {
+            $request->validate([
+                'status' => ['boolean'],
+            ]);
+
+            $query->where('status', $request->boolean('status'));
+        }
+
+        $empresas = $query->orderBy('razao_social')->get();
 
         return response()->json($empresas);
     }

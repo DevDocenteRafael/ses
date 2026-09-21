@@ -16,11 +16,7 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                         <h2 class="h6 fw-bold text-primary mb-0">Histórico de Empresas</h2>
-                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 560px;">
-                            <button class="btn btn-primary" type="button" @click="abrirModalCadastro">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                Nova Empresa
-                            </button>
+                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 740px;">
                             <div class="input-group flex-grow-1" style="min-width: 240px;">
                                 <input
                                     v-model="busca"
@@ -30,6 +26,15 @@
                                 >
                                 <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
                             </div>
+                            <select v-model="statusFiltro" class="form-select" aria-label="Filtrar empresas por status" style="max-width: 180px;">
+                                <option value="">Todos os status</option>
+                                <option value="1">Liberado</option>
+                                <option value="0">Bloqueado</option>
+                            </select>
+                            <button class="btn btn-primary" type="button" @click="abrirModalCadastro">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                Nova Empresa
+                            </button>
                         </div>
                     </div>
 
@@ -155,7 +160,7 @@
                         </div>
                     </transition>
 
-                    <p v-if="!empresasFiltradas.length" class="text-secondary small mb-0">
+                    <p v-if="!admin.empresas.length" class="text-secondary small mb-0">
                         Nenhuma empresa encontrada.
                     </p>
 
@@ -172,7 +177,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="empresa in empresasFiltradas" :key="empresa.cnpj">
+                                <tr v-for="empresa in admin.empresas" :key="empresa.cnpj">
                                     <td><p class="fw-semibold mb-0">{{ empresa.razao_social }}</p></td>
                                     <td>
                                         <p class="mb-0">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
@@ -211,7 +216,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
@@ -222,6 +227,7 @@ const admin = useAdminStore();
 const toast = useToast();
 const carregouUmaVez = ref(false);
 const busca = ref('');
+const statusFiltro = ref('');
 const alterando = ref(null);
 const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
@@ -242,15 +248,34 @@ const formularioInicial = () => ({
 const formulario = reactive(formularioInicial());
 
 onMounted(async () => {
-    await admin.carregarEmpresas();
+    await carregarEmpresasFiltradas();
     carregouUmaVez.value = true;
 });
+
+let temporizadorFiltro = null;
+watch([busca, statusFiltro], () => {
+    clearTimeout(temporizadorFiltro);
+    temporizadorFiltro = setTimeout(() => {
+        carregarEmpresasFiltradas();
+    }, 300);
+});
+
+function parametrosFiltro() {
+    return {
+        ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
+        ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
+    };
+}
+
+async function carregarEmpresasFiltradas() {
+    await admin.carregarEmpresas(parametrosFiltro());
+}
 
 // "Sincronizar SIG": ainda não existe uma integração real com o SIG para
 // empresas (nenhuma tabela de log equivalente à `alunos_migrados`), então
 // por ora o botão só recarrega a lista com os dados mais recentes do banco.
 async function sincronizar() {
-    await admin.carregarEmpresas();
+    await carregarEmpresasFiltradas();
 }
 
 function limparFormulario() {
@@ -347,7 +372,7 @@ async function salvarNovaEmpresa() {
             status: formulario.status,
         });
 
-        await admin.carregarEmpresas();
+        await carregarEmpresasFiltradas();
         modalCadastroAberto.value = false;
         fecharModalCadastro({ limpar: false });
         limparFormulario();
@@ -362,9 +387,11 @@ async function salvarNovaEmpresa() {
 
 async function alternarStatus(empresa) {
     alterando.value = empresa.cnpj;
+    const novoStatus = !empresa.status;
     try {
-        await admin.atualizarStatusEmpresa(empresa.cnpj, !empresa.status);
-        toast.info(`Acesso da empresa ${!empresa.status ? 'liberado' : 'bloqueado'} com sucesso.`);
+        await admin.atualizarStatusEmpresa(empresa.cnpj, novoStatus);
+        await carregarEmpresasFiltradas();
+        toast.info(`Acesso da empresa ${novoStatus ? 'liberado' : 'bloqueado'} com sucesso.`);
     } catch (error) {
         toast.error('Não foi possível alterar o status da empresa.');
     } finally {
@@ -377,17 +404,6 @@ function formatarCnpj(cnpj) {
     return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
 }
 
-const empresasFiltradas = computed(() => {
-    const termo = busca.value.trim().toLowerCase();
-    if (!termo) return admin.empresas;
-    const termoSemMascara = removerMascara(termo);
-    return admin.empresas.filter(
-        (e) => e.razao_social?.toLowerCase().includes(termo)
-            || e.responsavel_contratual?.pessoa?.nome?.toLowerCase().includes(termo)
-            || formatarCnpj(e.cnpj).includes(termo)
-            || removerMascara(e.cnpj).includes(termoSemMascara),
-    );
-});
 </script>
 
 <style scoped>

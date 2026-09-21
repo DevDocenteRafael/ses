@@ -20,6 +20,7 @@ class PreferenciasDeTrabalho extends Model
     protected $casts = [
         'candidato_matricula' => 'string',
         'aceita_todas_regioes' => 'boolean',
+        'disponibilidade_de_horario' => 'array',
     ];
 
     public function candidato()

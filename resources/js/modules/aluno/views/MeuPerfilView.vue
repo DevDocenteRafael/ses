@@ -342,13 +342,22 @@
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label">Disponibilidade de Horário</label>
-                                    <select v-model="preferencias.disponibilidade_de_horario" class="form-select">
-                                        <option>Manhã</option>
-                                        <option>Tarde</option>
-                                        <option>Noite</option>
-                                        <option>Integral</option>
-                                    </select>
+                                    <label class="form-label d-block">Disponibilidade de Horário</label>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <div v-for="opcao in opcoesDisponibilidadeHorario" :key="opcao" class="form-check form-check-inline mb-0">
+                                            <input
+                                                v-model="preferencias.disponibilidade_de_horario"
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                :id="`disponibilidade-${opcao}`"
+                                                :value="opcao"
+                                            >
+                                            <label class="form-check-label" :for="`disponibilidade-${opcao}`">{{ opcao }}</label>
+                                        </div>
+                                    </div>
+                                    <div v-if="erroDeCampo('disponibilidade_de_horario') || erroDeCampo('disponibilidade_de_horario.0')" class="invalid-feedback d-block">
+                                        {{ erroDeCampo('disponibilidade_de_horario') || erroDeCampo('disponibilidade_de_horario.0') }}
+                                    </div>
                                 </div>
                                 <div class="col-12 position-relative" ref="regioesTrabalhoDropdownContainer">
                                     <label class="form-label">Região Administrativa (RA) <span class="text-danger">*</span></label>
@@ -616,6 +625,7 @@ const informacoesPessoais = reactive({
 });
 
 const regioesAdministrativas = regioesAdministrativasDf;
+const opcoesDisponibilidadeHorario = ['Manhã', 'Tarde', 'Noite', 'Integral'];
 
 const perfil = reactive({
     sobre_mim: '',
@@ -689,12 +699,18 @@ const rotuloRegioesTrabalhoSelecionadas = computed(() => {
 const preferencias = reactive({
     clt: false,
     estagio: false,
-    disponibilidade_de_horario: 'Manhã',
+    disponibilidade_de_horario: ['Manhã'],
     regiao_administrativa: '',
     aceita_todas_regioes: false,
     regioes_preferidas: [],
     pretensao_salarial: '',
 });
+
+function normalizarDisponibilidadesHorario(valor) {
+    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+
+    return opcoesDisponibilidadeHorario.filter((opcao) => lista.includes(opcao));
+}
 
 function formatarDataParaApi(valor) {
     if (!valor) {
@@ -1003,7 +1019,8 @@ async function carregar() {
 
         if (data.preferencias_de_trabalho) {
             aplicarTipoContratacao(data.preferencias_de_trabalho.tipo_de_contratacao);
-            preferencias.disponibilidade_de_horario = data.preferencias_de_trabalho.disponibilidade_de_horario || preferencias.disponibilidade_de_horario;
+            const disponibilidadeRecebida = normalizarDisponibilidadesHorario(data.preferencias_de_trabalho.disponibilidade_de_horario);
+            preferencias.disponibilidade_de_horario = disponibilidadeRecebida.length ? disponibilidadeRecebida : preferencias.disponibilidade_de_horario;
             preferencias.regiao_administrativa = data.preferencias_de_trabalho.regiao_administrativa || '';
             preferencias.aceita_todas_regioes = Boolean(data.preferencias_de_trabalho.aceita_todas_regioes);
             preferencias.regioes_preferidas = preferencias.aceita_todas_regioes
@@ -1228,7 +1245,7 @@ async function salvar() {
             }),
             alunosService.salvarPreferencias(matricula.value, {
                 tipo_de_contratacao: tipoContratacaoBitmask(),
-                disponibilidade_de_horario: preferencias.disponibilidade_de_horario,
+                disponibilidade_de_horario: [...preferencias.disponibilidade_de_horario],
                 regiao_administrativa: obterRegiaoAdministrativaLegadaParaApi(),
                 aceita_todas_regioes: preferencias.aceita_todas_regioes,
                 regioes_preferidas: preferencias.aceita_todas_regioes ? [] : preferencias.regioes_preferidas,

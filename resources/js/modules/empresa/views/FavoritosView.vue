@@ -172,7 +172,7 @@
                 <p class="fw-bold mb-1">{{ c.pessoa?.nome }}</p>
                 <p class="small mb-1"><strong>Curso:</strong> {{ c.dados_academicos?.[0]?.curso || '—' }}</p>
                 <p class="small mb-1"><strong>Região:</strong> {{ c.preferencias_de_trabalho?.regiao_administrativa || '—' }}</p>
-                <p class="small mb-1"><strong>Disponibilidade:</strong> {{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '—' }}</p>
+                <p class="small mb-1"><strong>Disponibilidade:</strong> {{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</p>
                 <div class="d-flex flex-wrap gap-1">
                     <span
                         v-for="h in habilidadesPlanas(c)"
@@ -251,6 +251,11 @@ const perfilSelecionado = ref(null);
 
 function formatarPretensao(valor) {
     return formatarFaixaPretensaoSalarial(valor, '—');
+}
+
+function formatarDisponibilidade(valor) {
+    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+    return lista.length ? lista.join(' + ') : '—';
 }
 
 onMounted(async () => {

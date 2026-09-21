@@ -14,6 +14,10 @@ export default {
         return api.get('/candidatos', { params });
     },
 
+    listarUnidadesAlunos() {
+        return api.get('/candidatos/unidades');
+    },
+
     verAluno(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

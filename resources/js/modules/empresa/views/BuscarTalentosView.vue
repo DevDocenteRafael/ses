@@ -29,18 +29,22 @@
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
                     <div class="mb-2">
-                        <label class="form-label small text-secondary mb-1">Segmento</label>
-                        <select v-model="filtros.segmento" class="form-select form-select-sm">
-                            <option value="">Todos os Segmentos</option>
-                            <option v-for="segmento in segmentos" :key="segmento" :value="segmento">{{ segmento }}</option>
+                        <label class="form-label small text-secondary mb-1">Tipo de Curso</label>
+                        <select v-model="filtros.tipo_curso" class="form-select form-select-sm" :disabled="carregandoTiposCurso">
+                            <option value="">Selecione o tipo de curso</option>
+                            <option v-for="tipo in tiposCurso" :key="tipo.id" :value="tipo.id">{{ tipo.nome }}</option>
                         </select>
+                        <div v-if="erroTiposCurso" class="form-text text-danger">{{ erroTiposCurso }}</div>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small text-secondary mb-1">Tipo de Curso</label>
-                        <select v-model="filtros.tipo_curso" class="form-select form-select-sm">
-                            <option value="">Todos os Tipos</option>
-                            <option v-for="t in tiposCurso" :key="t.value" :value="t.value">{{ t.label }}</option>
+                        <label class="form-label small text-secondary mb-1">Segmento</label>
+                        <select v-model="filtros.segmento" class="form-select form-select-sm" :disabled="segmentoDesabilitado">
+                            <option value="">{{ rotuloOpcaoInicialSegmento }}</option>
+                            <option v-for="segmento in segmentosAcademicos" :key="segmento.id" :value="segmento.id">{{ segmento.nome }}</option>
                         </select>
+                        <div v-if="carregandoSegmentos" class="form-text text-secondary">Carregando segmentos...</div>
+                        <div v-else-if="erroSegmentos" class="form-text text-danger">{{ erroSegmentos }}</div>
+                        <div v-else-if="filtros.tipo_curso && !segmentosAcademicos.length" class="form-text text-secondary">Nenhum segmento disponível para este tipo de curso.</div>
                     </div>
                 </div>
 
@@ -232,7 +236,7 @@
                                             </div>
                                             <div class="d-flex align-items-center flex-wrap gap-2">
                                                 <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }} - DF</small>
-                                                <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ c.preferencias_de_trabalho?.disponibilidade_de_horario || '-' }}</small>
+                                                <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</small>
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-auto mt-1 mt-md-0">
@@ -271,20 +275,13 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
-import { areasAtuacao, deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
+import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 
 const auth = useAuthStore();
 const router = useRouter();
 
-const segmentos = areasAtuacao;
-
-const tiposCurso = [
-    { value: 'livres', label: 'Cursos Livres' },
-    { value: 'extensao', label: 'Certificação em TI' },
-    { value: 'tecnico', label: 'Técnico' },
-    { value: 'graduacao', label: 'Graduação' },
-    { value: 'pos-graduacao', label: 'Pós-graduação' },
-];
+const tiposCurso = ref([]);
+const segmentosAcademicos = ref([]);
 
 const filtros = reactive({
     segmento: '',
@@ -299,6 +296,10 @@ const filtros = reactive({
 const carregando = ref(true);
 const buscando = ref(false);
 const carregandoHabilidades = ref(false);
+const carregandoTiposCurso = ref(false);
+const carregandoSegmentos = ref(false);
+const erroTiposCurso = ref('');
+const erroSegmentos = ref('');
 const candidatos = ref([]);
 const habilidadesDisponiveis = ref([]);
 const buscaHabilidade = ref('');
@@ -348,6 +349,26 @@ const rotuloFiltroRegioes = computed(() => {
 
     return `${total} regiões selecionadas`;
 });
+const segmentoDesabilitado = computed(() => !filtros.tipo_curso || carregandoSegmentos.value || Boolean(erroSegmentos.value) || !segmentosAcademicos.value.length);
+const rotuloOpcaoInicialSegmento = computed(() => {
+    if (!filtros.tipo_curso) {
+        return 'Selecione primeiro o Tipo de Curso';
+    }
+
+    if (carregandoSegmentos.value) {
+        return 'Carregando segmentos...';
+    }
+
+    if (erroSegmentos.value) {
+        return 'Não foi possível carregar os segmentos';
+    }
+
+    if (!segmentosAcademicos.value.length) {
+        return 'Nenhum segmento disponível para este tipo de curso';
+    }
+
+    return 'Todos os segmentos';
+});
 const habilidadesFiltradas = computed(() => {
     const termo = normalizarTexto(buscaHabilidade.value);
 
@@ -376,6 +397,33 @@ watch(() => [...filtros.habilidades], () => {
 });
 
 watch(() => [...filtros.regioes_administrativas], () => {
+    paginacao.current_page = 1;
+});
+
+watch(() => filtros.tipo_curso, async (novoTipo, tipoAnterior) => {
+    paginacao.current_page = 1;
+
+    if (!novoTipo) {
+        filtros.segmento = '';
+        segmentosAcademicos.value = [];
+        erroSegmentos.value = '';
+        return;
+    }
+
+    const segmentoAnterior = filtros.segmento;
+    await carregarSegmentosAcademicos(novoTipo);
+
+    if (segmentoAnterior && segmentosAcademicos.value.some((segmento) => segmento.id === segmentoAnterior)) {
+        filtros.segmento = segmentoAnterior;
+        return;
+    }
+
+    if (tipoAnterior !== undefined) {
+        filtros.segmento = '';
+    }
+});
+
+watch(() => filtros.segmento, () => {
     paginacao.current_page = 1;
 });
 
@@ -423,6 +471,11 @@ function normalizarTexto(valor) {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function formatarDisponibilidade(valor) {
+    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
+    return lista.length ? lista.join(' + ') : '-';
 }
 
 function regiaoSelecionada(codigo) {
@@ -517,6 +570,37 @@ async function carregarHabilidadesDisponiveis() {
     }
 }
 
+async function carregarTiposCurso() {
+    carregandoTiposCurso.value = true;
+    erroTiposCurso.value = '';
+
+    try {
+        const { data } = await empresaService.listarTiposCurso();
+        tiposCurso.value = Array.isArray(data) ? data : [];
+    } catch (e) {
+        erroTiposCurso.value = 'Não foi possível carregar os tipos de curso.';
+        tiposCurso.value = [];
+    } finally {
+        carregandoTiposCurso.value = false;
+    }
+}
+
+async function carregarSegmentosAcademicos(tipoCurso) {
+    carregandoSegmentos.value = true;
+    erroSegmentos.value = '';
+    segmentosAcademicos.value = [];
+
+    try {
+        const { data } = await empresaService.listarSegmentosAcademicos(tipoCurso);
+        segmentosAcademicos.value = Array.isArray(data) ? data : [];
+    } catch (e) {
+        erroSegmentos.value = 'Não foi possível carregar os segmentos.';
+        segmentosAcademicos.value = [];
+    } finally {
+        carregandoSegmentos.value = false;
+    }
+}
+
 function tipoContratacaoBitmask() {
     return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0);
 }
@@ -550,6 +634,7 @@ async function buscar(pagina = 1) {
 }
 
 function aplicarFiltros() {
+    paginacao.current_page = 1;
     buscar(1);
 }
 
@@ -562,8 +647,10 @@ function mudarPagina(pagina) {
 }
 
 function limparFiltros() {
-    filtros.segmento = '';
     filtros.tipo_curso = '';
+    filtros.segmento = '';
+    segmentosAcademicos.value = [];
+    erroSegmentos.value = '';
     filtros.clt = false;
     filtros.estagio = false;
     filtros.regioes_administrativas = [];
@@ -582,6 +669,7 @@ async function sair() {
 }
 
 onMounted(() => {
+    carregarTiposCurso();
     buscar();
     carregarHabilidadesDisponiveis();
     document.addEventListener('click', aoClicarForaDosDropdowns);

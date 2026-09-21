@@ -4,6 +4,7 @@ import adminService from '../services/adminServices';
 export const useAdminStore = defineStore('admin', {
     state: () => ({
         alunos: [],
+        unidadesAlunos: [],
         empresas: [],
         vagas: [],
         convites: [],
@@ -50,6 +51,15 @@ export const useAdminStore = defineStore('admin', {
                 this.erro = e.response?.data?.message || 'Erro ao carregar alunos.';
             } finally {
                 this.carregando = false;
+            }
+        },
+
+        async carregarUnidadesAlunos() {
+            try {
+                const { data } = await adminService.listarUnidadesAlunos();
+                this.unidadesAlunos = Array.isArray(data) ? data : [];
+            } catch (e) {
+                this.erro = e.response?.data?.message || 'Erro ao carregar unidades dos candidatos.';
             }
         },
 
