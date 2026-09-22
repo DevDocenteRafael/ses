@@ -23,9 +23,21 @@ class AuthController extends Controller
             ->where('email', $dados['email'])
             ->first();
 
-        if (! $pessoa || ! Hash::check($dados['senha'], $pessoa->senha)) {
+        if (! $pessoa) {
             return response()->json([
-                'message' => 'Credenciais invalidas.',
+                'message' => 'E-mail não encontrado.',
+                'errors' => [
+                    'email' => ['Não encontramos uma conta com este e-mail.'],
+                ],
+            ], 422);
+        }
+
+        if (! Hash::check($dados['senha'], $pessoa->senha)) {
+            return response()->json([
+                'message' => 'Senha incorreta.',
+                'errors' => [
+                    'senha' => ['A senha informada está incorreta.'],
+                ],
             ], 422);
         }
 

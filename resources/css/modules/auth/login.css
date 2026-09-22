@@ -131,6 +131,29 @@ html.dark .auth-login-check .form-check-label {
 	outline: none;
 }
 
+.auth-login-input.auth-login-input-invalid,
+.auth-login-input.auth-login-input-invalid:focus {
+	border: 2px solid #dc3545;
+	box-shadow: 0 0 0 0.12rem rgba(220, 53, 69, 0.18);
+}
+
+.auth-login-field-error {
+	margin: 0.35rem 0 0;
+	color: #b02a37;
+	font-size: 0.84rem;
+	line-height: 1.25;
+}
+
+html.dark .auth-login-input.auth-login-input-invalid,
+html.dark .auth-login-input.auth-login-input-invalid:focus {
+	border-color: #ff6b7a;
+	box-shadow: 0 0 0 0.12rem rgba(255, 107, 122, 0.22);
+}
+
+html.dark .auth-login-field-error {
+	color: #ff9aa5;
+}
+
 .auth-login-password-wrapper {
 	position: relative;
 }

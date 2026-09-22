@@ -16,6 +16,11 @@ const formulario = reactive({
 	senha: '',
 });
 
+const errors = reactive({
+	email: '',
+	senha: '',
+});
+
 const painelPorTipo = {
 	administrativo: '/admin',
 	empresa: '/empresa/buscar-talentos',
@@ -24,29 +29,109 @@ const painelPorTipo = {
 
 const logoSenacSrc = '/img/senac-logo.png';
 
+const MENSAGEM_CAMPOS_OBRIGATORIOS = 'Existem campos obrigatórios não preenchidos.';
+const MENSAGEM_VALIDACAO = 'Corrija os campos destacados para continuar.';
+const MENSAGEM_AUTENTICACAO = 'Não foi possível entrar com os dados informados.';
+const MENSAGEM_ERRO_TECNICO = 'Não foi possível concluir o login no momento. Tente novamente mais tarde.';
+
+function limparErrosCampos() {
+	errors.email = '';
+	errors.senha = '';
+}
+
+function existeErroCampo() {
+	return Boolean(errors.email || errors.senha);
+}
+
+function emailTemFormatoValido(email) {
+	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validarFormulario() {
+	limparErrosCampos();
+
+	if (!formulario.email) {
+		errors.email = 'Informe o e-mail.';
+	} else if (!emailTemFormatoValido(formulario.email)) {
+		errors.email = 'Informe um e-mail válido.';
+	}
+
+	if (!formulario.senha) {
+		errors.senha = 'Informe a senha.';
+	}
+
+	if (!existeErroCampo()) {
+		return true;
+	}
+
+	mensagemErro.value = (!formulario.email || !formulario.senha)
+		? MENSAGEM_CAMPOS_OBRIGATORIOS
+		: MENSAGEM_VALIDACAO;
+
+	return false;
+}
+
+function limparErroCampo(campo) {
+	if (errors[campo]) {
+		errors[campo] = '';
+	}
+
+	if (!existeErroCampo()) {
+		mensagemErro.value = '';
+	}
+}
+
+function aplicarErrosValidacaoBackend(error) {
+	const errosBackend = error?.response?.data?.errors;
+
+	if (!errosBackend || error?.response?.status !== 422) {
+		return false;
+	}
+
+	errors.email = errosBackend.email?.[0] || '';
+	errors.senha = errosBackend.senha?.[0] || '';
+
+	if (existeErroCampo()) {
+		mensagemErro.value = error.response.data.message || MENSAGEM_AUTENTICACAO;
+		return true;
+	}
+
+	return false;
+}
+
 function obterMensagemErro(error) {
+	if (!error?.response) {
+		return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+	}
+
+	if (error.response.status >= 500) {
+		return MENSAGEM_ERRO_TECNICO;
+	}
+
 	if (error?.response?.data?.message) {
 		return error.response.data.message;
 	}
 
-	if (error?.response?.data?.errors) {
-		const primeiroCampo = Object.values(error.response.data.errors)[0];
-		if (Array.isArray(primeiroCampo) && primeiroCampo.length) {
-			return primeiroCampo[0];
-		}
-	}
-
-	return 'Nao foi possivel autenticar com os dados informados.';
+	return MENSAGEM_ERRO_TECNICO;
 }
 
 async function enviarLogin() {
 	mensagemErro.value = '';
+
+	if (!validarFormulario()) {
+		return;
+	}
+
 	carregando.value = true;
 
 	try {
 		const resultado = await auth.login(formulario);
 		await router.push(painelPorTipo[resultado.tipo] || '/login');
 	} catch (error) {
+		if (aplicarErrosValidacaoBackend(error)) {
+			return;
+		}
+
 		mensagemErro.value = obterMensagemErro(error);
 	} finally {
 		carregando.value = false;
@@ -73,7 +158,7 @@ async function enviarLogin() {
 				<section class="col-12 col-lg-7 auth-login-content">
 					<div class="auth-login-form">
 						<div class="auth-login-form-inner">
-							<div v-if="mensagemErro" class="alert alert-danger py-2 mb-4" role="alert">
+							<div v-if="mensagemErro" id="login-mensagem-erro" class="alert alert-danger py-2 mb-4" role="alert">
 								{{ mensagemErro }}
 							</div>
 
@@ -84,31 +169,47 @@ async function enviarLogin() {
 										v-model.trim="formulario.email"
 										type="email"
 										class="form-control auth-login-input"
+										:class="{ 'auth-login-input-invalid': errors.email }"
 										placeholder="Email"
 										autocomplete="email"
+										:aria-invalid="Boolean(errors.email)"
+										:aria-describedby="errors.email ? 'login-email-erro' : undefined"
 										required
+										@input="limparErroCampo('email')"
 									>
+									<p v-if="errors.email" id="login-email-erro" class="auth-login-field-error">
+										{{ errors.email }}
+									</p>
 								</div>
 
-								<div class="mb-2 auth-login-password-wrapper">
-									<input
-										id="senha"
-										v-model="formulario.senha"
-										:type="mostrarSenha ? 'text' : 'password'"
-										class="form-control auth-login-input auth-login-password-input"
-										placeholder="Senha"
-										autocomplete="current-password"
-										required
-									>
-									<button
-										type="button"
-										class="auth-login-password-toggle"
-										:aria-label="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
-										:title="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
-										@click="mostrarSenha = !mostrarSenha"
-									>
-										<i :class="mostrarSenha ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-									</button>
+								<div class="mb-2">
+									<div class="auth-login-password-wrapper">
+										<input
+											id="senha"
+											v-model="formulario.senha"
+											:type="mostrarSenha ? 'text' : 'password'"
+											class="form-control auth-login-input auth-login-password-input"
+											:class="{ 'auth-login-input-invalid': errors.senha }"
+											placeholder="Senha"
+											autocomplete="current-password"
+											:aria-invalid="Boolean(errors.senha)"
+											:aria-describedby="errors.senha ? 'login-senha-erro' : undefined"
+											required
+											@input="limparErroCampo('senha')"
+										>
+										<button
+											type="button"
+											class="auth-login-password-toggle"
+											:aria-label="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
+											:title="mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'"
+											@click="mostrarSenha = !mostrarSenha"
+										>
+											<i :class="mostrarSenha ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+										</button>
+									</div>
+									<p v-if="errors.senha" id="login-senha-erro" class="auth-login-field-error">
+										{{ errors.senha }}
+									</p>
 								</div>
 
 								<div class="auth-login-actions mt-3">

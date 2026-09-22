@@ -200,6 +200,14 @@ html.dark .btn-light {
     --bs-btn-disabled-border-color: var(--ses-primary);
 }
 
+.pagination {
+    --bs-pagination-active-bg: var(--ses-primary);
+    --bs-pagination-active-border-color: var(--ses-primary);
+    --bs-pagination-color: var(--ses-primary);
+    --bs-pagination-hover-color: var(--ses-primary-hover);
+    --bs-pagination-focus-color: var(--ses-primary-hover);
+}
+
 .text-primary {
     color: var(--ses-primary) !important;
 }
