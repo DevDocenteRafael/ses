@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Empresa;
+use App\Models\Candidato;
 use App\Models\Pessoa;
 use App\Models\ResponsavelContratual;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,13 +21,34 @@ class AuthEmpresaCnpjTest extends TestCase
         [$pessoa, $empresa] = $this->criarEmpresaComPessoa('empresa-login@teste.com');
 
         $this->postJson('/api/auth/login', [
-            'email' => $pessoa->email,
+            'identificador' => $pessoa->email,
             'senha' => '123456',
         ])->assertOk()
             ->assertJsonPath('tipo', 'empresa')
             ->assertJsonPath('pessoa.id_pessoa', $pessoa->id_pessoa)
             ->assertJsonPath('pessoa.cnpj', $empresa->cnpj)
             ->assertJsonMissingPath('pessoa.senha');
+    }
+
+    public function test_login_candidato_aceita_cpf_sem_quebrar_fluxo_de_email(): void
+    {
+        [$pessoa, $candidato] = $this->criarCandidatoComPessoa('aluno-login@teste.com');
+
+        $this->postJson('/api/auth/login', [
+            'identificador' => '123.456.789-01',
+            'senha' => '123456',
+        ])->assertOk()
+            ->assertJsonPath('tipo', 'candidato')
+            ->assertJsonPath('pessoa.id_pessoa', $pessoa->id_pessoa)
+            ->assertJsonPath('pessoa.matricula', $candidato->matricula)
+            ->assertJsonMissingPath('pessoa.senha');
+
+        $this->postJson('/api/auth/login', [
+            'identificador' => $pessoa->email,
+            'senha' => '123456',
+        ])->assertOk()
+            ->assertJsonPath('tipo', 'candidato')
+            ->assertJsonPath('pessoa.id_pessoa', $pessoa->id_pessoa);
     }
 
     public function test_auth_me_empresa_retorna_cnpj_real_da_empresa_autenticada(): void
@@ -77,5 +99,25 @@ class AuthEmpresaCnpjTest extends TestCase
         ]);
 
         return [$pessoaEmpresa, $empresa];
+    }
+
+    private function criarCandidatoComPessoa(string $email): array
+    {
+        $pessoa = Pessoa::query()->create([
+            'nome' => 'Aluno Teste',
+            'email' => $email,
+            'telefone' => (string) random_int(10000000000, 99999999999),
+            'senha' => Hash::make('123456'),
+            'data_cadastro' => now(),
+        ]);
+
+        $candidato = Candidato::query()->create([
+            'matricula' => (string) random_int(100000000000, 999999999999),
+            'cpf' => '12345678901',
+            'status' => true,
+            'pessoa_id_pessoa' => $pessoa->id_pessoa,
+        ]);
+
+        return [$pessoa, $candidato];
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Pessoa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -14,20 +15,22 @@ class AuthController extends Controller
 {
     public function login(Request $request): JsonResponse
     {
+        if (! $request->filled('identificador') && $request->filled('email')) {
+            $request->merge(['identificador' => $request->input('email')]);
+        }
+
         $dados = $request->validate([
-            'email' => ['required', 'email'],
+            'identificador' => ['required', 'string'],
             'senha' => ['required', 'string'],
         ]);
 
-        $pessoa = Pessoa::with(['administrativo', 'empresa', 'candidato'])
-            ->where('email', $dados['email'])
-            ->first();
+        $pessoa = $this->localizarPessoaPorIdentificador($dados['identificador']);
 
         if (! $pessoa) {
             return response()->json([
-                'message' => 'E-mail não encontrado.',
+                'message' => 'Conta não encontrada.',
                 'errors' => [
-                    'email' => ['Não encontramos uma conta com este e-mail.'],
+                    'identificador' => ['Não encontramos uma conta com este CPF ou e-mail.'],
                 ],
             ], 422);
         }
@@ -94,6 +97,25 @@ class AuthController extends Controller
         ]);
     }
 
+    private function localizarPessoaPorIdentificador(string $identificador): ?Pessoa
+    {
+        $identificador = trim($identificador);
+        $identificadorEmail = mb_strtolower($identificador);
+        $cpf = preg_replace('/\D+/', '', $identificador);
+
+        return Pessoa::with(['administrativo', 'empresa', 'candidato'])
+            ->where(function ($query) use ($identificadorEmail, $cpf) {
+                $query->whereRaw('LOWER(email) = ?', [$identificadorEmail]);
+
+                if (strlen($cpf) === 11) {
+                    $query->orWhereHas('candidato', function ($query) use ($cpf) {
+                        $query->where(DB::raw("REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), '/', '')"), $cpf);
+                    });
+                }
+            })
+            ->first();
+    }
+
     private function tokenFromRequest(Request $request): ?string
     {
         $header = $request->bearerToken();
@@ -131,6 +153,7 @@ class AuthController extends Controller
             'nome' => $pessoa->nome,
             'email' => $pessoa->email,
             'telefone' => $pessoa->telefone,
+            'endereco' => $pessoa->endereco,
             'tipo' => $tipo,
         ];
 

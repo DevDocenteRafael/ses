@@ -173,12 +173,13 @@ onBeforeUnmount(() => {
 .ses-accessibility {
     position: fixed;
     right: 20px;
-    bottom: 20px;
+    top: 50%;
     z-index: 1080;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 12px;
+    transform: translateY(-50%);
 }
 
 .ses-accessibility__trigger {
@@ -377,7 +378,6 @@ onBeforeUnmount(() => {
 @media (max-width: 575.98px) {
     .ses-accessibility {
         right: 16px;
-        bottom: 16px;
     }
 }
 

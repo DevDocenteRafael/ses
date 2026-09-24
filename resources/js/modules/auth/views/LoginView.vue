@@ -12,12 +12,12 @@ const mensagemErro = ref('');
 const mostrarSenha = ref(false);
 
 const formulario = reactive({
-	email: '',
+	identificador: '',
 	senha: '',
 });
 
 const errors = reactive({
-	email: '',
+	identificador: '',
 	senha: '',
 });
 
@@ -35,25 +35,19 @@ const MENSAGEM_AUTENTICACAO = 'Não foi possível entrar com os dados informados
 const MENSAGEM_ERRO_TECNICO = 'Não foi possível concluir o login no momento. Tente novamente mais tarde.';
 
 function limparErrosCampos() {
-	errors.email = '';
+	errors.identificador = '';
 	errors.senha = '';
 }
 
 function existeErroCampo() {
-	return Boolean(errors.email || errors.senha);
-}
-
-function emailTemFormatoValido(email) {
-	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+	return Boolean(errors.identificador || errors.senha);
 }
 
 function validarFormulario() {
 	limparErrosCampos();
 
-	if (!formulario.email) {
-		errors.email = 'Informe o e-mail.';
-	} else if (!emailTemFormatoValido(formulario.email)) {
-		errors.email = 'Informe um e-mail válido.';
+	if (!formulario.identificador) {
+		errors.identificador = 'Informe o CPF ou e-mail.';
 	}
 
 	if (!formulario.senha) {
@@ -64,7 +58,7 @@ function validarFormulario() {
 		return true;
 	}
 
-	mensagemErro.value = (!formulario.email || !formulario.senha)
+	mensagemErro.value = (!formulario.identificador || !formulario.senha)
 		? MENSAGEM_CAMPOS_OBRIGATORIOS
 		: MENSAGEM_VALIDACAO;
 
@@ -88,7 +82,7 @@ function aplicarErrosValidacaoBackend(error) {
 		return false;
 	}
 
-	errors.email = errosBackend.email?.[0] || '';
+	errors.identificador = errosBackend.identificador?.[0] || errosBackend.email?.[0] || '';
 	errors.senha = errosBackend.senha?.[0] || '';
 
 	if (existeErroCampo()) {
@@ -125,7 +119,10 @@ async function enviarLogin() {
 	carregando.value = true;
 
 	try {
-		const resultado = await auth.login(formulario);
+		const resultado = await auth.login({
+			identificador: formulario.identificador,
+			senha: formulario.senha,
+		});
 		await router.push(painelPorTipo[resultado.tipo] || '/login');
 	} catch (error) {
 		if (aplicarErrosValidacaoBackend(error)) {
@@ -165,20 +162,20 @@ async function enviarLogin() {
 							<form @submit.prevent="enviarLogin" novalidate>
 								<div class="mb-4">
 									<input
-										id="email"
-										v-model.trim="formulario.email"
-										type="email"
+										id="identificador"
+										v-model.trim="formulario.identificador"
+										type="text"
 										class="form-control auth-login-input"
-										:class="{ 'auth-login-input-invalid': errors.email }"
-										placeholder="Email"
-										autocomplete="email"
-										:aria-invalid="Boolean(errors.email)"
-										:aria-describedby="errors.email ? 'login-email-erro' : undefined"
+										:class="{ 'auth-login-input-invalid': errors.identificador }"
+										placeholder="CPF ou E-mail"
+										autocomplete="username"
+										:aria-invalid="Boolean(errors.identificador)"
+										:aria-describedby="errors.identificador ? 'login-identificador-erro' : undefined"
 										required
-										@input="limparErroCampo('email')"
+										@input="limparErroCampo('identificador')"
 									>
-									<p v-if="errors.email" id="login-email-erro" class="auth-login-field-error">
-										{{ errors.email }}
+									<p v-if="errors.identificador" id="login-identificador-erro" class="auth-login-field-error">
+										{{ errors.identificador }}
 									</p>
 								</div>
 

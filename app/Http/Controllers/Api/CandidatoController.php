@@ -491,8 +491,30 @@ class CandidatoController extends Controller
             'status'   => 'sometimes|boolean',
             'nome'     => 'sometimes|string|max:100',
             'email'    => 'sometimes|email|unique:pessoa,email,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
-            'telefone' => 'sometimes|string|max:11|unique:pessoa,telefone,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
+            'telefone' => 'sometimes|string|max:16|unique:pessoa,telefone,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
+            'endereco' => 'sometimes|nullable|string|max:255',
         ]);
+
+        if (array_key_exists('telefone', $validated)) {
+            $validated['telefone'] = preg_replace('/\D+/', '', $validated['telefone']) ?? '';
+
+            if (! in_array(strlen($validated['telefone']), [10, 11], true)) {
+                return response()->json([
+                    'errors' => ['telefone' => ['O campo telefone deve conter 10 ou 11 dígitos.']],
+                ], 422);
+            }
+
+            $telefoneEmUso = Pessoa::query()
+                ->where('telefone', $validated['telefone'])
+                ->where('id_pessoa', '<>', $candidato->pessoa_id_pessoa)
+                ->exists();
+
+            if ($telefoneEmUso) {
+                return response()->json([
+                    'errors' => ['telefone' => ['O telefone informado já está em uso.']],
+                ], 422);
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -500,11 +522,13 @@ class CandidatoController extends Controller
                 $candidato->update(['status' => $validated['status']]);
             }
 
-            $pessoaData = array_filter([
-                'nome'     => $validated['nome'] ?? null,
-                'email'    => $validated['email'] ?? null,
-                'telefone' => $validated['telefone'] ?? null,
-            ]);
+            $pessoaData = [];
+
+            foreach (['nome', 'email', 'telefone', 'endereco'] as $campo) {
+                if (array_key_exists($campo, $validated)) {
+                    $pessoaData[$campo] = $validated[$campo];
+                }
+            }
 
             if (!empty($pessoaData)) {
                 $candidato->pessoa->update($pessoaData);

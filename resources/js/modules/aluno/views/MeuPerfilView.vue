@@ -11,15 +11,29 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0" @click="abrirModalInformacoesPessoais">
-                    <div class="text-end d-none d-sm-block">
-                        <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
-                    </div>
-                    <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
-                          style="width: 38px; height: 38px;">
-                        {{ iniciais }}
-                    </span>
-                </button>
+                <div class="dropdown">
+                    <button
+                        type="button"
+                        class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0 dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                    >
+                        <div class="text-end d-none d-sm-block">
+                            <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
+                        </div>
+                        <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                              style="width: 38px; height: 38px;">
+                            {{ iniciais }}
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                            <button type="button" class="dropdown-item" @click="abrirModalInformacoesPessoais">
+                                <i class="bi bi-person-lines-fill me-2"></i> Meus dados
+                            </button>
+                        </li>
+                    </ul>
+                </div>
                 <button type="button" class="btn btn-sm btn-outline-light ms-2" @click="sair">
                     <i class="bi bi-box-arrow-left me-1"></i> Sair
                 </button>
@@ -45,16 +59,11 @@
                         </div>
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label">Nome</label>
-                                <input v-model.trim="informacoesPessoais.nome" type="text" class="form-control" :class="campoInvalido('nome')" maxlength="100">
-                                <div v-if="erroDeCampo('nome')" class="invalid-feedback d-block">{{ erroDeCampo('nome') }}</div>
+                                <label class="form-label">E-mail</label>
+                                <input v-model.trim="informacoesPessoais.email" type="email" class="form-control" :class="campoInvalido('email')" maxlength="100" autocomplete="email">
+                                <div v-if="erroDeCampo('email')" class="invalid-feedback d-block">{{ erroDeCampo('email') }}</div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">E-mail</label>
-                                <input :value="informacoesPessoais.email" type="email" class="form-control" readonly disabled>
-                                <div class="form-text">O e-mail permanece somente leitura nesta etapa.</div>
-                            </div>
-                            <div>
                                 <label class="form-label">Telefone / WhatsApp</label>
                                 <input
                                     v-model="informacoesPessoais.telefone"
@@ -67,6 +76,19 @@
                                     @input="onTelefoneInformacoesPessoaisInput"
                                 >
                                 <div v-if="erroDeCampo('telefone')" class="invalid-feedback d-block">{{ erroDeCampo('telefone') }}</div>
+                            </div>
+                            <div>
+                                <label class="form-label">Endereço</label>
+                                <textarea
+                                    v-model.trim="informacoesPessoais.endereco"
+                                    class="form-control"
+                                    :class="campoInvalido('endereco')"
+                                    rows="3"
+                                    maxlength="255"
+                                    autocomplete="street-address"
+                                    placeholder="Informe seu endereço completo"
+                                ></textarea>
+                                <div v-if="erroDeCampo('endereco')" class="invalid-feedback d-block">{{ erroDeCampo('endereco') }}</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -619,9 +641,9 @@ const links = reactive({
 });
 
 const informacoesPessoais = reactive({
-    nome: '',
     email: '',
     telefone: '',
+    endereco: '',
 });
 
 const regioesAdministrativas = regioesAdministrativasDf;
@@ -924,9 +946,9 @@ function mostrarMensagem(tipo, texto) {
 }
 
 function sincronizarInformacoesPessoais() {
-    informacoesPessoais.nome = auth.pessoa?.nome || '';
     informacoesPessoais.email = auth.pessoa?.email || '';
     informacoesPessoais.telefone = formatarTelefone(auth.pessoa?.telefone);
+    informacoesPessoais.endereco = auth.pessoa?.endereco || '';
 }
 
 function abrirModalInformacoesPessoais() {
@@ -951,14 +973,17 @@ async function salvarInformacoesPessoais() {
 
     try {
         const { data } = await alunosService.atualizarPerfil(matricula.value, {
-            nome: informacoesPessoais.nome,
+            email: informacoesPessoais.email,
             telefone: somenteNumeros(informacoesPessoais.telefone),
+            endereco: informacoesPessoais.endereco,
         });
 
         auth.pessoa = {
             ...auth.pessoa,
-            nome: data.pessoa?.nome || informacoesPessoais.nome,
+            nome: data.pessoa?.nome || auth.pessoa?.nome,
+            email: data.pessoa?.email || informacoesPessoais.email,
             telefone: data.pessoa?.telefone || somenteNumeros(informacoesPessoais.telefone),
+            endereco: data.pessoa?.endereco ?? informacoesPessoais.endereco,
         };
 
         localStorage.setItem('ses_pessoa', JSON.stringify(auth.pessoa));

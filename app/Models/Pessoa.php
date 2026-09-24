@@ -15,6 +15,7 @@ class Pessoa extends Authenticatable
         'nome',
         'email',
         'telefone',
+        'endereco',
         'senha',
         'data_cadastro',
     ];
