@@ -168,6 +168,15 @@
                                 <span class="fw-bold">{{ formatarTelefone(candidato.pessoa?.telefone) || '-' }}</span>
                             </div>
 
+                            <hr>
+                            <h2 class="h6 fw-bold mb-3">Endereço</h2>
+                            <div v-if="linhasEndereco.length" class="text-secondary small d-flex flex-column gap-1">
+                                <p v-for="linha in linhasEndereco" :key="linha" class="mb-0 text-break">
+                                    {{ linha }}
+                                </p>
+                            </div>
+                            <p v-else class="text-secondary small mb-0">Endereço não informado.</p>
+
                             <template v-if="temLinksExternos">
                                 <hr>
                                 <h2 class="h6 fw-bold mb-3">Links Externos</h2>
@@ -282,6 +291,48 @@ const pretensaoFormatada = computed(() => {
     return formatarFaixaPretensaoSalarial(valor, 'A combinar');
 });
 
+const linhasEndereco = computed(() => {
+    const endereco = candidato.value.pessoa?.endereco || {};
+    const linhas = [];
+    const logradouro = textoEndereco(endereco.logradouro);
+    const numero = textoEndereco(endereco.numero);
+    const complemento = textoEndereco(endereco.complemento);
+    const bairro = textoEndereco(endereco.bairro);
+    const cidade = textoEndereco(endereco.cidade);
+    const uf = textoEndereco(endereco.uf);
+    const cep = formatarCep(endereco.cep);
+
+    if (logradouro && numero) {
+        linhas.push(`${logradouro}, nº ${numero}`);
+    } else if (logradouro) {
+        linhas.push(logradouro);
+    } else if (numero) {
+        linhas.push(`Nº ${numero}`);
+    }
+
+    if (complemento) {
+        linhas.push(`Complemento: ${complemento}`);
+    }
+
+    if (bairro) {
+        linhas.push(bairro);
+    }
+
+    if (cidade && uf) {
+        linhas.push(`${cidade} - ${uf}`);
+    } else if (cidade) {
+        linhas.push(cidade);
+    } else if (uf) {
+        linhas.push(uf);
+    }
+
+    if (cep) {
+        linhas.push(`CEP: ${cep}`);
+    }
+
+    return linhas;
+});
+
 function formatarData(data) {
     if (!data) return '-';
     return new Date(data).toLocaleDateString('pt-BR');
@@ -294,6 +345,20 @@ function normalizarTexto(valor) {
         .toLowerCase()
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function textoEndereco(valor) {
+    return valor === null || valor === undefined ? '' : String(valor).trim();
+}
+
+function formatarCep(valor) {
+    const digitos = textoEndereco(valor).replace(/\D/g, '');
+
+    if (digitos.length !== 8) {
+        return textoEndereco(valor);
+    }
+
+    return `${digitos.slice(0, 5)}-${digitos.slice(5)}`;
 }
 
 function formatarDisponibilidade(valor) {

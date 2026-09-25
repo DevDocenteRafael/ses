@@ -469,7 +469,7 @@ class CandidatoController extends Controller
             ]);
         }
 
-        return response()->json($this->formatarCandidato($candidato));
+        return response()->json($this->formatarCandidatoParaResposta($candidato, $solicitante));
     }
 
     /**
@@ -492,7 +492,14 @@ class CandidatoController extends Controller
             'nome'     => 'sometimes|string|max:100',
             'email'    => 'sometimes|email|unique:pessoa,email,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
             'telefone' => 'sometimes|string|max:16|unique:pessoa,telefone,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
-            'endereco' => 'sometimes|nullable|string|max:255',
+            'endereco' => ['sometimes', 'nullable', 'array'],
+            'endereco.cep' => ['required_with:endereco', 'string', 'regex:/^\d{5}-?\d{3}$/'],
+            'endereco.logradouro' => ['nullable', 'string', 'max:120'],
+            'endereco.numero' => ['required_with:endereco', 'string', 'max:20'],
+            'endereco.complemento' => ['nullable', 'string', 'max:80'],
+            'endereco.bairro' => ['nullable', 'string', 'max:80'],
+            'endereco.cidade' => ['nullable', 'string', 'max:80'],
+            'endereco.uf' => ['nullable', 'string', 'size:2'],
         ]);
 
         if (array_key_exists('telefone', $validated)) {
@@ -524,10 +531,23 @@ class CandidatoController extends Controller
 
             $pessoaData = [];
 
-            foreach (['nome', 'email', 'telefone', 'endereco'] as $campo) {
+            foreach (['nome', 'email', 'telefone'] as $campo) {
                 if (array_key_exists($campo, $validated)) {
                     $pessoaData[$campo] = $validated[$campo];
                 }
+            }
+
+            if (array_key_exists('endereco', $validated)) {
+                $endereco = $validated['endereco'] ?? [];
+                $pessoaData = array_merge($pessoaData, [
+                    'endereco_cep' => isset($endereco['cep']) ? preg_replace('/\D+/', '', $endereco['cep']) : null,
+                    'endereco_logradouro' => $endereco['logradouro'] ?? null,
+                    'endereco_numero' => $endereco['numero'] ?? null,
+                    'endereco_complemento' => $endereco['complemento'] ?? null,
+                    'endereco_bairro' => $endereco['bairro'] ?? null,
+                    'endereco_cidade' => $endereco['cidade'] ?? null,
+                    'endereco_uf' => isset($endereco['uf']) ? strtoupper($endereco['uf']) : null,
+                ]);
             }
 
             if (!empty($pessoaData)) {
@@ -635,6 +655,60 @@ class CandidatoController extends Controller
         );
 
         return $candidato;
+    }
+
+    private function formatarCandidatoParaResposta(Candidato $candidato, Pessoa $solicitante): array
+    {
+        $regioesPreferidas = $candidato->regioesPreferidasTrabalho
+            ->sortBy('codigo_regiao')
+            ->values()
+            ->map(fn ($regiao) => [
+                'codigo' => (int) $regiao->codigo_regiao,
+                'nome' => RegioesAdministrativasDf::nome((int) $regiao->codigo_regiao),
+            ])
+            ->all();
+
+        $pessoa = [
+            'id_pessoa' => $candidato->pessoa?->id_pessoa,
+            'nome' => $candidato->pessoa?->nome,
+            'email' => $candidato->pessoa?->email,
+            'telefone' => $candidato->pessoa?->telefone,
+        ];
+
+        $pessoa['endereco'] = $this->formatarEnderecoPessoa($candidato->pessoa);
+
+        return [
+            'matricula' => (string) $candidato->matricula,
+            'cpf' => $solicitante->tipo() === 'empresa' ? null : $candidato->cpf,
+            'status' => (bool) $candidato->status,
+            'pessoa_id_pessoa' => $candidato->pessoa_id_pessoa,
+            'created_at' => $candidato->created_at,
+            'updated_at' => $candidato->updated_at,
+            'pessoa' => $pessoa,
+            'link_externo' => $candidato->linkExterno,
+            'informacoes_profissionais' => $candidato->informacoesProfissionais,
+            'preferencias_de_trabalho' => $candidato->preferenciasDeTrabalho,
+            'regioes_preferidas_trabalho' => $regioesPreferidas,
+            'dados_academicos' => $candidato->dadosAcademicos,
+            'cursos_senac' => $candidato->cursosSenac,
+            'cursos_externos' => $candidato->cursosExternos,
+            'experiencias_profissionais' => $candidato->experienciasProfissionais,
+            'convites' => $solicitante->tipo() === 'empresa' ? [] : $candidato->convites,
+            'empresas' => $solicitante->tipo() === 'empresa' ? [] : $candidato->empresas,
+        ];
+    }
+
+    private function formatarEnderecoPessoa(?Pessoa $pessoa): array
+    {
+        return [
+            'cep' => $pessoa?->endereco_cep,
+            'logradouro' => $pessoa?->endereco_logradouro,
+            'numero' => $pessoa?->endereco_numero,
+            'complemento' => $pessoa?->endereco_complemento,
+            'bairro' => $pessoa?->endereco_bairro,
+            'cidade' => $pessoa?->endereco_cidade,
+            'uf' => $pessoa?->endereco_uf,
+        ];
     }
 
     private function habilidadesDaInfoProfissional(?InformacoesProfissionais $info): array

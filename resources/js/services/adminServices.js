@@ -30,6 +30,12 @@ export default {
         return api.post('/candidatos', dados);
     },
 
+    baixarCurriculoAluno(matricula) {
+        return api.get(`/administrativo/candidatos/${encodeURIComponent(matricula)}/curriculo`, {
+            responseType: 'blob',
+        });
+    },
+
     sincronizarAlunos(dados) {
         return api.post('/administrativo/sincronizar-alunos', dados);
     },

@@ -153,7 +153,15 @@ class AuthController extends Controller
             'nome' => $pessoa->nome,
             'email' => $pessoa->email,
             'telefone' => $pessoa->telefone,
-            'endereco' => $pessoa->endereco,
+            'endereco' => [
+                'cep' => $pessoa->endereco_cep,
+                'logradouro' => $pessoa->endereco_logradouro,
+                'numero' => $pessoa->endereco_numero,
+                'complemento' => $pessoa->endereco_complemento,
+                'bairro' => $pessoa->endereco_bairro,
+                'cidade' => $pessoa->endereco_cidade,
+                'uf' => $pessoa->endereco_uf,
+            ],
             'tipo' => $tipo,
         ];
 

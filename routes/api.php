@@ -2,7 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CepController;
 use App\Http\Controllers\Api\CandidatoController;
+use App\Http\Controllers\Api\CurriculoCandidatoController;
 use App\Http\Controllers\Api\EmpresaController;
 use App\Http\Controllers\Api\VagaController;
 use App\Http\Controllers\Api\ConviteController;
@@ -27,6 +29,7 @@ Route::post('candidatos', [CandidatoController::class, 'store']);
 Route::middleware('auth.token')->group(function () {
 
     Route::get('auth/me', [AuthController::class, 'me']);
+    Route::get('cep/{cep}', [CepController::class, 'show'])->where('cep', '[0-9\-]+');
     Route::post('candidatos', [CandidatoController::class, 'store']);
     Route::post('empresas', [EmpresaController::class, 'store']);
 
@@ -79,6 +82,7 @@ Route::middleware('auth.token')->group(function () {
         Route::get('dashboard',                  [AdministrativoController::class, 'dashboard']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
+        Route::get('candidatos/{matricula}/curriculo', [CurriculoCandidatoController::class, 'show']);
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
         Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
         Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);

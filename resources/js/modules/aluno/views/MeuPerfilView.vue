@@ -51,7 +51,7 @@
                 aria-modal="true"
                 @click.self="fecharModalInformacoesPessoais"
             >
-                <div class="modal-dialog modal-dialog-centered app-modal-dialog-animated">
+                <div class="modal-dialog modal-lg modal-dialog-centered app-modal-dialog-animated">
                     <div class="modal-content border-0 shadow-sm">
                         <div class="modal-header">
                             <h2 class="modal-title h5 mb-0">Informações Pessoais</h2>
@@ -79,16 +79,56 @@
                             </div>
                             <div>
                                 <label class="form-label">Endereço</label>
-                                <textarea
-                                    v-model.trim="informacoesPessoais.endereco"
-                                    class="form-control"
-                                    :class="campoInvalido('endereco')"
-                                    rows="3"
-                                    maxlength="255"
-                                    autocomplete="street-address"
-                                    placeholder="Informe seu endereço completo"
-                                ></textarea>
+                                <div class="row g-2">
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">CEP <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input
+                                                v-model="informacoesPessoais.endereco.cep"
+                                                type="text"
+                                                inputmode="numeric"
+                                                class="form-control"
+                                                :class="campoInvalido('endereco') || campoInvalido('endereco.cep')"
+                                                maxlength="9"
+                                                autocomplete="postal-code"
+                                                placeholder="00000-000"
+                                                @input="onCepInformacoesPessoaisInput"
+                                                @blur="consultarCepInformacoesPessoais"
+                                            >
+                                            <button type="button" class="btn btn-outline-primary" :disabled="consultandoCep || cepInformacoesPessoaisIncompleto" @click="consultarCepInformacoesPessoais">
+                                                <span v-if="consultandoCep" class="spinner-border spinner-border-sm"></span>
+                                                <i v-else class="bi bi-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <label class="form-label small mb-1">Logradouro</label>
+                                        <input v-model.trim="informacoesPessoais.endereco.logradouro" type="text" class="form-control" maxlength="120" autocomplete="address-line1" placeholder="Preenchido automaticamente">
+                                    </div>
+                                    <div class="col-sm-4">
+                                        <label class="form-label small mb-1">Número <span class="text-danger">*</span></label>
+                                        <input v-model.trim="informacoesPessoais.endereco.numero" type="text" class="form-control" :class="campoInvalido('endereco.numero')" maxlength="20" autocomplete="address-line2">
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <label class="form-label small mb-1">Complemento</label>
+                                        <input v-model.trim="informacoesPessoais.endereco.complemento" type="text" class="form-control" maxlength="80" autocomplete="address-line3">
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <label class="form-label small mb-1">Bairro</label>
+                                        <input v-model.trim="informacoesPessoais.endereco.bairro" type="text" class="form-control" maxlength="80" placeholder="Preenchido automaticamente">
+                                    </div>
+                                    <div class="col-sm-5">
+                                        <label class="form-label small mb-1">Cidade</label>
+                                        <input v-model.trim="informacoesPessoais.endereco.cidade" type="text" class="form-control" maxlength="80" autocomplete="address-level2" placeholder="Preenchido automaticamente">
+                                    </div>
+                                    <div class="col-sm-2">
+                                        <label class="form-label small mb-1">UF</label>
+                                        <input v-model.trim="informacoesPessoais.endereco.uf" type="text" class="form-control text-uppercase" maxlength="2" autocomplete="address-level1" placeholder="UF">
+                                    </div>
+                                </div>
                                 <div v-if="erroDeCampo('endereco')" class="invalid-feedback d-block">{{ erroDeCampo('endereco') }}</div>
+                                <div v-if="erroDeCampo('endereco.cep')" class="invalid-feedback d-block">{{ erroDeCampo('endereco.cep') }}</div>
+                                <div v-if="erroDeCampo('endereco.numero')" class="invalid-feedback d-block">{{ erroDeCampo('endereco.numero') }}</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -577,6 +617,7 @@ import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount } from 'v
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
+import cepService, { formatarCep } from '../../../services/cepService';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
@@ -624,6 +665,7 @@ const cursosExternos = ref([]);
 const experiencias = ref([]);
 const modalInformacoesPessoaisAberto = ref(false);
 const salvandoInformacoesPessoais = ref(false);
+const consultandoCep = ref(false);
 
 const mostrarFormCursoExterno = ref(false);
 const mostrarFormExperiencia = ref(false);
@@ -643,8 +685,10 @@ const links = reactive({
 const informacoesPessoais = reactive({
     email: '',
     telefone: '',
-    endereco: '',
+    endereco: enderecoVazio(),
 });
+
+const cepInformacoesPessoaisIncompleto = computed(() => somenteNumeros(informacoesPessoais.endereco.cep).length !== 8);
 
 const regioesAdministrativas = regioesAdministrativasDf;
 const opcoesDisponibilidadeHorario = ['Manhã', 'Tarde', 'Noite', 'Integral'];
@@ -945,10 +989,106 @@ function mostrarMensagem(tipo, texto) {
     toast.showToast(tipo, texto);
 }
 
+function enderecoVazio() {
+    return {
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+        uf: '',
+    };
+}
+
+function normalizarUf(valor) {
+    return String(valor ?? '').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase();
+}
+
+function formatarEnderecoParaPersistencia(endereco) {
+    return {
+        cep: somenteNumeros(endereco.cep),
+        logradouro: String(endereco.logradouro ?? '').trim(),
+        numero: String(endereco.numero ?? '').trim(),
+        complemento: String(endereco.complemento ?? '').trim(),
+        bairro: String(endereco.bairro ?? '').trim(),
+        cidade: String(endereco.cidade ?? '').trim(),
+        uf: normalizarUf(endereco.uf),
+    };
+}
+
+function obterCampoEnderecoRotulado(endereco, rotulo) {
+    const correspondencia = endereco.match(new RegExp(`${rotulo}:\\s*([^;]+)`, 'i'));
+    return correspondencia?.[1]?.trim() || '';
+}
+
+function aplicarEnderecoSalvo(enderecoSalvo) {
+    Object.assign(informacoesPessoais.endereco, enderecoVazio());
+
+    if (enderecoSalvo && typeof enderecoSalvo === 'object' && !Array.isArray(enderecoSalvo)) {
+        informacoesPessoais.endereco.cep = formatarCep(enderecoSalvo.cep);
+        informacoesPessoais.endereco.logradouro = enderecoSalvo.logradouro || '';
+        informacoesPessoais.endereco.numero = enderecoSalvo.numero || '';
+        informacoesPessoais.endereco.complemento = enderecoSalvo.complemento || '';
+        informacoesPessoais.endereco.bairro = enderecoSalvo.bairro || '';
+        informacoesPessoais.endereco.cidade = enderecoSalvo.cidade || '';
+        informacoesPessoais.endereco.uf = normalizarUf(enderecoSalvo.uf);
+        return;
+    }
+
+    const endereco = String(enderecoSalvo ?? '').trim();
+
+    if (!endereco) {
+        return;
+    }
+
+    const cepEncontrado = endereco.match(/\b\d{5}-?\d{3}\b/);
+
+    if (cepEncontrado) {
+        informacoesPessoais.endereco.cep = formatarCep(cepEncontrado[0]);
+    }
+
+    const logradouroRotulado = obterCampoEnderecoRotulado(endereco, 'Logradouro');
+    const numeroRotulado = obterCampoEnderecoRotulado(endereco, 'N(?:ú|u)mero');
+    const complementoRotulado = obterCampoEnderecoRotulado(endereco, 'Complemento');
+    const bairroRotulado = obterCampoEnderecoRotulado(endereco, 'Bairro');
+    const cidadeRotulada = obterCampoEnderecoRotulado(endereco, 'Cidade');
+    const ufRotulada = obterCampoEnderecoRotulado(endereco, 'UF');
+
+    if (logradouroRotulado || numeroRotulado || complementoRotulado || bairroRotulado || cidadeRotulada || ufRotulada) {
+        informacoesPessoais.endereco.logradouro = logradouroRotulado;
+        informacoesPessoais.endereco.numero = numeroRotulado;
+        informacoesPessoais.endereco.complemento = complementoRotulado;
+        informacoesPessoais.endereco.bairro = bairroRotulado;
+        informacoesPessoais.endereco.cidade = cidadeRotulada;
+        informacoesPessoais.endereco.uf = normalizarUf(ufRotulada);
+        return;
+    }
+
+    const semCep = endereco
+        .replace(/^CEP\s*/i, '')
+        .replace(/\b\d{5}-?\d{3}\b\s*\|?\s*/i, '')
+        .trim();
+    const [logradouroNumero = '', bairro = '', cidadeUf = ''] = semCep.split(' - ').map((parte) => parte.trim());
+    const numeroEncontrado = logradouroNumero.match(/(?:n[ºo.]?\s*)([^-]+)/i);
+
+    informacoesPessoais.endereco.logradouro = logradouroNumero.replace(/,?\s*n[ºo.]?\s*[^-]+/i, '').trim();
+    informacoesPessoais.endereco.numero = numeroEncontrado?.[1]?.trim() || '';
+    informacoesPessoais.endereco.bairro = bairro;
+
+    const [cidade = '', uf = ''] = cidadeUf.split('/');
+    informacoesPessoais.endereco.cidade = cidade.trim();
+    informacoesPessoais.endereco.uf = normalizarUf(uf);
+
+    if (!informacoesPessoais.endereco.logradouro && !informacoesPessoais.endereco.bairro && !informacoesPessoais.endereco.cidade) {
+        informacoesPessoais.endereco.logradouro = endereco;
+    }
+}
+
 function sincronizarInformacoesPessoais() {
     informacoesPessoais.email = auth.pessoa?.email || '';
     informacoesPessoais.telefone = formatarTelefone(auth.pessoa?.telefone);
-    informacoesPessoais.endereco = auth.pessoa?.endereco || '';
+    aplicarEnderecoSalvo(auth.pessoa?.endereco || '');
 }
 
 function abrirModalInformacoesPessoais() {
@@ -967,15 +1107,66 @@ function onTelefoneInformacoesPessoaisInput(evento) {
     evento.target.value = valorFormatado;
 }
 
+function onCepInformacoesPessoaisInput(evento) {
+    const valorFormatado = formatarCep(evento.target.value);
+    informacoesPessoais.endereco.cep = valorFormatado;
+    evento.target.value = valorFormatado;
+
+    if (somenteNumeros(valorFormatado).length === 8) {
+        consultarCepInformacoesPessoais();
+    }
+}
+
+async function consultarCepInformacoesPessoais() {
+    const cep = somenteNumeros(informacoesPessoais.endereco.cep);
+
+    if (cep.length !== 8 || consultandoCep.value) {
+        return;
+    }
+
+    consultandoCep.value = true;
+
+    try {
+        const endereco = await cepService.consultarCep(cep);
+
+        informacoesPessoais.endereco.cep = endereco.cep;
+        informacoesPessoais.endereco.logradouro = endereco.logradouro;
+        informacoesPessoais.endereco.bairro = endereco.bairro;
+        informacoesPessoais.endereco.cidade = endereco.cidade;
+        informacoesPessoais.endereco.uf = endereco.uf;
+        errosFormulario.value = Object.fromEntries(Object.entries(errosFormulario.value).filter(([campo]) => !campo.startsWith('endereco')));
+    } catch (e) {
+        const mensagem = e?.message || 'Não foi possível consultar o CEP no momento. Tente novamente ou preencha o endereço manualmente.';
+        definirErrosFormulario({ endereco: [mensagem] });
+        mostrarMensagem(e?.tipo === 'nao_encontrado' ? 'aviso' : 'erro', mensagem);
+    } finally {
+        consultandoCep.value = false;
+    }
+}
+
 async function salvarInformacoesPessoais() {
     salvandoInformacoesPessoais.value = true;
     limparErrosFormulario();
 
     try {
+        if (cepInformacoesPessoaisIncompleto.value) {
+            definirErrosFormulario({ endereco: ['Informe um CEP válido com 8 dígitos.'] });
+            mostrarMensagem('erro', 'Informe um CEP válido com 8 dígitos.');
+            return;
+        }
+
+        if (!informacoesPessoais.endereco.numero.trim()) {
+            definirErrosFormulario({ 'endereco.numero': ['Informe o número do endereço.'] });
+            mostrarMensagem('erro', 'Informe o número do endereço.');
+            return;
+        }
+
+        const enderecoParaPersistir = formatarEnderecoParaPersistencia(informacoesPessoais.endereco);
+
         const { data } = await alunosService.atualizarPerfil(matricula.value, {
             email: informacoesPessoais.email,
             telefone: somenteNumeros(informacoesPessoais.telefone),
-            endereco: informacoesPessoais.endereco,
+            endereco: enderecoParaPersistir,
         });
 
         auth.pessoa = {
@@ -983,7 +1174,7 @@ async function salvarInformacoesPessoais() {
             nome: data.pessoa?.nome || auth.pessoa?.nome,
             email: data.pessoa?.email || informacoesPessoais.email,
             telefone: data.pessoa?.telefone || somenteNumeros(informacoesPessoais.telefone),
-            endereco: data.pessoa?.endereco ?? informacoesPessoais.endereco,
+            endereco: data.pessoa?.endereco ?? enderecoParaPersistir,
         };
 
         localStorage.setItem('ses_pessoa', JSON.stringify(auth.pessoa));

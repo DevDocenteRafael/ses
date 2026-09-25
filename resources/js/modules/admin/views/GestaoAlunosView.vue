@@ -194,6 +194,15 @@
                                                 {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
                                             </button>
                                             <button
+                                                class="btn btn-sm btn-outline-secondary me-2"
+                                                :disabled="curriculoGerando === aluno.matricula"
+                                                @click="baixarCurriculo(aluno)"
+                                            >
+                                                <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
+                                                {{ curriculoGerando === aluno.matricula ? 'Gerando currículo...' : 'Baixar currículo' }}
+                                            </button>
+                                            <button
                                                 class="btn btn-sm"
                                                 :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
                                                 :disabled="alterando === aluno.matricula"
@@ -250,6 +259,7 @@ import { onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import { useAdminStore } from '../../../store/admin';
+import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
@@ -261,6 +271,7 @@ const busca = ref('');
 const statusFiltro = ref('');
 const unidadeFiltro = ref('');
 const alterando = ref(null);
+const curriculoGerando = ref(null);
 const alunoExpandido = ref(null);
 const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
@@ -456,6 +467,44 @@ async function alternarStatus(aluno) {
     } finally {
         alterando.value = null;
     }
+}
+
+async function baixarCurriculo(aluno) {
+    curriculoGerando.value = aluno.matricula;
+
+    try {
+        const response = await adminService.baixarCurriculoAluno(aluno.matricula);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nomeArquivoCurriculo(response, aluno);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        toast.error('Não foi possível gerar o currículo deste candidato.');
+    } finally {
+        curriculoGerando.value = null;
+    }
+}
+
+function nomeArquivoCurriculo(response, aluno) {
+    const disposicao = response.headers?.['content-disposition'] || '';
+    const encontrado = disposicao.match(/filename="?([^";]+)"?/i);
+
+    if (encontrado?.[1]) {
+        return encontrado[1];
+    }
+
+    const nome = (aluno.pessoa?.nome || 'Candidato')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '');
+
+    return `Curriculo_${nome || 'Candidato'}.pdf`;
 }
 
 function alternarDetalhes(matricula) {
