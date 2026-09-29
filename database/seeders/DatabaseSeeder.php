@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CandidatoTesteSeeder::class);
         $this->call(EmpresaTesteSeeder::class);
+        $this->call(EmpresasFicticiasSeeder::class);
         $this->call(AdministrativoTesteSeeder::class);
         $this->call(RelatorioDemoSeeder::class);
     }
