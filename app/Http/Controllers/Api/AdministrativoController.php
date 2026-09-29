@@ -9,6 +9,7 @@ use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Empresa;
 use App\Models\EngajamentoPorUnidadeSenac;
+use App\Models\Contratacao;
 use App\Models\VisualizacaoPerfil;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -66,6 +67,10 @@ class AdministrativoController extends Controller
         $variacaoPerfis = $candidatosMesAnterior > 0
             ? round((($candidatosMesAtual - $candidatosMesAnterior) / $candidatosMesAnterior) * 100, 1)
             : null;
+
+        $contratadosUltimos30Dias = Contratacao::query()
+            ->whereDate('contratado_em', '>=', today()->subDays(30))
+            ->count();
 
         $acessosUltimos30Dias = VisualizacaoPerfil::where('visualizado_em', '>=', now()->subDays(30))->count();
 
@@ -147,6 +152,9 @@ class AdministrativoController extends Controller
             'perfisAtivos' => [
                 'total' => $totalCandidatos,
                 'variacaoPercentualVsMesAnterior' => $variacaoPerfis,
+            ],
+            'contratados' => [
+                'ultimos30Dias' => $contratadosUltimos30Dias,
             ],
             'acessosCandidatos' => [
                 'ultimos30Dias' => $acessosUltimos30Dias,

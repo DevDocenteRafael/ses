@@ -9,7 +9,7 @@
 
             <template v-else-if="dashboard">
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-6 col-lg-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <p class="text-uppercase text-secondary small fw-semibold mb-1">Perfis Ativos</p>
@@ -22,7 +22,21 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-6 col-lg-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body d-flex align-items-start justify-content-between">
+                                <div>
+                                    <p class="text-uppercase text-secondary small fw-semibold mb-1">Contratados</p>
+                                    <p class="fs-3 fw-bold mb-1">{{ formatarNumero(dashboard.contratados.ultimos30Dias) }}</p>
+                                    <p class="small text-secondary mb-0">Últimos 30 dias</p>
+                                </div>
+                                <span class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 bg-primary-subtle text-primary" style="width: 44px; height: 44px;">
+                                    <i class="bi bi-person-check"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <p class="text-uppercase text-secondary small fw-semibold mb-1">Acessos de Candidatos</p>
@@ -31,7 +45,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-6 col-lg-3">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body">
                                 <p class="text-uppercase text-secondary small fw-semibold mb-1">Empresas Ativas</p>

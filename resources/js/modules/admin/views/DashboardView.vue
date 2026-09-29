@@ -10,7 +10,7 @@
 
             <template v-else-if="dash">
                 <div class="row g-3 mb-4">
-                    <div class="col-6 col-lg-4">
+                    <div class="col-6 col-lg-3">
                         <cardIndicador
                             titulo="Perfis Ativos"
                             :valor="dash.perfisAtivos.total"
@@ -20,7 +20,16 @@
                             variante="primary"
                         />
                     </div>
-                    <div class="col-6 col-lg-4">
+                    <div class="col-6 col-lg-3">
+                        <cardIndicador
+                            titulo="Contratados"
+                            :valor="dash.contratados?.ultimos30Dias || 0"
+                            subtitulo="Últimos 30 dias"
+                            icone="bi-person-check"
+                            variante="primary"
+                        />
+                    </div>
+                    <div class="col-6 col-lg-3">
                         <cardIndicador
                             titulo="Acessos de Candidatos"
                             :valor="dash.acessosCandidatos.ultimos30Dias"
@@ -29,7 +38,7 @@
                             variante="info"
                         />
                     </div>
-                    <div class="col-6 col-lg-4">
+                    <div class="col-6 col-lg-3">
                         <cardIndicador
                             titulo="Empresas Ativas"
                             :valor="dash.empresasAtivas.total"
