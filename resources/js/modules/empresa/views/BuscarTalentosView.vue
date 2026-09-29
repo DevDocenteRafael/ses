@@ -196,19 +196,19 @@
                 </p>
 
                 <template v-else>
-                    <nav v-if="paginacao.last_page > 1" class="d-flex justify-content-center mb-2" aria-label="Paginação de candidatos superior">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item" :class="{ disabled: paginacao.current_page <= 1 || carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(paginacao.current_page - 1)">Anterior</button>
-                            </li>
-                            <li v-for="pagina in paginasVisiveis" :key="`topo-${pagina}`" class="page-item" :class="{ active: pagina === paginacao.current_page, disabled: carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(pagina)">{{ pagina }}</button>
-                            </li>
-                            <li class="page-item" :class="{ disabled: paginacao.current_page >= paginacao.last_page || carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(paginacao.current_page + 1)">Próxima</button>
-                            </li>
-                        </ul>
-                    </nav>
+                    <base-pagination
+                        class="mb-2"
+                        :current-page="paginacao.current_page"
+                        :last-page="paginacao.last_page"
+                        :per-page="paginacao.per_page"
+                        :total="paginacao.total"
+                        :from="paginacao.from"
+                        :to="paginacao.to"
+                        :loading="carregando"
+                        item-label="candidatos"
+                        aria-label="Paginação de candidatos superior"
+                        @change="mudarPagina"
+                    />
 
                     <div class="row gy-2 gx-0">
                         <div v-for="c in candidatos" :key="c.matricula" class="col-12">
@@ -250,19 +250,19 @@
                         </div>
                     </div>
 
-                    <nav v-if="paginacao.last_page > 1" class="d-flex justify-content-center mt-2" aria-label="Paginação de candidatos inferior">
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item" :class="{ disabled: paginacao.current_page <= 1 || carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(paginacao.current_page - 1)">Anterior</button>
-                            </li>
-                            <li v-for="pagina in paginasVisiveis" :key="`rodape-${pagina}`" class="page-item" :class="{ active: pagina === paginacao.current_page, disabled: carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(pagina)">{{ pagina }}</button>
-                            </li>
-                            <li class="page-item" :class="{ disabled: paginacao.current_page >= paginacao.last_page || carregando }">
-                                <button class="page-link py-1" type="button" @click="mudarPagina(paginacao.current_page + 1)">Próxima</button>
-                            </li>
-                        </ul>
-                    </nav>
+                    <base-pagination
+                        class="mt-2"
+                        :current-page="paginacao.current_page"
+                        :last-page="paginacao.last_page"
+                        :per-page="paginacao.per_page"
+                        :total="paginacao.total"
+                        :from="paginacao.from"
+                        :to="paginacao.to"
+                        :loading="carregando"
+                        item-label="candidatos"
+                        aria-label="Paginação de candidatos inferior"
+                        @change="mudarPagina"
+                    />
                 </template>
             </main>
         </div>
@@ -274,6 +274,7 @@ import { computed, nextTick, reactive, ref, onMounted, onBeforeUnmount, watch } 
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
+import BasePagination from '../../../components/common/BasePagination.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 
@@ -315,18 +316,11 @@ const paginacao = reactive({
     last_page: 1,
     per_page: 10,
     total: 0,
+    from: null,
+    to: null,
 });
 
 const iniciais = computed(() => iniciaisDe(auth.pessoa?.nome || 'Empresa'));
-const paginasVisiveis = computed(() => {
-    const total = paginacao.last_page || 1;
-    const atual = paginacao.current_page || 1;
-    const inicio = Math.max(1, atual - 2);
-    const fim = Math.min(total, inicio + 4);
-    const primeiro = Math.max(1, fim - 4);
-
-    return Array.from({ length: fim - primeiro + 1 }, (_, i) => primeiro + i);
-});
 const rotuloFiltroHabilidades = computed(() => {
     const total = filtros.habilidades.length;
 
@@ -627,6 +621,8 @@ async function buscar(pagina = 1) {
         paginacao.last_page = data.last_page || 1;
         paginacao.per_page = Number(data.per_page || 10);
         paginacao.total = data.total || 0;
+        paginacao.from = data.from || null;
+        paginacao.to = data.to || null;
     } finally {
         buscando.value = false;
         carregando.value = false;

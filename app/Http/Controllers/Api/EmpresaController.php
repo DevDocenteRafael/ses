@@ -170,9 +170,12 @@ class EmpresaController extends Controller
             $query->where('status', $request->boolean('status'));
         }
 
-        $empresas = $query->orderBy('razao_social')->get();
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max($perPage, 1), 10);
 
-        return response()->json($empresas);
+        return response()->json(
+            $query->orderBy('razao_social')->orderBy('cnpj')->paginate($perPage)
+        );
     }
 
     public function show(Request $request, string $cnpj): JsonResponse

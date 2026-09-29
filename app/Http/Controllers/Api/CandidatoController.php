@@ -282,16 +282,12 @@ class CandidatoController extends Controller
 
         $this->registrarBuscaDeTalentos($request, $solicitante);
 
-        if ($solicitante->tipo() === 'empresa') {
-            $perPage = (int) $request->query('per_page', 10);
-            $perPage = min(max($perPage, 1), 10);
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max($perPage, 1), 10);
 
-            return response()->json(
-                $query->orderBy('matricula')->paginate($perPage)
-            );
-        }
-
-        return response()->json($query->orderBy('matricula')->get());
+        return response()->json(
+            $query->orderBy('matricula')->paginate($perPage)
+        );
     }
 
     public function tiposCurso(Request $request): JsonResponse

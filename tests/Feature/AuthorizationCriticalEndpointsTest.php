@@ -421,19 +421,74 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonMissing(['matricula' => $bloqueado->matricula]);
     }
 
-    public function test_admin_continua_recebendo_lista_simples_de_candidatos_sem_paginacao(): void
+    public function test_admin_lista_candidatos_paginados_com_dez_por_pagina(): void
     {
         [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
 
-        $this->criarCandidatoParaBusca('Aluno Admin 1');
-        $this->criarCandidatoParaBusca('Aluno Admin 2');
+        for ($i = 1; $i <= 25; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Admin Paginado ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT));
+        }
 
         $this->withToken($tokenAdmin)
             ->getJson('/api/candidatos?page=1&per_page=10')
             ->assertOk()
-            ->assertJsonIsArray()
-            ->assertJsonMissingPath('data')
-            ->assertJsonCount(2);
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 25)
+            ->assertJsonPath('last_page', 3)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=3&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(5, 'data');
+    }
+
+    public function test_admin_paginacao_respeita_quantidades_de_cinco_dez_e_onze_candidatos(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        for ($i = 1; $i <= 5; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Quantidade 5 ' . $i);
+        }
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 5)
+            ->assertJsonCount(5, 'data');
+
+        for ($i = 6; $i <= 10; $i++) {
+            $this->criarCandidatoParaBusca('Aluno Quantidade 10 ' . $i);
+        }
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 10)
+            ->assertJsonCount(10, 'data');
+
+        $this->criarCandidatoParaBusca('Aluno Quantidade 11');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 11)
+            ->assertJsonPath('last_page', 2)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 11)
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_admin_filtra_candidatos_por_busca_e_status_com_semantica_and(): void
@@ -447,7 +502,8 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         $this->withToken($tokenAdmin)
             ->getJson('/api/candidatos?busca=Jo%C3%A3o&status=1')
             ->assertOk()
-            ->assertJsonCount(1)
+            ->assertJsonPath('total', 1)
+            ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['matricula' => $liberado->matricula])
             ->assertJsonMissing(['matricula' => $bloqueado->matricula])
             ->assertJsonMissing(['matricula' => $maria->matricula]);
@@ -463,8 +519,42 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         $this->withToken($tokenAdmin)
             ->getJson('/api/candidatos?status=0')
             ->assertOk()
-            ->assertJsonCount(1)
+            ->assertJsonPath('total', 1)
+            ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['matricula' => $bloqueado->matricula]);
+    }
+
+    public function test_admin_paginacao_preserva_busca_status_e_unidade(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->criarCandidatoParaBusca('Maria Filtrada ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT), status: true);
+        }
+
+        for ($i = 1; $i <= 4; $i++) {
+            $this->criarCandidatoParaBusca('Maria Outra Unidade ' . $i, status: true);
+        }
+
+        DadosAcademicos::query()
+            ->whereHas('candidato.pessoa', fn ($query) => $query->where('nome', 'like', 'Maria Outra Unidade%'))
+            ->update(['unidade' => 'Taguatinga']);
+
+        $this->criarCandidatoParaBusca('Maria Bloqueada', status: false);
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?busca=Maria&status=1&unidade=Asa%20Sul&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonPath('last_page', 2)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?busca=Maria&status=1&unidade=Asa%20Sul&page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonMissing(['status' => false]);
     }
 
     public function test_aluno_acessa_proprio_candidato_mas_nao_acessa_candidato_de_terceiro(): void
@@ -524,6 +614,33 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_lista_empresas_paginadas_com_dez_por_pagina(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        for ($i = 1; $i <= 25; $i++) {
+            $this->criarEmpresaParaGestao('Empresa Paginada ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT), 'Responsável Empresa ' . $i, true);
+        }
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonPath('total', 25)
+            ->assertJsonPath('last_page', 3)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas?page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas?page=3&per_page=10')
+            ->assertOk()
+            ->assertJsonCount(5, 'data');
+    }
+
     public function test_admin_filtra_empresas_por_busca_e_status_com_semantica_and(): void
     {
         [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
@@ -535,7 +652,8 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         $this->withToken($tokenAdmin)
             ->getJson('/api/empresas?busca=Empresa%20Teste&status=0')
             ->assertOk()
-            ->assertJsonCount(1)
+            ->assertJsonPath('total', 1)
+            ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['cnpj' => $bloqueada->cnpj])
             ->assertJsonMissing(['cnpj' => $liberada->cnpj])
             ->assertJsonMissing(['cnpj' => $outra->cnpj]);
@@ -551,8 +669,36 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         $this->withToken($tokenAdmin)
             ->getJson('/api/empresas?status=0')
             ->assertOk()
-            ->assertJsonCount(1)
+            ->assertJsonPath('total', 1)
+            ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['cnpj' => $bloqueada->cnpj]);
+    }
+
+    public function test_admin_paginacao_de_empresas_respeita_filtros(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        for ($i = 1; $i <= 12; $i++) {
+            $this->criarEmpresaParaGestao('Empresa Filtro Ativa ' . str_pad((string) $i, 2, '0', STR_PAD_LEFT), 'Responsável Ativo ' . $i, true);
+        }
+
+        for ($i = 1; $i <= 4; $i++) {
+            $this->criarEmpresaParaGestao('Empresa Filtro Bloqueada ' . $i, 'Responsável Bloqueado ' . $i, false);
+        }
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas?busca=Filtro&status=1&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonPath('last_page', 2)
+            ->assertJsonCount(10, 'data');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/empresas?busca=Filtro&status=1&page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonMissing(['status' => false]);
     }
 
     public function test_empresa_acessa_propria_empresa_mas_nao_acessa_empresa_de_terceiro(): void

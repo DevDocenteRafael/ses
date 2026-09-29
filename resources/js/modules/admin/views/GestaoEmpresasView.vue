@@ -38,6 +38,20 @@
                         </div>
                     </div>
 
+                    <base-pagination
+                        class="mb-3"
+                        :current-page="admin.empresasPaginacao.current_page"
+                        :last-page="admin.empresasPaginacao.last_page"
+                        :per-page="admin.empresasPaginacao.per_page"
+                        :total="admin.empresasPaginacao.total"
+                        :from="admin.empresasPaginacao.from"
+                        :to="admin.empresasPaginacao.to"
+                        :loading="admin.carregando"
+                        item-label="empresas"
+                        aria-label="Paginação superior de empresas"
+                        @change="mudarPagina"
+                    />
+
                     <transition name="app-modal-overlay">
                         <div
                             v-if="modalCadastroAberto"
@@ -164,51 +178,67 @@
                         Nenhuma empresa encontrada.
                     </p>
 
-                    <div v-else class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr class="text-secondary small text-uppercase">
-                                    <th>Empresa</th>
-                                    <th>Responsável</th>
-                                    <th>CNPJ</th>
-                                    <th>Atividade</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="empresa in admin.empresas" :key="empresa.cnpj">
-                                    <td><p class="fw-semibold mb-0">{{ empresa.razao_social }}</p></td>
-                                    <td>
-                                        <p class="mb-0">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
-                                        <p class="text-secondary small mb-0">{{ empresa.responsavel_contratual?.pessoa?.email || '—' }}</p>
-                                    </td>
-                                    <td>{{ formatarCnpj(empresa.cnpj) }}</td>
-                                    <td>{{ empresa.atividade_economica }}</td>
-                                    <td>
-                                        <span
-                                            class="badge"
-                                            :class="empresa.status
-                                                ? 'text-bg-success-subtle text-success-emphasis'
-                                                : 'text-bg-danger-subtle text-danger-emphasis'"
-                                        >
-                                            {{ empresa.status ? 'Liberado' : 'Bloqueado' }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        <button
-                                            class="btn btn-sm"
-                                            :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
-                                            :disabled="alterando === empresa.cnpj"
-                                            @click="alternarStatus(empresa)"
-                                        >
-                                            {{ empresa.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <template v-else>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr class="text-secondary small text-uppercase">
+                                        <th>Empresa</th>
+                                        <th>Responsável</th>
+                                        <th>CNPJ</th>
+                                        <th>Atividade</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="empresa in admin.empresas" :key="empresa.cnpj">
+                                        <td><p class="fw-semibold mb-0">{{ empresa.razao_social }}</p></td>
+                                        <td>
+                                            <p class="mb-0">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
+                                            <p class="text-secondary small mb-0">{{ empresa.responsavel_contratual?.pessoa?.email || '—' }}</p>
+                                        </td>
+                                        <td>{{ formatarCnpj(empresa.cnpj) }}</td>
+                                        <td>{{ empresa.atividade_economica }}</td>
+                                        <td>
+                                            <span
+                                                class="badge"
+                                                :class="empresa.status
+                                                    ? 'text-bg-success-subtle text-success-emphasis'
+                                                    : 'text-bg-danger-subtle text-danger-emphasis'"
+                                            >
+                                                {{ empresa.status ? 'Liberado' : 'Bloqueado' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button
+                                                class="btn btn-sm"
+                                                :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
+                                                :disabled="alterando === empresa.cnpj"
+                                                @click="alternarStatus(empresa)"
+                                            >
+                                                {{ empresa.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <base-pagination
+                            class="mt-3"
+                            :current-page="admin.empresasPaginacao.current_page"
+                            :last-page="admin.empresasPaginacao.last_page"
+                            :per-page="admin.empresasPaginacao.per_page"
+                            :total="admin.empresasPaginacao.total"
+                            :from="admin.empresasPaginacao.from"
+                            :to="admin.empresasPaginacao.to"
+                            :loading="admin.carregando"
+                            item-label="empresas"
+                            aria-label="Paginação inferior de empresas"
+                            @change="mudarPagina"
+                        />
+                    </template>
                 </div>
             </div>
         </div>
@@ -219,6 +249,7 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
+import BasePagination from '../../../components/common/BasePagination.vue';
 import { useAdminStore } from '../../../store/admin';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
@@ -256,19 +287,33 @@ let temporizadorFiltro = null;
 watch([busca, statusFiltro], () => {
     clearTimeout(temporizadorFiltro);
     temporizadorFiltro = setTimeout(() => {
-        carregarEmpresasFiltradas();
+        carregarEmpresasFiltradas(1);
     }, 300);
 });
 
-function parametrosFiltro() {
+function parametrosFiltro(pagina = admin.empresasPaginacao.current_page || 1) {
     return {
+        page: pagina,
+        per_page: 10,
         ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
     };
 }
 
-async function carregarEmpresasFiltradas() {
-    await admin.carregarEmpresas(parametrosFiltro());
+async function carregarEmpresasFiltradas(pagina = admin.empresasPaginacao.current_page || 1) {
+    await admin.carregarEmpresas(parametrosFiltro(pagina));
+
+    if (admin.erro) {
+        toast.error(admin.erro);
+    }
+}
+
+function mudarPagina(pagina) {
+    if (pagina < 1 || pagina > admin.empresasPaginacao.last_page || pagina === admin.empresasPaginacao.current_page || admin.carregando) {
+        return;
+    }
+
+    carregarEmpresasFiltradas(pagina);
 }
 
 // "Sincronizar SIG": ainda não existe uma integração real com o SIG para

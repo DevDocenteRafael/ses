@@ -48,6 +48,20 @@
                         </div>
                     </div>
 
+                    <base-pagination
+                        class="mb-3"
+                        :current-page="admin.alunosPaginacao.current_page"
+                        :last-page="admin.alunosPaginacao.last_page"
+                        :per-page="admin.alunosPaginacao.per_page"
+                        :total="admin.alunosPaginacao.total"
+                        :from="admin.alunosPaginacao.from"
+                        :to="admin.alunosPaginacao.to"
+                        :loading="admin.carregando"
+                        item-label="candidatos"
+                        aria-label="Paginação superior de candidatos"
+                        @change="mudarPagina"
+                    />
+
                     <transition name="app-modal">
                         <div
                             v-if="modalCadastroAberto"
@@ -153,101 +167,117 @@
                         Nenhum candidato encontrado.
                     </p>
 
-                    <div v-else class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr class="text-secondary small text-uppercase">
-                                    <th>Candidato</th>
-                                    <th>CPF</th>
-                                    <th>Curso / Unidade</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template v-for="aluno in admin.alunos" :key="aluno.matricula">
-                                    <tr>
-                                        <td>
-                                            <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
-                                            <p class="text-secondary small mb-0">E-mail: {{ aluno.pessoa?.email || '—' }}</p>
-                                        </td>
-                                        <td>{{ formatarCpf(aluno.cpf) }}</td>
-                                        <td>
-                                            <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
-                                            <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
-                                        </td>
-                                        <td>
-                                            <span
-                                                class="badge"
-                                                :class="aluno.status
-                                                    ? 'text-bg-success-subtle text-success-emphasis'
-                                                    : 'text-bg-danger-subtle text-danger-emphasis'"
-                                            >
-                                                {{ aluno.status ? 'Liberado' : 'Bloqueado' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end">
-                                            <button
-                                                class="btn btn-sm btn-outline-primary me-2"
-                                                @click="alternarDetalhes(aluno.matricula)"
-                                            >
-                                                {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
-                                            </button>
-                                            <button
-                                                class="btn btn-sm btn-outline-secondary me-2"
-                                                :disabled="curriculoGerando === aluno.matricula"
-                                                @click="baixarCurriculo(aluno)"
-                                            >
-                                                <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
-                                                {{ curriculoGerando === aluno.matricula ? 'Gerando currículo...' : 'Baixar currículo' }}
-                                            </button>
-                                            <button
-                                                class="btn btn-sm"
-                                                :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
-                                                :disabled="alterando === aluno.matricula"
-                                                @click="alternarStatus(aluno)"
-                                            >
-                                                {{ aluno.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
-                                            </button>
-                                        </td>
+                    <template v-else>
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr class="text-secondary small text-uppercase">
+                                        <th>Candidato</th>
+                                        <th>CPF</th>
+                                        <th>Curso / Unidade</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Ações</th>
                                     </tr>
-                                    <tr v-if="alunoExpandido === aluno.matricula" :key="`detalhes-${aluno.matricula}`">
-                                        <td colspan="5" class="bg-light-subtle">
-                                            <div class="p-3">
-                                                <div class="row g-3">
-                                                    <div class="col-12">
-                                                        <small class="text-secondary d-block">Sobre mim</small>
-                                                        <span>{{ aluno.informacoes_profissionais?.sobre_mim || 'Não informado' }}</span>
-                                                    </div>
-                                                    <div class="col-md-6 col-lg-4">
-                                                        <small class="text-secondary d-block">CPF</small>
-                                                        <span>{{ formatarCpf(aluno.cpf) }}</span>
-                                                    </div>
-                                                    <div class="col-md-6 col-lg-4">
-                                                        <small class="text-secondary d-block">Cargo de interesse</small>
-                                                        <span>{{ aluno.informacoes_profissionais?.cargo_de_interesse || 'Não informado' }}</span>
-                                                    </div>
-                                                    <div class="col-md-6 col-lg-4">
-                                                        <small class="text-secondary d-block">Disponibilidade de horário</small>
-                                                        <span>{{ formatarDisponibilidade(aluno.preferencias_de_trabalho?.disponibilidade_de_horario) }}</span>
-                                                    </div>
-                                                    <div class="col-md-6 col-lg-4">
-                                                        <small class="text-secondary d-block">Região administrativa</small>
-                                                        <span>{{ aluno.preferencias_de_trabalho?.regiao_administrativa || 'Não informado' }}</span>
-                                                    </div>
-                                                    <div class="col-md-6 col-lg-4">
-                                                        <small class="text-secondary d-block">Pretensão salarial</small>
-                                                        <span>{{ formatarPretensao(aluno.preferencias_de_trabalho?.pretensao_salarial) }}</span>
+                                </thead>
+                                <tbody>
+                                    <template v-for="aluno in admin.alunos" :key="aluno.matricula">
+                                        <tr>
+                                            <td>
+                                                <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
+                                                <p class="text-secondary small mb-0">E-mail: {{ aluno.pessoa?.email || '—' }}</p>
+                                            </td>
+                                            <td>{{ formatarCpf(aluno.cpf) }}</td>
+                                            <td>
+                                                <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
+                                                <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    class="badge"
+                                                    :class="aluno.status
+                                                        ? 'text-bg-success-subtle text-success-emphasis'
+                                                        : 'text-bg-danger-subtle text-danger-emphasis'"
+                                                >
+                                                    {{ aluno.status ? 'Liberado' : 'Bloqueado' }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button
+                                                    class="btn btn-sm btn-outline-primary me-2"
+                                                    @click="alternarDetalhes(aluno.matricula)"
+                                                >
+                                                    {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
+                                                </button>
+                                                <button
+                                                    class="btn btn-sm btn-outline-secondary me-2"
+                                                    :disabled="curriculoGerando === aluno.matricula"
+                                                    @click="baixarCurriculo(aluno)"
+                                                >
+                                                    <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                    <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
+                                                    {{ curriculoGerando === aluno.matricula ? 'Gerando currículo...' : 'Baixar currículo' }}
+                                                </button>
+                                                <button
+                                                    class="btn btn-sm"
+                                                    :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
+                                                    :disabled="alterando === aluno.matricula"
+                                                    @click="alternarStatus(aluno)"
+                                                >
+                                                    {{ aluno.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="alunoExpandido === aluno.matricula" :key="`detalhes-${aluno.matricula}`">
+                                            <td colspan="5" class="bg-light-subtle">
+                                                <div class="p-3">
+                                                    <div class="row g-3">
+                                                        <div class="col-12">
+                                                            <small class="text-secondary d-block">Sobre mim</small>
+                                                            <span>{{ aluno.informacoes_profissionais?.sobre_mim || 'Não informado' }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4">
+                                                            <small class="text-secondary d-block">CPF</small>
+                                                            <span>{{ formatarCpf(aluno.cpf) }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4">
+                                                            <small class="text-secondary d-block">Cargo de interesse</small>
+                                                            <span>{{ aluno.informacoes_profissionais?.cargo_de_interesse || 'Não informado' }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4">
+                                                            <small class="text-secondary d-block">Disponibilidade de horário</small>
+                                                            <span>{{ formatarDisponibilidade(aluno.preferencias_de_trabalho?.disponibilidade_de_horario) }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4">
+                                                            <small class="text-secondary d-block">Região administrativa</small>
+                                                            <span>{{ aluno.preferencias_de_trabalho?.regiao_administrativa || 'Não informado' }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4">
+                                                            <small class="text-secondary d-block">Pretensão salarial</small>
+                                                            <span>{{ formatarPretensao(aluno.preferencias_de_trabalho?.pretensao_salarial) }}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <base-pagination
+                            class="mt-3"
+                            :current-page="admin.alunosPaginacao.current_page"
+                            :last-page="admin.alunosPaginacao.last_page"
+                            :per-page="admin.alunosPaginacao.per_page"
+                            :total="admin.alunosPaginacao.total"
+                            :from="admin.alunosPaginacao.from"
+                            :to="admin.alunosPaginacao.to"
+                            :loading="admin.carregando"
+                            item-label="candidatos"
+                            aria-label="Paginação inferior de candidatos"
+                            @change="mudarPagina"
+                        />
+                    </template>
                 </div>
             </div>
         </div>
@@ -258,6 +288,7 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
+import BasePagination from '../../../components/common/BasePagination.vue';
 import { useAdminStore } from '../../../store/admin';
 import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
@@ -289,7 +320,6 @@ const formularioInicial = () => ({
     status: true,
 });
 const formulario = reactive(formularioInicial());
-
 onMounted(async () => {
     try {
         await Promise.all([
@@ -305,20 +335,35 @@ let temporizadorFiltro = null;
 watch([busca, statusFiltro, unidadeFiltro], () => {
     clearTimeout(temporizadorFiltro);
     temporizadorFiltro = setTimeout(() => {
-        carregarAlunosFiltrados();
+        carregarAlunosFiltrados(1);
     }, 300);
 });
 
-function parametrosFiltro() {
+function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
     return {
+        page: pagina,
+        per_page: 10,
         ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
         ...(unidadeFiltro.value !== '' ? { unidade: unidadeFiltro.value } : {}),
     };
 }
 
-async function carregarAlunosFiltrados() {
-    await admin.carregarAlunos(parametrosFiltro());
+async function carregarAlunosFiltrados(pagina = admin.alunosPaginacao.current_page || 1) {
+    await admin.carregarAlunos(parametrosFiltro(pagina));
+
+    if (admin.erro) {
+        toast.error(admin.erro);
+    }
+}
+
+function mudarPagina(pagina) {
+    if (pagina < 1 || pagina > admin.alunosPaginacao.last_page || pagina === admin.alunosPaginacao.current_page || admin.carregando) {
+        return;
+    }
+
+    alunoExpandido.value = null;
+    carregarAlunosFiltrados(pagina);
 }
 
 // "Sincronizar SIG": no protótipo simula uma re-importação de candidatos.

@@ -4,6 +4,22 @@ import adminService from '../services/adminServices';
 export const useAdminStore = defineStore('admin', {
     state: () => ({
         alunos: [],
+        alunosPaginacao: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 10,
+            total: 0,
+            from: null,
+            to: null,
+        },
+        empresasPaginacao: {
+            current_page: 1,
+            last_page: 1,
+            per_page: 10,
+            total: 0,
+            from: null,
+            to: null,
+        },
         unidadesAlunos: [],
         empresas: [],
         vagas: [],
@@ -46,9 +62,17 @@ export const useAdminStore = defineStore('admin', {
             this.erro = null;
             try {
                 const { data } = await adminService.listarAlunos(params);
-                this.alunos = data;
+                this.alunos = data.data || [];
+                this.alunosPaginacao = {
+                    current_page: data.current_page || 1,
+                    last_page: data.last_page || 1,
+                    per_page: Number(data.per_page || 10),
+                    total: data.total || 0,
+                    from: data.from || null,
+                    to: data.to || null,
+                };
             } catch (e) {
-                this.erro = e.response?.data?.message || 'Erro ao carregar alunos.';
+                this.erro = e.response?.data?.message || 'Não foi possível carregar os candidatos.';
             } finally {
                 this.carregando = false;
             }
@@ -84,9 +108,17 @@ export const useAdminStore = defineStore('admin', {
             this.erro = null;
             try {
                 const { data } = await adminService.listarEmpresas(params);
-                this.empresas = data;
+                this.empresas = data.data || [];
+                this.empresasPaginacao = {
+                    current_page: data.current_page || 1,
+                    last_page: data.last_page || 1,
+                    per_page: Number(data.per_page || 10),
+                    total: data.total || 0,
+                    from: data.from || null,
+                    to: data.to || null,
+                };
             } catch (e) {
-                this.erro = e.response?.data?.message || 'Erro ao carregar empresas.';
+                this.erro = e.response?.data?.message || 'Não foi possível carregar as empresas.';
             } finally {
                 this.carregando = false;
             }
