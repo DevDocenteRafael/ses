@@ -68,9 +68,24 @@ class AdministrativoController extends Controller
             ? round((($candidatosMesAtual - $candidatosMesAnterior) / $candidatosMesAnterior) * 100, 1)
             : null;
 
+        $inicioUltimos30Dias = today()->subDays(30);
         $contratadosUltimos30Dias = Contratacao::query()
-            ->whereDate('contratado_em', '>=', today()->subDays(30))
+            ->whereDate('contratado_em', '>=', $inicioUltimos30Dias)
             ->count();
+
+        $cursosMaisContratados = Contratacao::query()
+            ->leftJoin('dados_academicos', function ($join) {
+                $join->on('dados_academicos.candidato_matricula', '=', 'contratacoes.candidato_matricula')
+                    ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = contratacoes.candidato_matricula)');
+            })
+            ->whereDate('contratacoes.contratado_em', '>=', $inicioUltimos30Dias)
+            ->selectRaw("COALESCE(NULLIF(dados_academicos.curso, ''), 'Não informado') as curso")
+            ->selectRaw('COUNT(DISTINCT contratacoes.id) as total')
+            ->groupBy('curso')
+            ->orderByDesc('total')
+            ->orderBy('curso')
+            ->limit(10)
+            ->get();
 
         $acessosUltimos30Dias = VisualizacaoPerfil::where('visualizado_em', '>=', now()->subDays(30))->count();
 
@@ -91,6 +106,19 @@ class AdministrativoController extends Controller
             ->selectRaw('dados_academicos.segmento as segmento, count(*) as total')
             ->groupBy('dados_academicos.segmento')
             ->orderByDesc('total')
+            ->get();
+
+        $candidatosPorCurso = Candidato::query()
+            ->join('dados_academicos', 'dados_academicos.candidato_matricula', '=', 'candidato.matricula')
+            ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = candidato.matricula)')
+            ->whereNotNull('dados_academicos.curso')
+            ->where('dados_academicos.curso', '<>', '')
+            ->select('dados_academicos.curso')
+            ->selectRaw('COUNT(DISTINCT candidato.matricula) as total')
+            ->groupBy('dados_academicos.curso')
+            ->orderByDesc('total')
+            ->orderBy('dados_academicos.curso')
+            ->limit(10)
             ->get();
 
         // Linha "Visualizações de Perfil" nos últimos 6 meses.
@@ -156,6 +184,7 @@ class AdministrativoController extends Controller
             'contratados' => [
                 'ultimos30Dias' => $contratadosUltimos30Dias,
             ],
+            'cursosMaisContratados' => $cursosMaisContratados,
             'acessosCandidatos' => [
                 'ultimos30Dias' => $acessosUltimos30Dias,
             ],
@@ -168,6 +197,7 @@ class AdministrativoController extends Controller
             'visualizacoesPorMes' => $visualizacoesPorMes,
             'buscasPorMes' => $buscasPorMes,
             'filtrosMaisAcessados' => $filtrosMaisAcessados,
+            'candidatosPorCurso' => $candidatosPorCurso,
         ]);
     }
 

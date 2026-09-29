@@ -84,6 +84,16 @@
                                         <span class="text-secondary">{{ fatia.total }}</span>
                                     </div>
                                 </template>
+
+                                <hr class="my-4">
+                                <h3 class="h6 fw-bold mb-1">Cursos com mais candidatos cadastrados</h3>
+                                <p class="text-secondary small mb-2">Os 10 cursos com maior quantidade de candidatos.</p>
+                                <p v-if="!dash.candidatosPorCurso?.length" class="text-secondary small mb-0">
+                                    Ainda não há candidatos com curso acadêmico registrado.
+                                </p>
+                                <div v-else style="height: 330px;">
+                                    <canvas ref="graficoCandidatosCursoRef" role="img" aria-label="Quantidade de candidatos cadastrados por curso"></canvas>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -140,6 +150,23 @@
                     </div>
                 </div>
 
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h2 class="h6 fw-bold mb-1">Cursos com mais contratações</h2>
+                                <p class="text-secondary small mb-3">Os 10 cursos com mais contratações nos últimos 30 dias.</p>
+                                <p v-if="!dash.cursosMaisContratados?.length" class="text-secondary small mb-0">
+                                    Ainda não há contratações com cursos acadêmicos registrados.
+                                </p>
+                                <div v-else style="height: 340px;">
+                                    <canvas ref="graficoCursosRef" role="img" aria-label="Quantidade de contratações por curso"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <p class="text-secondary small mt-3 mb-0">
                     "Buscas Realizadas" e "Filtros Mais Acessados pelas Empresas" dependem de um registro de
                     buscas em Buscar Talentos que ainda não existe no sistema — por isso não aparecem aqui.
@@ -150,7 +177,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import Chart from 'chart.js/auto';
 import topbar from '../../../components/common/header.vue';
 import cardIndicador from '../../../components/common/cardIndicador.vue';
 import loading from '../../../components/common/loading.vue';
@@ -158,11 +186,162 @@ import { useAdminStore } from '../../../store/admin';
 
 const admin = useAdminStore();
 const carregouUmaVez = ref(false);
+const graficoCursosRef = ref(null);
+const graficoCandidatosCursoRef = ref(null);
+let graficoCursos = null;
+let graficoCandidatosCurso = null;
 
 onMounted(async () => {
     await admin.carregarDashboard();
     carregouUmaVez.value = true;
+    await nextTick();
+
+    if (admin.dashboard?.cursosMaisContratados?.length && graficoCursosRef.value) {
+        graficoCursos = new Chart(graficoCursosRef.value, {
+            type: 'bar',
+            data: {
+                labels: admin.dashboard.cursosMaisContratados.map((item) => quebrarRotuloCurso(item.curso)),
+                datasets: [{
+                    label: 'Contratados',
+                    data: admin.dashboard.cursosMaisContratados.map((item) => Number(item.total)),
+                    backgroundColor: '#0b4f91',
+                    hoverBackgroundColor: '#083b6d',
+                    borderRadius: 6,
+                    maxBarThickness: 56,
+                }],
+            },
+            options: {
+                maintainAspectRatio: false,
+                layout: { padding: { top: 22 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (context) => `${context.parsed.y} contratado(s)` } },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#596579', maxRotation: 0, minRotation: 0 },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, stepSize: 1, color: '#596579' },
+                        grid: { color: '#e9eef4' },
+                    },
+                },
+            },
+            plugins: [{
+                id: 'rotulosQuantidade',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.getDatasetMeta(0).data.forEach((barra, indice) => {
+                        ctx.save();
+                        ctx.fillStyle = '#163f70';
+                        ctx.font = '600 12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(String(chart.data.datasets[0].data[indice]), barra.x, barra.y - 7);
+                        ctx.restore();
+                    });
+                },
+            }],
+        });
+    }
+
+    if (admin.dashboard?.candidatosPorCurso?.length && graficoCandidatosCursoRef.value) {
+        const cursos = admin.dashboard.candidatosPorCurso;
+        const maiorQuantidade = Math.max(1, ...cursos.map((item) => Number(item.total)));
+        graficoCandidatosCurso = new Chart(graficoCandidatosCursoRef.value, {
+            type: 'bar',
+            data: {
+                labels: cursos.map((item) => resumirRotuloCurso(item.curso)),
+                datasets: [{
+                    label: 'Candidatos cadastrados',
+                    data: cursos.map((item) => Number(item.total)),
+                    backgroundColor: '#0b4f91',
+                    hoverBackgroundColor: '#083b6d',
+                    borderRadius: 5,
+                    maxBarThickness: 22,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                layout: { padding: { right: 28 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (itens) => cursos[itens[0]?.dataIndex]?.curso || '',
+                            label: (context) => `${context.parsed.x} candidato(s)`,
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: maiorQuantidade + Math.max(1, Math.ceil(maiorQuantidade * 0.15)),
+                        ticks: { display: false },
+                        grid: { display: false },
+                    },
+                    y: { grid: { display: false }, ticks: { color: '#596579' } },
+                },
+            },
+            plugins: [{
+                id: 'rotulosCandidatosPorCurso',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    chart.getDatasetMeta(0).data.forEach((barra, indice) => {
+                        ctx.save();
+                        ctx.fillStyle = '#163f70';
+                        ctx.font = '600 11px sans-serif';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(String(chart.data.datasets[0].data[indice]), barra.x + 6, barra.y);
+                        ctx.restore();
+                    });
+                },
+            }],
+        });
+    }
 });
+
+onBeforeUnmount(() => {
+    graficoCursos?.destroy();
+    graficoCandidatosCurso?.destroy();
+});
+
+function quebrarRotuloCurso(valor) {
+    const palavras = String(valor || 'Curso não informado').split(/\s+/);
+    const linhas = [];
+    let linha = '';
+
+    palavras.forEach((palavra) => {
+        if (linha && `${linha} ${palavra}`.length > 18) {
+            linhas.push(linha);
+            linha = palavra;
+        } else {
+            linha = linha ? `${linha} ${palavra}` : palavra;
+        }
+    });
+
+    if (linha) linhas.push(linha);
+    return linhas;
+}
+
+function resumirRotuloCurso(valor) {
+    let rotulo = String(valor || 'Curso não informado')
+        .replace(/^pós-graduação em\s*/i, 'Pós-grad. ')
+        .replace(/^graduação em\s*/i, 'Grad. ')
+        .replace(/^certificação em\s*/i, 'Cert. ')
+        .replace(/^curso de\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (rotulo.length > 34) {
+        rotulo = `${rotulo.slice(0, 31).trimEnd()}…`;
+    }
+
+    return quebrarRotuloCurso(rotulo);
+}
 
 const dash = computed(() => admin.dashboard);
 
