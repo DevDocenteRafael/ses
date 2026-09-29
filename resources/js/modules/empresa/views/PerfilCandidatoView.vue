@@ -169,6 +169,19 @@
                             </div>
 
                             <hr>
+                            <div v-if="contratacaoRegistrada" class="alert alert-success py-2 mb-0">
+                                Contratação registrada. O candidato saiu da busca de talentos.
+                            </div>
+                            <div v-else>
+                                <button class="btn btn-success w-100" type="button" @click="modalContratacaoAberto = true">
+                                    <span v-if="registrandoContratacao" class="spinner-border spinner-border-sm me-2"></span>
+                                    <i v-else class="bi bi-person-check me-1"></i>
+                                    Contratado(a)
+                                </button>
+                                <p v-if="erroContratacao" class="text-danger small mt-2 mb-0">{{ erroContratacao }}</p>
+                            </div>
+
+                            <hr>
                             <h2 class="h6 fw-bold mb-3">Endereço</h2>
                             <div v-if="linhasEndereco.length" class="text-secondary small d-flex flex-column gap-1">
                                 <p v-for="linha in linhasEndereco" :key="linha" class="mb-0 text-break">
@@ -205,6 +218,28 @@
             </div>
         </div>
     </div>
+    <div v-if="modalContratacaoAberto" class="modal-backdrop fade show"></div>
+    <div v-if="modalContratacaoAberto" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0">Confirmar contratação</h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" :disabled="registrandoContratacao" @click="modalContratacaoAberto = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Confirme que <strong>{{ candidato.pessoa?.nome }}</strong> foi contratado pela sua empresa. Essa ação removerá o perfil da busca de talentos.</p>
+                    <div v-if="erroContratacao" class="alert alert-danger py-2 mt-3 mb-0">{{ erroContratacao }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" :disabled="registrandoContratacao" @click="modalContratacaoAberto = false">Cancelar</button>
+                    <button type="button" class="btn btn-success" :disabled="registrandoContratacao" @click="registrarContratacao">
+                        <span v-if="registrandoContratacao" class="spinner-border spinner-border-sm me-2"></span>
+                        Confirmar contratação
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
@@ -225,6 +260,10 @@ const router = useRouter();
 const carregando = ref(true);
 const erro = ref('');
 const candidato = ref({});
+const contratacaoRegistrada = ref(false);
+const modalContratacaoAberto = ref(false);
+const registrandoContratacao = ref(false);
+const erroContratacao = ref('');
 
 function iniciaisDe(nome) {
     return (nome || 'C')
@@ -414,6 +453,20 @@ async function carregar() {
         erro.value = 'Não foi possível carregar este candidato.';
     } finally {
         carregando.value = false;
+    }
+}
+
+async function registrarContratacao() {
+    registrandoContratacao.value = true;
+    erroContratacao.value = '';
+    try {
+        await empresaService.registrarContratacao(props.matricula);
+        contratacaoRegistrada.value = true;
+        modalContratacaoAberto.value = false;
+    } catch (error) {
+        erroContratacao.value = error.response?.data?.message || 'Não foi possível registrar a contratação.';
+    } finally {
+        registrandoContratacao.value = false;
     }
 }
 

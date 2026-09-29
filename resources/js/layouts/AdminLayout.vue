@@ -20,6 +20,7 @@ const menuItems = [
     { label: 'Relatórios Geral', icon: 'bi-pie-chart-fill', to: 'admin.dashboard' },
     { label: 'Gestão de Empresas', icon: 'bi-building-fill', to: 'admin.empresas' },
     { label: 'Gestão dos Candidatos', icon: 'bi-people-fill', to: 'admin.alunos' },
+    { label: 'Candidatos Contratados', icon: 'bi-person-check-fill', to: 'admin.contratados' },
 ];
 
 async function handleSair() {

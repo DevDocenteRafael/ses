@@ -51,6 +51,10 @@ export default {
         return api.get(`/candidatos/${matricula}`);
     },
 
+    registrarContratacao(matricula) {
+        return api.post(`/candidatos/${encodeURIComponent(matricula)}/contratacao`);
+    },
+
     // Convites enviados
     listarConvites(params = {}) {
         return api.get('/convites', { params });

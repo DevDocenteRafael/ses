@@ -78,6 +78,65 @@
                     />
 
                     <transition name="app-modal">
+                        <div v-if="modalContratacaoAberto" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
+                            <div class="modal-dialog modal-dialog-centered app-modal-dialog-animated">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h3 class="modal-title h5 mb-0">Registrar contratação</h3>
+                                        <button type="button" class="btn-close" aria-label="Fechar" @click="fecharModalContratacao"></button>
+                                    </div>
+                                    <form @submit.prevent="registrarContratacao">
+                                        <div class="modal-body">
+                                            <p class="mb-3">Confirme a contratação de <strong>{{ candidatoParaContratar?.pessoa?.nome }}</strong>.</p>
+                                            <label class="form-label" for="empresa-contratante">Empresa contratante</label>
+                                            <div class="position-relative">
+                                                <input
+                                                    id="empresa-contratante"
+                                                    v-model="buscaEmpresaContratante"
+                                                    class="form-control"
+                                                    type="search"
+                                                    placeholder="Pesquisar empresa cadastrada"
+                                                    autocomplete="off"
+                                                    role="combobox"
+                                                    :aria-expanded="!empresaContratanteSelecionada && empresasEncontradas.length > 0"
+                                                >
+                                                <div v-if="!empresaContratanteSelecionada && empresasEncontradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
+                                                    <button
+                                                        v-for="empresa in empresasEncontradas"
+                                                        :key="empresa.cnpj"
+                                                        type="button"
+                                                        class="list-group-item list-group-item-action text-start"
+                                                        @click="selecionarEmpresaContratante(empresa)"
+                                                    >
+                                                        <span class="d-block fw-semibold">{{ empresa.razao_social }}</span>
+                                                        <small class="text-secondary">{{ formatarCnpj(empresa.cnpj) }}</small>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div v-if="empresaContratanteSelecionada" class="d-flex align-items-center justify-content-between border rounded p-2 mt-2">
+                                                <span class="small">{{ buscaEmpresaContratante }}</span>
+                                                <button type="button" class="btn btn-sm btn-link" @click="limparEmpresaContratante">Trocar</button>
+                                            </div>
+                                            <small v-else-if="!carregandoEmpresas && !empresasEncontradas.length && buscaEmpresaContratante" class="text-secondary d-block mt-2">
+                                                Nenhuma empresa encontrada. Confira o cadastro em Gestão de Empresas.
+                                            </small>
+                                            <small v-if="carregandoEmpresas" class="text-secondary d-block mt-2">Buscando empresas...</small>
+                                            <div v-if="erroContratacao" class="alert alert-danger py-2 mt-3 mb-0">{{ erroContratacao }}</div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" :disabled="salvandoContratacao" @click="fecharModalContratacao">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary" :disabled="salvandoContratacao || !empresaContratanteSelecionada">
+                                                <span v-if="salvandoContratacao" class="spinner-border spinner-border-sm me-2"></span>
+                                                Confirmar contratação
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+
+                    <transition name="app-modal">
                         <div
                             v-if="modalCadastroAberto"
                             class="modal fade show d-block"
@@ -299,30 +358,26 @@
                                                     {{ aluno.status ? 'Liberado' : 'Bloqueado' }}
                                                 </span>
                                             </td>
-                                            <td class="text-end">
+                                            <td class="text-end" style="min-width: 430px;">
+                                                <div class="d-flex flex-nowrap justify-content-end gap-2">
                                                 <button
-                                                    class="btn btn-sm btn-outline-primary me-2"
+                                                    class="btn btn-sm btn-outline-primary flex-shrink-0"
                                                     @click="alternarDetalhes(aluno.matricula)"
                                                 >
                                                     {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
                                                 </button>
-                                                <button
-                                                    class="btn btn-sm btn-outline-secondary me-2"
-                                                    :disabled="curriculoGerando === aluno.matricula"
-                                                    @click="baixarCurriculo(aluno)"
-                                                >
-                                                    <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                    <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
-                                                    {{ curriculoGerando === aluno.matricula ? 'Gerando currículo...' : 'Baixar currículo' }}
+                                                <button class="btn btn-sm btn-outline-success flex-shrink-0" :disabled="salvandoContratacao" @click="abrirModalContratacao(aluno)">
+                                                    <i class="bi bi-person-check me-1"></i>Contratado(a)
                                                 </button>
                                                 <button
-                                                    class="btn btn-sm"
+                                                    class="btn btn-sm flex-shrink-0"
                                                     :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
                                                     :disabled="alterando === aluno.matricula"
                                                     @click="alternarStatus(aluno)"
                                                 >
                                                     {{ aluno.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
                                                 </button>
+                                                </div>
                                             </td>
                                         </tr>
                                         <tr v-if="alunoExpandido === aluno.matricula" :key="`detalhes-${aluno.matricula}`">
@@ -352,6 +407,17 @@
                                                         <div class="col-md-6 col-lg-4">
                                                             <small class="text-secondary d-block">Pretensão salarial</small>
                                                             <span>{{ formatarPretensao(aluno.preferencias_de_trabalho?.pretensao_salarial) }}</span>
+                                                        </div>
+                                                        <div class="col-md-6 col-lg-4 d-flex align-items-end justify-content-lg-start">
+                                                            <button
+                                                                class="btn btn-sm btn-outline-primary"
+                                                                :disabled="curriculoGerando === aluno.matricula"
+                                                                @click="baixarCurriculo(aluno)"
+                                                            >
+                                                                <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                                <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
+                                                                {{ curriculoGerando === aluno.matricula ? 'Gerando...' : 'Baixar currículo' }}
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -402,6 +468,14 @@ const unidadeFiltro = ref('');
 const alterando = ref(null);
 const curriculoGerando = ref(null);
 const alunoExpandido = ref(null);
+const modalContratacaoAberto = ref(false);
+const candidatoParaContratar = ref(null);
+const empresasEncontradas = ref([]);
+const buscaEmpresaContratante = ref('');
+const empresaContratanteSelecionada = ref('');
+const carregandoEmpresas = ref(false);
+const salvandoContratacao = ref(false);
+const erroContratacao = ref('');
 const modalCadastroAberto = ref(false);
 const modalCurriculosAberto = ref(false);
 const gerandoZip = ref(false);
@@ -444,6 +518,15 @@ watch([busca, statusFiltro, unidadeFiltro], () => {
     temporizadorFiltro = setTimeout(() => {
         carregarAlunosFiltrados(1);
     }, 300);
+});
+
+let temporizadorBuscaEmpresa = null;
+watch(buscaEmpresaContratante, (termo) => {
+    clearTimeout(temporizadorBuscaEmpresa);
+    const empresaSelecionada = empresasEncontradas.value.find((empresa) => empresa.cnpj === empresaContratanteSelecionada.value);
+    if (empresaSelecionada?.razao_social === termo) return;
+    empresaContratanteSelecionada.value = '';
+    temporizadorBuscaEmpresa = setTimeout(() => carregarEmpresasParaContratacao(termo), 250);
 });
 
 function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
@@ -494,6 +577,67 @@ function mudarPagina(pagina) {
 
     alunoExpandido.value = null;
     carregarAlunosFiltrados(pagina);
+}
+
+async function carregarEmpresasParaContratacao(termo = '') {
+    carregandoEmpresas.value = true;
+    try {
+        const { data } = await adminService.listarEmpresas({ busca: termo.trim(), per_page: 10 });
+        empresasEncontradas.value = data.data || [];
+    } catch (error) {
+        empresasEncontradas.value = [];
+        erroContratacao.value = 'Não foi possível carregar as empresas.';
+    } finally {
+        carregandoEmpresas.value = false;
+    }
+}
+
+function selecionarEmpresaContratante(empresa) {
+    empresaContratanteSelecionada.value = empresa.cnpj;
+    buscaEmpresaContratante.value = empresa.razao_social;
+}
+
+function limparEmpresaContratante() {
+    empresaContratanteSelecionada.value = '';
+    buscaEmpresaContratante.value = '';
+}
+
+function formatarCnpj(cnpj) {
+    const digitos = String(cnpj ?? '').replace(/\D/g, '').padStart(14, '0');
+    return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
+function abrirModalContratacao(aluno) {
+    candidatoParaContratar.value = aluno;
+    empresaContratanteSelecionada.value = '';
+    buscaEmpresaContratante.value = '';
+    erroContratacao.value = '';
+    modalContratacaoAberto.value = true;
+    carregarEmpresasParaContratacao();
+}
+
+function fecharModalContratacao() {
+    if (salvandoContratacao.value) return;
+    modalContratacaoAberto.value = false;
+    candidatoParaContratar.value = null;
+}
+
+async function registrarContratacao() {
+    if (!candidatoParaContratar.value || !empresaContratanteSelecionada.value) return;
+    salvandoContratacao.value = true;
+    erroContratacao.value = '';
+    try {
+        await adminService.registrarContratacao(candidatoParaContratar.value.matricula, {
+            empresa_cnpj: empresaContratanteSelecionada.value,
+        });
+        toast.success('Contratação registrada. O candidato foi movido para Candidatos Contratados.');
+        fecharModalContratacao();
+        await carregarAlunosFiltrados(1);
+    } catch (error) {
+        erroContratacao.value = error.response?.data?.message || 'Não foi possível registrar a contratação.';
+    } finally {
+        salvandoContratacao.value = false;
+    }
 }
 
 async function sincronizar() {

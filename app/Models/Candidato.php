@@ -74,6 +74,11 @@ class Candidato extends Model
         return $this->hasMany(Convite::class, 'candidatos_matricula', 'matricula');
     }
 
+    public function contratacao()
+    {
+        return $this->hasOne(Contratacao::class, 'candidato_matricula', 'matricula');
+    }
+
     public function visualizacoes()
     {
         return $this->hasMany(VisualizacaoPerfil::class, 'candidato_matricula', 'matricula');

@@ -19,6 +19,7 @@ class CandidatoQueryService
     public function construir(Request $request, Pessoa $solicitante): Builder
     {
         $query = Candidato::query()
+            ->whereDoesntHave('contratacao')
             ->with([
                 'pessoa:id_pessoa,nome,email,telefone',
                 'linkExterno',

@@ -26,6 +26,14 @@ export default {
         return api.put(`/candidatos/${matricula}`, { status });
     },
 
+    registrarContratacao(matricula, dados) {
+        return api.post(`/candidatos/${encodeURIComponent(matricula)}/contratacao`, dados);
+    },
+
+    listarContratacoes(params = {}) {
+        return api.get('/contratacoes', { params });
+    },
+
     cadastrarAluno(dados) {
         return api.post('/candidatos', dados);
     },

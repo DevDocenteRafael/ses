@@ -286,7 +286,7 @@ class CandidatoController extends Controller
             $this->garantirCandidatoDono($request, $matricula);
         }
 
-        if ($solicitante->tipo() === 'empresa' && ! $candidato->status) {
+        if ($solicitante->tipo() === 'empresa' && (! $candidato->status || $candidato->contratacao()->exists())) {
             abort(403, 'Voce nao tem permissao para visualizar este candidato.');
         }
 

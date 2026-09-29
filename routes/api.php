@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\VagaController;
 use App\Http\Controllers\Api\ConviteController;
 use App\Http\Controllers\Api\AdministrativoController;
 use App\Http\Controllers\Api\PerfilCandidatoController;
+use App\Http\Controllers\Api\ContratacaoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -76,6 +77,9 @@ Route::middleware('auth.token')->group(function () {
 
     // Convites
     Route::apiResource('convites', ConviteController::class);
+
+    Route::get('contratacoes', [ContratacaoController::class, 'index']);
+    Route::post('candidatos/{matricula}/contratacao', [ContratacaoController::class, 'store']);
 
     // Administrativo
     Route::prefix('administrativo')->group(function () {
