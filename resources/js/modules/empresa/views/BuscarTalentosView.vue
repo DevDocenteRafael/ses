@@ -234,10 +234,18 @@
                                                     +{{ habilidadesExtras(c) }}
                                                 </span>
                                             </div>
-                                            <div class="d-flex align-items-center flex-wrap gap-2">
-                                                <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }} - DF</small>
-                                                <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</small>
-                                            </div>
+                                             <div class="d-flex align-items-center flex-wrap gap-2">
+                                                 <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }} - DF</small>
+                                                 <a
+                                                     v-if="telefoneFormatado(c)"
+                                                     class="text-secondary text-decoration-none candidato-contato-link"
+                                                     :href="`tel:${telefoneNormalizado(c)}`"
+                                                     :aria-label="`Telefone: ${telefoneFormatado(c)}`"
+                                                 >
+                                                     <small><i class="bi bi-telephone me-1"></i>{{ telefoneFormatado(c) }}</small>
+                                                 </a>
+                                                 <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</small>
+                                             </div>
                                         </div>
                                         <div class="col-12 col-md-auto mt-1 mt-md-0">
                                             <router-link :to="{ name: 'empresa.candidato', params: { matricula: c.matricula } }" class="btn btn-sm btn-primary d-block px-2 py-1">
@@ -277,6 +285,7 @@ import empresaService from '../../../services/empresaServices';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
+import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -470,6 +479,15 @@ function normalizarTexto(valor) {
 function formatarDisponibilidade(valor) {
     const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
     return lista.length ? lista.join(' + ') : '-';
+}
+
+function telefoneNormalizado(candidato) {
+    return somenteNumeros(candidato?.pessoa?.telefone);
+}
+
+function telefoneFormatado(candidato) {
+    const telefone = telefoneNormalizado(candidato);
+    return telefone ? formatarTelefone(telefone) : '';
 }
 
 function regiaoSelecionada(codigo) {
@@ -725,6 +743,11 @@ onBeforeUnmount(() => {
     padding-top: 0.2rem;
     padding-bottom: 0.2rem;
     line-height: 1;
+}
+
+.candidato-contato-link:hover,
+.candidato-contato-link:focus {
+    color: var(--bs-primary) !important;
 }
 
 .min-w-0 {

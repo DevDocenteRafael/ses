@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
+use ZipArchive;
 
 class AdminCurriculoCandidatoTest extends TestCase
 {
@@ -135,6 +136,101 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertStringNotContainsString('Experiência com <script>malicioso</script>', $html);
     }
 
+    public function test_admin_baixa_zip_da_pagina_atual_respeitando_filtros_e_ordem(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+
+        for ($i = 1; $i <= 25; $i++) {
+            $candidato = $this->criarCandidatoBasico(sprintf('Ativo %02d', $i));
+            $candidato->forceFill(['matricula' => str_pad((string) $i, 15, '0', STR_PAD_LEFT)])->save();
+            DadosAcademicos::query()->create([
+                'instituicao' => 'Senac DF',
+                'curso' => 'Curso Teste',
+                'unidade' => 'Taguatinga',
+                'ano_de_conclusao' => '2026-12-01',
+                'candidato_matricula' => $candidato->matricula,
+            ]);
+        }
+
+        $bloqueado = $this->criarCandidatoBasico('Ativo Bloqueado');
+        $bloqueado->update(['status' => false]);
+
+        $response = $this->withToken($token)->post('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 2,
+            'pagina_final' => 2,
+            'status' => true,
+            'unidade' => 'Taguatinga',
+        ]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('application/zip', $response->headers->get('content-type'));
+        $this->assertStringContainsString('Curriculos_Pagina_2.zip', $response->headers->get('content-disposition'));
+
+        $nomes = $this->nomesNoZip($response->getFile()->getPathname());
+
+        $this->assertCount(10, $nomes);
+        $nomesNormalizados = array_map(fn ($nome) => preg_replace('/_+/', '_', $nome), $nomes);
+        $this->assertContains('Curriculo_Ativo_11.pdf', $nomesNormalizados, implode(', ', $nomesNormalizados));
+        $this->assertContains('Curriculo_Ativo_20.pdf', $nomesNormalizados, implode(', ', $nomesNormalizados));
+        $this->assertNotContains('Curriculo_Ativo_Bloqueado.pdf', $nomes);
+    }
+
+    public function test_zip_intervalo_inclui_ultima_pagina_e_trata_nomes_duplicados(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+
+        for ($i = 1; $i <= 13; $i++) {
+            $this->criarCandidatoBasico($i <= 2 ? 'João Repetido' : sprintf('Candidato %02d', $i));
+        }
+
+        $response = $this->withToken($token)->post('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 2,
+        ]);
+
+        $response->assertOk();
+        $nomes = $this->nomesNoZip($response->getFile()->getPathname());
+
+        $this->assertCount(13, $nomes);
+        $this->assertContains('Curriculo_Joao_Repetido.pdf', $nomes);
+        $this->assertContains('Curriculo_Joao_Repetido_2.pdf', $nomes);
+    }
+
+    public function test_zip_valida_intervalo_limite_e_autorizacao(): void
+    {
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        [, $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        $this->criarCandidatoBasico();
+
+        $this->postJson('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 1,
+        ])->assertUnauthorized();
+
+        $this->withToken($tokenEmpresa)->postJson('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 1,
+        ])->assertForbidden();
+
+        $this->withToken($tokenAdmin)->postJson('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 5,
+            'pagina_final' => 3,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_inicial');
+
+        $this->withToken($tokenAdmin)->postJson('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1.5,
+            'pagina_final' => 3,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_inicial');
+
+        $this->withToken($tokenAdmin)->postJson('/api/administrativo/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 11,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_final');
+    }
+
     private function criarCandidatoCompleto(): Candidato
     {
         $candidato = $this->criarCandidatoBasico('João da Silva');
@@ -196,7 +292,7 @@ class AdminCurriculoCandidatoTest extends TestCase
         $pessoa = Pessoa::query()->create([
             'nome' => $nome,
             'email' => Str::slug($nome) . Str::random(6) . '@teste.com',
-            'telefone' => '61999999999',
+            'telefone' => (string) random_int(10000000000, 99999999999),
             'endereco_cidade' => 'Brasília',
             'endereco_uf' => 'DF',
             'senha' => bcrypt('123456'),
@@ -258,5 +354,22 @@ class AdminCurriculoCandidatoTest extends TestCase
     private function normalizarPdfParaTeste(string $pdf): string
     {
         return iconv('Windows-1252', 'UTF-8//IGNORE', $pdf) ?: $pdf;
+    }
+
+    private function nomesNoZip(string $caminho): array
+    {
+        $zip = new ZipArchive();
+        $this->assertTrue($zip->open($caminho));
+
+        $nomes = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $nomes[] = $zip->getNameIndex($i);
+            $this->assertStringStartsWith('%PDF-', $zip->getFromIndex($i));
+        }
+
+        $zip->close();
+        sort($nomes);
+
+        return $nomes;
     }
 }

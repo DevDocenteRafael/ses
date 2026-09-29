@@ -152,6 +152,21 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonPath('data.0.matricula', $alvo->matricula);
     }
 
+    public function test_listagem_retorna_telefone_sem_expor_senha_e_busca_por_telefone(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+        $alvo = $this->criarCandidatoParaBusca('Aluno Telefone', telefone: '61999999999');
+        $this->criarCandidatoParaBusca('Aluno Outro Telefone', telefone: '6133334444');
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?busca=(61)%209%209999-9999')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', $alvo->matricula)
+            ->assertJsonPath('data.0.pessoa.telefone', '61999999999')
+            ->assertJsonMissingPath('data.0.pessoa.senha');
+    }
+
     public function test_empresa_lista_catalogo_de_habilidades_padrao_mais_persistidas_unicas_incluindo_personalizadas(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
@@ -1134,12 +1149,13 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         ?string $areaAtuacao = null,
         ?array $habilidadesPorArea = null,
         int $tipoContratacao = 1,
-        bool $aceitaTodasRegioes = false
+        bool $aceitaTodasRegioes = false,
+        ?string $telefone = null
     ): Candidato {
         $pessoa = Pessoa::query()->create([
             'nome' => $nome,
             'email' => Str::slug($nome) . Str::random(6) . '@teste.com',
-            'telefone' => (string) random_int(10000000000, 99999999999),
+            'telefone' => $telefone ?? (string) random_int(10000000000, 99999999999),
             'senha' => bcrypt('123456'),
             'data_cadastro' => now(),
         ]);

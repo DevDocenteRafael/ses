@@ -36,6 +36,12 @@ export default {
         });
     },
 
+    baixarCurriculosAlunos(params = {}) {
+        return api.post('/administrativo/candidatos/curriculos/zip', params, {
+            responseType: 'blob',
+        });
+    },
+
     sincronizarAlunos(dados) {
         return api.post('/administrativo/sincronizar-alunos', dados);
     },

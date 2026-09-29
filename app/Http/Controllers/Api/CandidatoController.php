@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Convite;
 use App\Models\CursoSenac;
@@ -11,6 +10,7 @@ use App\Models\DadosAcademicos;
 use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
+use App\Services\Candidatos\CandidatoQueryService;
 use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\HabilidadesCatalogo;
 use App\Support\RegioesAdministrativasDf;
@@ -136,7 +136,7 @@ class CandidatoController extends Controller
      * representa a classificação acadêmica/curricular em dados_academicos,
      * não a área de atuação profissional do candidato.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, CandidatoQueryService $queryService): JsonResponse
     {
         $solicitante = $this->pessoaAutenticada($request);
 
@@ -144,149 +144,14 @@ class CandidatoController extends Controller
             abort(403, 'Voce nao tem permissao para listar candidatos.');
         }
 
-        $query = Candidato::query()
-            ->with([
-                'pessoa',
-                'linkExterno',
-                'informacoesProfissionais',
-                'preferenciasDeTrabalho',
-                'regioesPreferidasTrabalho',
-                'dadosAcademicos',
-            ]);
-
-        // Empresas só devem ver candidatos com acesso liberado (FR16-20).
-        // O administrativo precisa ver todos, inclusive os bloqueados, para
-        // poder geri-los na tela "Gestão dos Candidatos" (FR37).
-        if ($solicitante->tipo() === 'empresa') {
-            $query->where('status', true);
-        }
-
-        if ($request->filled('busca')) {
-            $termo = trim((string) $request->query('busca'));
-            $termoNumerico = preg_replace('/\D+/', '', $termo) ?? '';
-
-            $query->where(function ($q) use ($termo, $termoNumerico) {
-                $q->whereHas('pessoa', function ($pessoa) use ($termo) {
-                    $pessoa->where('nome', 'like', '%' . $termo . '%');
-                });
-
-                if ($termoNumerico !== '') {
-                    $q->orWhere('cpf', 'like', '%' . $termoNumerico . '%');
-                } else {
-                    $q->orWhere('cpf', 'like', '%' . $termo . '%');
-                }
-            });
-        }
-
-        if ($request->filled('status')) {
-            $request->validate([
-                'status' => ['boolean'],
-            ]);
-
-            $query->where('status', $request->boolean('status'));
-        }
-
-        if ($request->filled('unidade')) {
-            $request->validate([
-                'unidade' => ['string', 'max:100'],
-            ]);
-
-            $unidade = trim((string) $request->query('unidade'));
-
-            $query->where(function ($q) use ($unidade) {
-                $q->whereHas('dadosAcademicos', function ($academico) use ($unidade) {
-                    $academico->where('unidade', $unidade);
-                })->orWhereHas('cursosSenac', function ($cursoSenac) use ($unidade) {
-                    $cursoSenac->where('unidade', $unidade);
-                });
-            });
-        }
-
-        $tipoCurso = $request->filled('tipo_curso') ? trim((string) $request->query('tipo_curso')) : null;
-        $segmento = $request->filled('segmento') ? trim((string) $request->query('segmento')) : null;
-
-        if ($tipoCurso !== null && ! CatalogoAcademicoSenacDf::tipoExiste($tipoCurso)) {
-            return response()->json(['message' => 'Tipo de curso inválido.'], 422);
-        }
-
-        if ($segmento !== null) {
-            if (! CatalogoAcademicoSenacDf::segmentoExiste($segmento)) {
-                return response()->json(['message' => 'Segmento inválido.'], 422);
-            }
-
-            if ($tipoCurso === null || ! CatalogoAcademicoSenacDf::segmentoPertenceAoTipo($segmento, $tipoCurso)) {
-                return response()->json(['message' => 'Segmento não pertence ao tipo de curso informado.'], 422);
-            }
-        }
-
-        if ($tipoCurso !== null || $segmento !== null) {
-            $query->whereHas('dadosAcademicos', function ($q) use ($tipoCurso, $segmento) {
-                if ($tipoCurso !== null) {
-                    $q->whereIn('tipo_curso', CatalogoAcademicoSenacDf::valoresLegadosTipo($tipoCurso));
-                }
-
-                if ($segmento !== null) {
-                    $q->whereIn('segmento', CatalogoAcademicoSenacDf::valoresLegadosSegmento($segmento));
-                }
-            });
-        }
-
-        if ($request->filled('disponibilidade')) {
-            $query->whereHas('preferenciasDeTrabalho', function ($q) use ($request) {
-                $q->whereJsonContains('disponibilidade_de_horario', $request->query('disponibilidade'));
-            });
-        }
-
-        // Bitmask permitido: CLT=1, Estágio=2. Valores com o bit 4 são inválidos.
-        if ($request->filled('tipo_contratacao')) {
-            $request->validate([
-                'tipo_contratacao' => ['integer', 'in:1,2,3'],
-            ], [
-                'tipo_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
-            ]);
-
-            $mascara = (int) $request->query('tipo_contratacao');
-            $query->whereHas('preferenciasDeTrabalho', function ($q) use ($mascara) {
-                $q->whereRaw('(tipo_de_contratacao & ?) != 0', [$mascara]);
-            });
-        }
-
-        if ($request->filled('regioes_administrativas')) {
-            $request->validate([
-                'regioes_administrativas' => ['array'],
-                'regioes_administrativas.*' => ['integer', Rule::in(RegioesAdministrativasDf::codigos())],
-            ]);
-
-            $codigosRegioes = array_values(array_unique(array_map('intval', (array) $request->query('regioes_administrativas'))));
-            $nomesRegioes = array_filter(array_map(fn (int $codigo) => RegioesAdministrativasDf::nome($codigo), $codigosRegioes));
-
-            $query->where(function ($q) use ($codigosRegioes, $nomesRegioes) {
-                $q->whereHas('preferenciasDeTrabalho', function ($preferencias) {
-                    $preferencias->where('aceita_todas_regioes', true);
-                })
-                    ->orWhereHas('regioesPreferidasTrabalho', function ($regioes) use ($codigosRegioes) {
-                        $regioes->whereIn('codigo_regiao', $codigosRegioes);
-                    })
-                    ->orWhereHas('preferenciasDeTrabalho', function ($preferencias) use ($nomesRegioes) {
-                        $preferencias->whereIn('regiao_administrativa', $nomesRegioes);
-                    });
-            });
-        }
-
-        if ($request->filled('habilidades')) {
-            $habilidades = array_filter((array) $request->query('habilidades'));
-            foreach ($habilidades as $habilidade) {
-                $this->aplicarFiltroHabilidadeNaAreaAtiva($query, $habilidade);
-            }
-        }
-
-        $this->registrarBuscaDeTalentos($request, $solicitante);
+        $query = $queryService->construir($request, $solicitante);
+        $queryService->registrarBuscaDeTalentos($request, $solicitante);
 
         $perPage = (int) $request->query('per_page', 10);
         $perPage = min(max($perPage, 1), 10);
 
         return response()->json(
-            $query->orderBy('matricula')->paginate($perPage)
+            $query->paginate($perPage)
         );
     }
 
@@ -389,38 +254,6 @@ class CandidatoController extends Controller
         $habilidades = HabilidadesCatalogo::ordenar(HabilidadesCatalogo::deduplicar($habilidades));
 
         return response()->json($habilidades);
-    }
-
-    /**
-     * Loga os filtros usados por uma empresa ao buscar talentos, para
-     * alimentar "Filtros Mais Acessados" e "Buscas Realizadas" no
-     * relatório administrativo (FR38). Silencioso para quem não é empresa
-     * ou não aplicou nenhum filtro (evita logar toda listagem genérica).
-     */
-    private function registrarBuscaDeTalentos(Request $request, ?Pessoa $solicitante): void
-    {
-        if (! $solicitante || $solicitante->tipo() !== 'empresa') {
-            return;
-        }
-
-        $filtros = array_filter([
-            'segmento'         => $request->query('segmento'),
-            'tipo_curso'       => $request->query('tipo_curso'),
-            'disponibilidade'  => $request->query('disponibilidade'),
-            'tipo_contratacao' => $request->query('tipo_contratacao'),
-            'regioes_administrativas' => $request->query('regioes_administrativas'),
-            'habilidades'      => $request->query('habilidades'),
-        ]);
-
-        if (! $filtros) {
-            return;
-        }
-
-        BuscaTalento::create([
-            'empresa_cnpj' => $solicitante->empresa?->cnpj,
-            'filtros'      => $filtros,
-            'buscado_em'   => now(),
-        ]);
     }
 
     /**
@@ -725,24 +558,4 @@ class CandidatoController extends Controller
         return (array) ($info->habilidades ?? []);
     }
 
-    private function aplicarFiltroHabilidadeNaAreaAtiva($query, string $habilidade): void
-    {
-        $query->whereHas('informacoesProfissionais', function ($q) use ($habilidade) {
-            $q->where('habilidades', 'like', '%' . $habilidade . '%')
-                ->where(function ($ativo) use ($habilidade) {
-                    $ativo->whereNull('habilidades_por_area')
-                        ->orWhere('habilidades_por_area', '')
-                        ->orWhere('habilidades_por_area', '[]')
-                        ->orWhere('habilidades_por_area', '{}')
-                        ->orWhere(function ($json) use ($habilidade) {
-                            foreach (HabilidadesCatalogo::areas() as $area) {
-                                $json->orWhere(function ($areaAtiva) use ($area, $habilidade) {
-                                    $areaAtiva->where('area_de_atuacao', $area)
-                                        ->whereJsonContains('habilidades_por_area->' . $area, $habilidade);
-                                });
-                            }
-                        });
-                });
-        });
-    }
 }

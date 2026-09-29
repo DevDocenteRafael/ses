@@ -82,6 +82,7 @@ Route::middleware('auth.token')->group(function () {
         Route::get('dashboard',                  [AdministrativoController::class, 'dashboard']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
+        Route::post('candidatos/curriculos/zip', [CurriculoCandidatoController::class, 'zip']);
         Route::get('candidatos/{matricula}/curriculo', [CurriculoCandidatoController::class, 'show']);
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
         Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
