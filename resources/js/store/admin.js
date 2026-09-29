@@ -4,6 +4,7 @@ import adminService from '../services/adminServices';
 export const useAdminStore = defineStore('admin', {
     state: () => ({
         alunos: [],
+        alunosRequisicaoId: 0,
         alunosPaginacao: {
             current_page: 1,
             last_page: 1,
@@ -58,10 +59,13 @@ export const useAdminStore = defineStore('admin', {
         },
 
         async carregarAlunos(params = {}) {
+            const requisicaoId = ++this.alunosRequisicaoId;
             this.carregando = true;
             this.erro = null;
             try {
                 const { data } = await adminService.listarAlunos(params);
+                if (requisicaoId !== this.alunosRequisicaoId) return;
+
                 this.alunos = data.data || [];
                 this.alunosPaginacao = {
                     current_page: data.current_page || 1,
@@ -72,9 +76,13 @@ export const useAdminStore = defineStore('admin', {
                     to: data.to || null,
                 };
             } catch (e) {
-                this.erro = e.response?.data?.message || 'Não foi possível carregar os candidatos.';
+                if (requisicaoId === this.alunosRequisicaoId) {
+                    this.erro = e.response?.data?.message || 'Não foi possível carregar os candidatos.';
+                }
             } finally {
-                this.carregando = false;
+                if (requisicaoId === this.alunosRequisicaoId) {
+                    this.carregando = false;
+                }
             }
         },
 

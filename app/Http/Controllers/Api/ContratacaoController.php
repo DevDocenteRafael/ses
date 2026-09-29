@@ -46,7 +46,9 @@ class ContratacaoController extends Controller
         }
 
         if (! empty($validated['curso'])) {
-            $query->whereHas('candidato.dadosAcademicos', fn ($curso) => $curso->where('curso', 'like', '%' . $validated['curso'] . '%'));
+            $filtrarCurso = fn ($curso) => $curso->where('curso', 'like', '%' . trim($validated['curso']) . '%');
+            $query->whereHas('candidato.dadosAcademicos', $filtrarCurso)
+                ->with(['candidato.dadosAcademicos' => $filtrarCurso]);
         }
 
         return response()->json($query->latest('contratado_em')->paginate((int) ($validated['per_page'] ?? 10)));

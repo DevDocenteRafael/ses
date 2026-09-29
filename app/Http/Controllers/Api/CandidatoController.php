@@ -220,6 +220,32 @@ class CandidatoController extends Controller
         return response()->json($unidades);
     }
 
+    public function cursos(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || ! in_array($solicitante->tipo(), ['administrativo', 'empresa'], true)) {
+            abort(403, 'Voce nao tem permissao para listar cursos de candidatos.');
+        }
+
+        $validated = $request->validate([
+            'busca' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $query = DadosAcademicos::query()
+            ->whereNotNull('curso')
+            ->where('curso', '<>', '')
+            ->whereHas('candidato', fn ($candidato) => $candidato->whereDoesntHave('contratacao'));
+
+        if (! empty($validated['busca'])) {
+            $query->where('curso', 'like', '%' . trim($validated['busca']) . '%');
+        }
+
+        return response()->json(
+            $query->select('curso')->distinct()->orderBy('curso')->limit(10)->pluck('curso')
+        );
+    }
+
     /**
      * Lista apenas os nomes únicos de habilidades persistidas nos perfis dos
      * candidatos, sem expor dados pessoais. Empresas recebem habilidades de

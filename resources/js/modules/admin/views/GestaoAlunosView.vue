@@ -20,46 +20,105 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                         <h2 class="h6 fw-bold text-primary mb-0">Candidatos Cadastrados</h2>
-                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 900px;">
-                            <div class="input-group flex-grow-1" style="min-width: 240px;">
+                        <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end">
+                            <div class="input-group flex-grow-1 position-relative" style="min-width: 240px;">
                                 <input
                                     v-model="busca"
                                     type="text"
                                     class="form-control"
                                     placeholder="Filtrar por nome ou CPF"
+                                    autocomplete="off"
+                                    @focus="buscaDropdownAberto = Boolean(busca)"
+                                    @input="buscaDropdownAberto = true"
+                                    @blur="fecharSugestaoBusca"
                                 >
                                 <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
+                                <div v-if="buscaDropdownAberto && busca && candidatosBuscaSugeridos.length" class="list-group position-absolute w-100 shadow" style="z-index: 1060; top: 100%; max-height: 220px; overflow-y: auto;">
+                                    <button
+                                        v-for="aluno in candidatosBuscaSugeridos"
+                                        :key="aluno.matricula"
+                                        type="button"
+                                        class="list-group-item list-group-item-action text-start"
+                                        @mousedown.prevent="selecionarSugestaoBusca(aluno)"
+                                    >
+                                        <span class="d-block fw-semibold">{{ aluno.pessoa?.nome || 'Candidato' }}</span>
+                                        <small class="text-secondary">CPF {{ formatarCpf(aluno.cpf) }}</small>
+                                    </button>
+                                </div>
                             </div>
-                            <select v-model="statusFiltro" class="form-select" aria-label="Filtrar candidatos por status" style="max-width: 180px;">
-                                <option value="">Todos os status</option>
-                                <option value="1">Liberado</option>
-                                <option value="0">Bloqueado</option>
-                            </select>
-                            <select v-model="unidadeFiltro" class="form-select" aria-label="Filtrar candidatos por unidade" style="max-width: 220px;">
-                                <option value="">Todas as unidades</option>
-                                <option v-for="unidade in admin.unidadesAlunos" :key="unidade" :value="unidade">
-                                    {{ unidade }}
-                                </option>
-                            </select>
-                            <button
-                                class="btn btn-outline-secondary"
-                                type="button"
-                                :disabled="admin.carregando || gerandoZip || !admin.alunos.length"
-                                @click="baixarCurriculosPaginaAtual"
-                            >
-                                <span v-if="gerandoZip && geracaoRapidaEmAndamento" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                <i v-else class="bi bi-file-earmark-zip me-1"></i>
-                                Baixar currículos desta página
-                            </button>
-                            <button
-                                class="btn btn-outline-primary"
-                                type="button"
-                                :disabled="admin.carregando || gerandoZip || !admin.alunos.length"
-                                @click="abrirModalCurriculos"
-                            >
-                                <i class="bi bi-download me-1"></i>
-                                Baixar currículos
-                            </button>
+                            <div class="position-relative" style="min-width: 180px; max-width: 200px;">
+                                <input
+                                    v-model="statusBusca"
+                                    class="form-control"
+                                    type="search"
+                                    placeholder="Pesquisar status"
+                                    aria-label="Pesquisar status do candidato"
+                                    autocomplete="off"
+                                    @focus="statusDropdownAberto = true"
+                                    @input="statusFiltro = ''; statusDropdownAberto = true"
+                                    @blur="fecharSugestaoStatus"
+                                >
+                                <div v-if="statusDropdownAberto && statusOpcoesFiltradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060;">
+                                    <button v-for="opcao in statusOpcoesFiltradas" :key="opcao.value" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarStatus(opcao)">
+                                        {{ opcao.label }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="position-relative" style="min-width: 200px; max-width: 240px;">
+                                <input
+                                    v-model="unidadeFiltro"
+                                    class="form-control"
+                                    type="search"
+                                    placeholder="Pesquisar unidade"
+                                    aria-label="Pesquisar unidade"
+                                    autocomplete="off"
+                                    @focus="unidadeDropdownAberto = true"
+                                    @blur="fecharSugestaoUnidade"
+                                >
+                                <div v-if="unidadeDropdownAberto && unidadesFiltradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
+                                    <button v-for="unidade in unidadesFiltradas" :key="unidade" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarUnidade(unidade)">
+                                        {{ unidade }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="position-relative" style="min-width: 200px; max-width: 240px;">
+                                <input
+                                    v-model="cursoFiltro"
+                                    class="form-control"
+                                    type="search"
+                                    placeholder="Pesquisar curso"
+                                    aria-label="Pesquisar curso"
+                                    autocomplete="off"
+                                    @focus="abrirSugestoesCurso"
+                                    @blur="fecharSugestaoCurso"
+                                >
+                                <div v-if="cursoDropdownAberto && cursosEncontrados.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
+                                    <button v-for="curso in cursosEncontrados" :key="curso" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarCurso(curso)">
+                                        {{ curso }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-nowrap align-items-stretch gap-2">
+                                <button
+                                    class="btn btn-outline-secondary text-nowrap flex-shrink-0"
+                                    type="button"
+                                    :disabled="admin.carregando || gerandoZip || gerandoRelatorioPdf || !admin.alunos.length"
+                                    @click="baixarCandidatosFiltradosPdf"
+                                >
+                                    <span v-if="gerandoRelatorioPdf" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    <i v-else class="bi bi-file-earmark-pdf me-1"></i>
+                                    {{ gerandoRelatorioPdf ? 'Preparando PDF...' : 'Baixar' }}
+                                </button>
+                                <button
+                                    class="btn btn-outline-primary text-nowrap flex-shrink-0"
+                                    type="button"
+                                    :disabled="admin.carregando || gerandoZip || !admin.alunos.length"
+                                    @click="abrirModalCurriculos"
+                                >
+                                    <i class="bi bi-download me-1"></i>
+                                    Baixar currículos
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -463,8 +522,15 @@ const admin = useAdminStore();
 const toast = useToast();
 const carregouUmaVez = ref(false);
 const busca = ref('');
+const buscaDropdownAberto = ref(false);
 const statusFiltro = ref('');
+const statusBusca = ref('');
+const statusDropdownAberto = ref(false);
 const unidadeFiltro = ref('');
+const unidadeDropdownAberto = ref(false);
+const cursoFiltro = ref('');
+const cursoDropdownAberto = ref(false);
+const cursosEncontrados = ref([]);
 const alterando = ref(null);
 const curriculoGerando = ref(null);
 const alunoExpandido = ref(null);
@@ -479,7 +545,7 @@ const erroContratacao = ref('');
 const modalCadastroAberto = ref(false);
 const modalCurriculosAberto = ref(false);
 const gerandoZip = ref(false);
-const geracaoRapidaEmAndamento = ref(false);
+const gerandoRelatorioPdf = ref(false);
 const erroCurriculos = ref('');
 const limitePaginasZip = 10;
 const salvandoCadastro = ref(false);
@@ -501,6 +567,32 @@ const formularioCurriculos = reactive({
     paginaInicial: 1,
     paginaFinal: 1,
 });
+const statusOpcoes = [
+    { value: '', label: 'Todos os status' },
+    { value: '1', label: 'Liberado' },
+    { value: '0', label: 'Bloqueado' },
+];
+const statusOpcoesFiltradas = computed(() => {
+    const termo = statusBusca.value.trim().toLocaleLowerCase('pt-BR');
+    return statusOpcoes.filter((opcao) => opcao.label.toLocaleLowerCase('pt-BR').includes(termo));
+});
+const unidadesFiltradas = computed(() => {
+    const termo = unidadeFiltro.value.trim().toLocaleLowerCase('pt-BR');
+    return admin.unidadesAlunos
+        .filter((unidade) => !termo || unidade.toLocaleLowerCase('pt-BR').includes(termo))
+        .slice(0, 10);
+});
+const candidatosBuscaSugeridos = computed(() => {
+    const termo = busca.value.trim().toLocaleLowerCase('pt-BR');
+    const numeros = somenteNumeros(termo);
+    if (!termo) return [];
+
+    return admin.alunos.filter((aluno) => {
+        const nome = String(aluno.pessoa?.nome || '').toLocaleLowerCase('pt-BR');
+        const cpf = somenteNumeros(aluno.cpf);
+        return nome.includes(termo) || (numeros && cpf.includes(numeros));
+    }).slice(0, 10);
+});
 onMounted(async () => {
     try {
         await Promise.all([
@@ -513,11 +605,18 @@ onMounted(async () => {
 });
 
 let temporizadorFiltro = null;
-watch([busca, statusFiltro, unidadeFiltro], () => {
+watch([busca, statusFiltro, unidadeFiltro, cursoFiltro], () => {
     clearTimeout(temporizadorFiltro);
     temporizadorFiltro = setTimeout(() => {
         carregarAlunosFiltrados(1);
     }, 300);
+});
+
+let temporizadorCursos = null;
+let requisicaoCursos = 0;
+watch(cursoFiltro, (termo) => {
+    clearTimeout(temporizadorCursos);
+    temporizadorCursos = setTimeout(() => carregarSugestoesCurso(termo), 200);
 });
 
 let temporizadorBuscaEmpresa = null;
@@ -536,6 +635,7 @@ function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
         ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
         ...(unidadeFiltro.value !== '' ? { unidade: unidadeFiltro.value } : {}),
+        ...(cursoFiltro.value.trim() ? { curso: cursoFiltro.value.trim() } : {}),
     };
 }
 
@@ -577,6 +677,60 @@ function mudarPagina(pagina) {
 
     alunoExpandido.value = null;
     carregarAlunosFiltrados(pagina);
+}
+
+function selecionarSugestaoBusca(aluno) {
+    busca.value = aluno.pessoa?.nome || aluno.cpf || '';
+    buscaDropdownAberto.value = false;
+}
+
+function fecharSugestaoBusca() {
+    setTimeout(() => { buscaDropdownAberto.value = false; }, 150);
+}
+
+function selecionarStatus(opcao) {
+    statusFiltro.value = opcao.value;
+    statusBusca.value = opcao.value ? opcao.label : '';
+    statusDropdownAberto.value = false;
+}
+
+function fecharSugestaoStatus() {
+    setTimeout(() => { statusDropdownAberto.value = false; }, 150);
+}
+
+function selecionarUnidade(unidade) {
+    unidadeFiltro.value = unidade;
+    unidadeDropdownAberto.value = false;
+}
+
+function fecharSugestaoUnidade() {
+    setTimeout(() => { unidadeDropdownAberto.value = false; }, 150);
+}
+
+function abrirSugestoesCurso() {
+    cursoDropdownAberto.value = true;
+    carregarSugestoesCurso(cursoFiltro.value);
+}
+
+function selecionarCurso(curso) {
+    cursoFiltro.value = curso;
+    cursoDropdownAberto.value = false;
+}
+
+function fecharSugestaoCurso() {
+    setTimeout(() => { cursoDropdownAberto.value = false; }, 150);
+}
+
+async function carregarSugestoesCurso(termo = '') {
+    const requisicao = ++requisicaoCursos;
+    try {
+        const { data } = await adminService.listarCursosAlunos(termo.trim());
+        if (requisicao === requisicaoCursos) {
+            cursosEncontrados.value = Array.isArray(data) ? data : [];
+        }
+    } catch (error) {
+        if (requisicao === requisicaoCursos) cursosEncontrados.value = [];
+    }
 }
 
 async function carregarEmpresasParaContratacao(termo = '') {
@@ -865,11 +1019,96 @@ async function baixarCurriculo(aluno) {
     }
 }
 
-async function baixarCurriculosPaginaAtual() {
-    const paginaAtual = Number(admin.alunosPaginacao.current_page || 1);
-    geracaoRapidaEmAndamento.value = true;
-    await executarDownloadZip(paginaAtual, paginaAtual, { fecharModalAoConcluir: false });
-    geracaoRapidaEmAndamento.value = false;
+async function baixarCandidatosFiltradosPdf() {
+    const filtrosExportacao = { ...parametrosFiltro(1) };
+    clearTimeout(temporizadorFiltro);
+    const janelaImpressao = window.open('', '_blank');
+    if (!janelaImpressao) {
+        toast.error('Permita a abertura da janela para preparar o PDF.');
+        return;
+    }
+
+    gerandoRelatorioPdf.value = true;
+    janelaImpressao.document.write('<!doctype html><html><head><title>Preparando lista de candidatos</title></head><body><p style="font:16px Arial;padding:24px">Preparando a lista para impressão...</p></body></html>');
+    janelaImpressao.document.close();
+
+    try {
+        const respostaInicial = await adminService.listarAlunos({ ...filtrosExportacao, page: 1 });
+        const paginacao = respostaInicial.data;
+        const candidatos = [...(paginacao.data || [])];
+
+        for (let inicio = 2; inicio <= paginacao.last_page; inicio += 10) {
+            const paginas = Array.from({ length: Math.min(10, paginacao.last_page - inicio + 1) }, (_, indice) => inicio + indice);
+            const respostas = await Promise.all(paginas.map((pagina) =>
+                adminService.listarAlunos({ ...filtrosExportacao, page: pagina })
+            ));
+            respostas.forEach(({ data }) => candidatos.push(...(data.data || [])));
+        }
+
+        const resumoFiltros = [
+            filtrosExportacao.busca ? `Busca: ${filtrosExportacao.busca}` : null,
+            filtrosExportacao.status === '1' ? 'Status: Liberado' : filtrosExportacao.status === '0' ? 'Status: Bloqueado' : null,
+            filtrosExportacao.unidade ? `Unidade: ${filtrosExportacao.unidade}` : null,
+            filtrosExportacao.curso ? `Curso: ${filtrosExportacao.curso}` : null,
+        ].filter(Boolean).join(' | ') || 'Sem filtros adicionais';
+
+        const linhas = candidatos.map((aluno) => `
+            <tr>
+                <td>${escaparHtml(aluno.pessoa?.nome || '—')}</td>
+                <td>${escaparHtml(formatarCpf(aluno.cpf) || '—')}</td>
+                <td>${escaparHtml(formatarTelefoneListagem(aluno.pessoa?.telefone))}</td>
+                <td>${escaparHtml(aluno.dados_academicos?.[0]?.curso || '—')}</td>
+                <td>${escaparHtml(aluno.dados_academicos?.[0]?.unidade || '—')}</td>
+            </tr>
+        `).join('');
+        const titulo = `Candidatos cadastrados - ${new Date().toLocaleDateString('pt-BR')}`;
+
+        janelaImpressao.document.open();
+        janelaImpressao.document.write(`<!doctype html>
+            <html lang="pt-BR">
+                <head>
+                    <meta charset="utf-8">
+                    <title>${escaparHtml(titulo)}</title>
+                    <style>
+                        @page { size: landscape; margin: 14mm; }
+                        body { color: #212529; font: 12px Arial, sans-serif; }
+                        h1 { color: #163f70; font-size: 20px; margin: 0 0 6px; }
+                        p { color: #5c6670; margin: 0 0 16px; }
+                        table { border-collapse: collapse; width: 100%; }
+                        th, td { border: 1px solid #cbd2d9; padding: 8px; text-align: left; }
+                        th { background: #edf2f7; color: #163f70; }
+                        tr { break-inside: avoid; }
+                        footer { color: #6c757d; margin-top: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Candidatos Cadastrados</h1>
+                    <p>${escaparHtml(resumoFiltros)} · ${candidatos.length} candidato(s) · Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+                    <table>
+                        <thead><tr><th>Candidato</th><th>CPF</th><th>Telefone</th><th>Curso</th><th>Unidade</th></tr></thead>
+                        <tbody>${linhas || '<tr><td colspan="5">Nenhum candidato encontrado.</td></tr>'}</tbody>
+                    </table>
+                    <footer>Senac DF · Gestão dos Candidatos</footer>
+                    <script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));<\/script>
+                </body>
+            </html>`);
+        janelaImpressao.document.close();
+    } catch (error) {
+        janelaImpressao.close();
+        toast.error('Não foi possível preparar o PDF com os filtros selecionados.');
+    } finally {
+        gerandoRelatorioPdf.value = false;
+    }
+}
+
+function escaparHtml(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, (caractere) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    })[caractere]);
 }
 
 async function gerarZipCurriculos() {

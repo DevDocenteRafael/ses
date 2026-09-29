@@ -18,6 +18,10 @@ export default {
         return api.get('/candidatos/unidades');
     },
 
+    listarCursosAlunos(busca = '') {
+        return api.get('/candidatos/cursos', { params: busca ? { busca } : {} });
+    },
+
     verAluno(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

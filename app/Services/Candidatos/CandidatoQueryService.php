@@ -91,17 +91,31 @@ class CandidatoQueryService
             $query->where('status', $request->boolean('status'));
         }
 
+        $unidade = null;
         if ($request->filled('unidade')) {
             Validator::make($request->input(), ['unidade' => ['string', 'max:100']])->validate();
             $unidade = trim((string) $request->input('unidade'));
+        }
 
-            $query->where(function ($q) use ($unidade) {
-                $q->whereHas('dadosAcademicos', function ($academico) use ($unidade) {
+        $curso = null;
+        if ($request->filled('curso')) {
+            Validator::make($request->input(), ['curso' => ['string', 'max:100']])->validate();
+            $curso = trim((string) $request->input('curso'));
+        }
+
+        if ($unidade !== null || $curso !== null) {
+            $filtrarDadosAcademicos = function ($academico) use ($unidade, $curso) {
+                if ($unidade !== null) {
                     $academico->where('unidade', $unidade);
-                })->orWhereHas('cursosSenac', function ($cursoSenac) use ($unidade) {
-                    $cursoSenac->where('unidade', $unidade);
-                });
-            });
+                }
+
+                if ($curso !== null) {
+                    $academico->where('curso', 'like', '%' . $curso . '%');
+                }
+            };
+
+            $query->whereHas('dadosAcademicos', $filtrarDadosAcademicos)
+                ->with(['dadosAcademicos' => $filtrarDadosAcademicos]);
         }
 
         $tipoCurso = $request->filled('tipo_curso') ? trim((string) $request->input('tipo_curso')) : null;
