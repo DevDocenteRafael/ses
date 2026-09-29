@@ -39,6 +39,10 @@ export default {
         return api.post('/candidatos/curriculos/zip', params, { responseType: 'blob' });
     },
 
+    baixarCurriculoCandidato(matricula) {
+        return api.get(`/candidatos/${encodeURIComponent(matricula)}/curriculo`, { responseType: 'blob' });
+    },
+
     listarHabilidadesCandidatos() {
         return api.get('/candidatos/habilidades');
     },

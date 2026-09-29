@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Candidato;
+use App\Models\VisualizacaoPerfil;
 use App\Services\Candidatos\CandidatoQueryService;
 use App\Services\Curriculo\CurriculoCandidatoBuilder;
 use App\Services\Curriculo\CurriculoLoteZipService;
@@ -29,6 +31,46 @@ class CurriculoCandidatoController extends Controller
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="' . $arquivo . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    }
+
+    public function showEmpresa(
+        Request $request,
+        string $matricula,
+        CurriculoCandidatoBuilder $builder,
+        CurriculoPdfRenderer $renderer
+    ): Response {
+        $pessoa = $this->pessoaAutenticada($request);
+
+        if (! $pessoa || $pessoa->tipo() !== 'empresa') {
+            abort(403, 'Apenas empresas podem baixar currículos de candidatos.');
+        }
+
+        $candidato = Candidato::query()
+            ->where('matricula', $matricula)
+            ->where('status', true)
+            ->whereDoesntHave('contratacao')
+            ->firstOrFail();
+
+        $empresa = $pessoa->empresaAssociada();
+        if (! $empresa) {
+            abort(403, 'Apenas empresas podem baixar currículos de candidatos.');
+        }
+
+        VisualizacaoPerfil::create([
+            'candidato_matricula' => $candidato->matricula,
+            'empresa_cnpj' => $empresa->cnpj,
+            'visualizado_em' => now(),
+        ]);
+
+        $curriculo = $builder->montar((string) $candidato->matricula);
+        $pdf = $renderer->render($curriculo);
+        $arquivo = $builder->nomeArquivo($curriculo);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $arquivo . '"; filename*=UTF-8\'\'' . rawurlencode($arquivo),
             'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
         ]);
     }

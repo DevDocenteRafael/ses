@@ -216,6 +216,15 @@
                     </div>
                 </div>
             </div>
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <button type="button" class="btn btn-primary w-100" :disabled="curriculoBaixando" @click="baixarCurriculo">
+                        <span v-if="curriculoBaixando" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                        <i v-else class="bi bi-file-earmark-pdf me-2"></i>
+                        {{ curriculoBaixando ? 'Preparando currículo...' : 'Baixar currículo' }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     <div v-if="modalContratacaoAberto" class="modal-backdrop fade show"></div>
@@ -249,6 +258,7 @@ import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import { formatarTelefone } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
+import { useToast } from '../../../composables/useToast';
 
 const props = defineProps({
     matricula: { type: [String, Number], required: true },
@@ -256,6 +266,7 @@ const props = defineProps({
 
 const auth = useAuthStore();
 const router = useRouter();
+const toast = useToast();
 
 const carregando = ref(true);
 const erro = ref('');
@@ -264,6 +275,7 @@ const contratacaoRegistrada = ref(false);
 const modalContratacaoAberto = ref(false);
 const registrandoContratacao = ref(false);
 const erroContratacao = ref('');
+const curriculoBaixando = ref(false);
 
 function iniciaisDe(nome) {
     return (nome || 'C')
@@ -467,6 +479,25 @@ async function registrarContratacao() {
         erroContratacao.value = error.response?.data?.message || 'Não foi possível registrar a contratação.';
     } finally {
         registrandoContratacao.value = false;
+    }
+}
+
+async function baixarCurriculo() {
+    curriculoBaixando.value = true;
+    try {
+        const { data } = await empresaService.baixarCurriculoCandidato(props.matricula);
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Curriculo_${props.matricula}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        toast.error('Não foi possível baixar o currículo deste candidato.');
+    } finally {
+        curriculoBaixando.value = false;
     }
 }
 
