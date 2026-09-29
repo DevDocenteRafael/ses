@@ -46,11 +46,11 @@ class AuthController extends Controller
 
         $tipo = $this->resolverTipo($pessoa);
 
-        if ($tipo === 'candidato' && !$pessoa->candidato->status) {
+        if ($tipo === 'candidato' && ! $pessoa->candidato?->status) {
             return response()->json(['message' => 'Conta bloqueada.'], 403);
         }
-        
-        if ($tipo === 'empresa' && !$pessoa->empresa->status) {
+
+        if ($tipo === 'empresa' && ! $pessoa->empresaAssociada()?->status) {
             return response()->json(['message' => 'Conta bloqueada.'], 403);
         }
 
@@ -103,7 +103,7 @@ class AuthController extends Controller
         $identificadorEmail = mb_strtolower($identificador);
         $cpf = preg_replace('/\D+/', '', $identificador);
 
-        return Pessoa::with(['administrativo', 'empresa', 'candidato'])
+        return Pessoa::with(['administrativo', 'empresa', 'candidato', 'responsavelContratual.empresas'])
             ->where(function ($query) use ($identificadorEmail, $cpf) {
                 $query->whereRaw('LOWER(email) = ?', [$identificadorEmail]);
 
@@ -134,15 +134,7 @@ class AuthController extends Controller
 
     private function resolverTipo(Pessoa $pessoa): string
     {
-        if ($pessoa->administrativo) {
-            return 'administrativo';
-        }
-
-        if ($pessoa->empresa) {
-            return 'empresa';
-        }
-
-        return 'candidato';
+        return $pessoa->tipo();
     }
 
     private function pessoaParaResposta(Pessoa $pessoa, string $tipo): array
@@ -166,7 +158,7 @@ class AuthController extends Controller
         ];
 
         if ($tipo === 'empresa') {
-            $resposta['cnpj'] = $pessoa->empresa?->cnpj;
+            $resposta['cnpj'] = $pessoa->empresaAssociada()?->cnpj;
         }
 
         return $resposta;

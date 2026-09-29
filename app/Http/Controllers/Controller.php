@@ -36,12 +36,13 @@ abstract class Controller
     protected function empresaAutenticada(Request $request): \App\Models\Empresa
     {
         $pessoa = $this->pessoaAutenticada($request);
+        $empresa = $pessoa?->empresaAssociada();
 
-        if (! $pessoa || ! $pessoa->empresa) {
+        if (! $pessoa || ! $empresa) {
             abort(403, 'Apenas empresas podem acessar este recurso.');
         }
 
-        return $pessoa->empresa;
+        return $empresa;
     }
 
     /**

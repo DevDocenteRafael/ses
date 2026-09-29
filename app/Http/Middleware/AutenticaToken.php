@@ -32,7 +32,7 @@ class AutenticaToken
             return response()->json(['message' => 'Token invalido ou expirado.'], 401);
         }
 
-        $pessoa = Pessoa::with(['administrativo', 'empresa', 'candidato'])->find($pessoaId);
+        $pessoa = Pessoa::with(['administrativo', 'empresa', 'candidato', 'responsavelContratual.empresas'])->find($pessoaId);
 
         if (! $pessoa) {
             return response()->json(['message' => 'Nao autenticado.'], 401);
@@ -42,7 +42,8 @@ class AutenticaToken
             return response()->json(['message' => 'Conta bloqueada.'], 403);
         }
 
-        if ($pessoa->empresa && !$pessoa->empresa->status) {
+        $empresa = $pessoa->empresaAssociada();
+        if ($empresa && ! $empresa->status) {
             return response()->json(['message' => 'Conta bloqueada.'], 403);
         }
 

@@ -49,11 +49,20 @@ class Pessoa extends Authenticatable
             return 'administrativo';
         }
 
-        if ($this->empresa) {
+        if ($this->empresaAssociada()) {
             return 'empresa';
         }
 
         return 'candidato';
+    }
+
+    public function empresaAssociada(): ?Empresa
+    {
+        if ($this->empresa) {
+            return $this->empresa;
+        }
+
+        return $this->responsavelContratual?->empresas?->first();
     }
 
     // Relacionamentos
