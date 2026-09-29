@@ -218,6 +218,15 @@ Executar migrations:
 ```bash
 php artisan migrate
 ```
+Puxar todos os usuários principais
+```bash
+php artisan migrate:fresh --seed
+```
+
+Puxar UsersFicticios
+```bash
+php artisan db:seed --class=CandidatosFicticiosSeeder
+```
 Reverter migrations:
 ```bash
 php artisan migrate:rollback
