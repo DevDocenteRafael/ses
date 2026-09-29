@@ -27,7 +27,7 @@ class ContratacaoController extends Controller
 
         $query = Contratacao::query()->with([
             'empresa.pessoa:id_pessoa,nome,email,telefone',
-            'candidato.pessoa:id_pessoa,nome,email,telefone',
+            'candidato.pessoa:id_pessoa,nome,email,telefone,endereco_cep,endereco_logradouro,endereco_numero,endereco_complemento,endereco_bairro,endereco_cidade,endereco_uf',
             'candidato.dadosAcademicos',
             'registradoPor:id_pessoa,nome',
         ]);
