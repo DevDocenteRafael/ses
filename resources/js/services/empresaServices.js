@@ -35,6 +35,10 @@ export default {
         return api.get('/candidatos', { params });
     },
 
+    baixarCurriculosCandidatos(params = {}) {
+        return api.post('/candidatos/curriculos/zip', params, { responseType: 'blob' });
+    },
+
     listarHabilidadesCandidatos() {
         return api.get('/candidatos/habilidades');
     },

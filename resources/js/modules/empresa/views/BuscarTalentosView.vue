@@ -30,18 +30,66 @@
                     <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
                     <div class="mb-2">
                         <label class="form-label small text-secondary mb-1">Tipo de Curso</label>
-                        <select v-model="filtros.tipo_curso" class="form-select form-select-sm" :disabled="carregandoTiposCurso">
-                            <option value="">Selecione o tipo de curso</option>
-                            <option v-for="tipo in tiposCurso" :key="tipo.id" :value="tipo.id">{{ tipo.nome }}</option>
-                        </select>
+                        <div class="position-relative" ref="tiposCursoDropdownContainer">
+                            <input
+                                v-model="buscaTipoCurso"
+                                class="form-control form-control-sm"
+                                type="search"
+                                placeholder="Pesquisar tipo de curso"
+                                aria-label="Pesquisar tipo de curso"
+                                autocomplete="off"
+                                :disabled="carregandoTiposCurso"
+                                @focus="mostrarDropdownTiposCurso = true"
+                                @input="aoDigitarTipoCurso"
+                            >
+                            <div v-if="mostrarDropdownTiposCurso" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
+                                <button type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarTipoCurso(null)">
+                                    Todos os tipos
+                                </button>
+                                <button
+                                    v-for="tipo in tiposCursoFiltrados"
+                                    :key="tipo.id"
+                                    type="button"
+                                    class="list-group-item list-group-item-action text-start"
+                                    @mousedown.prevent="selecionarTipoCurso(tipo)"
+                                >
+                                    {{ tipo.nome }}
+                                </button>
+                                <p v-if="!tiposCursoFiltrados.length" class="list-group-item small text-secondary mb-0">Nenhum tipo de curso encontrado.</p>
+                            </div>
+                        </div>
                         <div v-if="erroTiposCurso" class="form-text text-danger">{{ erroTiposCurso }}</div>
                     </div>
                     <div class="mb-2">
                         <label class="form-label small text-secondary mb-1">Segmento</label>
-                        <select v-model="filtros.segmento" class="form-select form-select-sm" :disabled="segmentoDesabilitado">
-                            <option value="">{{ rotuloOpcaoInicialSegmento }}</option>
-                            <option v-for="segmento in segmentosAcademicos" :key="segmento.id" :value="segmento.id">{{ segmento.nome }}</option>
-                        </select>
+                        <div class="position-relative" ref="segmentosDropdownContainer">
+                            <input
+                                v-model="buscaSegmento"
+                                class="form-control form-control-sm"
+                                type="search"
+                                :placeholder="rotuloOpcaoInicialSegmento"
+                                aria-label="Pesquisar segmento"
+                                autocomplete="off"
+                                :disabled="segmentoDesabilitado"
+                                @focus="mostrarDropdownSegmentos = true"
+                                @input="aoDigitarSegmento"
+                            >
+                            <div v-if="mostrarDropdownSegmentos && !segmentoDesabilitado" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
+                                <button type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarSegmento(null)">
+                                    Todos os segmentos
+                                </button>
+                                <button
+                                    v-for="segmento in segmentosFiltrados"
+                                    :key="segmento.id"
+                                    type="button"
+                                    class="list-group-item list-group-item-action text-start"
+                                    @mousedown.prevent="selecionarSegmento(segmento)"
+                                >
+                                    {{ segmento.nome }}
+                                </button>
+                                <p v-if="!segmentosFiltrados.length" class="list-group-item small text-secondary mb-0">Nenhum segmento encontrado.</p>
+                            </div>
+                        </div>
                         <div v-if="carregandoSegmentos" class="form-text text-secondary">Carregando segmentos...</div>
                         <div v-else-if="erroSegmentos" class="form-text text-danger">{{ erroSegmentos }}</div>
                         <div v-else-if="filtros.tipo_curso && !segmentosAcademicos.length" class="form-text text-secondary">Nenhum segmento disponível para este tipo de curso.</div>
@@ -182,9 +230,21 @@
                         Resultados da Busca
                         <span class="badge bg-secondary ms-2">{{ paginacao.total }} candidato{{ paginacao.total === 1 ? '' : 's' }}</span>
                     </h2>
-                    <small v-if="paginacao.total" class="text-secondary">
-                        Página {{ paginacao.current_page }} de {{ paginacao.last_page }} · até {{ paginacao.per_page }} por página
-                    </small>
+                    <div class="d-flex align-items-center flex-wrap gap-2 ms-auto">
+                        <small v-if="paginacao.total" class="text-secondary">
+                            Página {{ paginacao.current_page }} de {{ paginacao.last_page }} · até {{ paginacao.per_page }} por página
+                        </small>
+                        <button type="button" class="btn btn-outline-secondary text-nowrap" :disabled="carregando || gerandoPdf || !paginacao.total" @click="baixarListaFiltrada">
+                            <span v-if="gerandoPdf" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                            <i v-else class="bi bi-file-earmark-pdf me-1"></i>
+                            {{ gerandoPdf ? 'Preparando PDF...' : 'Baixar' }}
+                        </button>
+                        <button type="button" class="btn btn-outline-primary text-nowrap" :disabled="carregando || baixandoCurriculos || !candidatos.length" @click="baixarCurriculosDaPagina">
+                            <span v-if="baixandoCurriculos" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                            <i v-else class="bi bi-download me-1"></i>
+                            {{ baixandoCurriculos ? 'Preparando...' : 'Baixar currículos' }}
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="carregando" class="text-center text-secondary py-5">
@@ -286,12 +346,20 @@ import BasePagination from '../../../components/common/BasePagination.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
+import { useToast } from '../../../composables/useToast';
 
 const auth = useAuthStore();
 const router = useRouter();
+const toast = useToast();
 
 const tiposCurso = ref([]);
 const segmentosAcademicos = ref([]);
+const buscaTipoCurso = ref('');
+const buscaSegmento = ref('');
+const mostrarDropdownTiposCurso = ref(false);
+const mostrarDropdownSegmentos = ref(false);
+const tiposCursoDropdownContainer = ref(null);
+const segmentosDropdownContainer = ref(null);
 
 const filtros = reactive({
     segmento: '',
@@ -305,6 +373,8 @@ const filtros = reactive({
 
 const carregando = ref(true);
 const buscando = ref(false);
+const gerandoPdf = ref(false);
+const baixandoCurriculos = ref(false);
 const carregandoHabilidades = ref(false);
 const carregandoTiposCurso = ref(false);
 const carregandoSegmentos = ref(false);
@@ -372,6 +442,14 @@ const rotuloOpcaoInicialSegmento = computed(() => {
 
     return 'Todos os segmentos';
 });
+const tiposCursoFiltrados = computed(() => {
+    const termo = normalizarTexto(buscaTipoCurso.value);
+    return tiposCurso.value.filter((tipo) => normalizarTexto(tipo.nome).includes(termo));
+});
+const segmentosFiltrados = computed(() => {
+    const termo = normalizarTexto(buscaSegmento.value);
+    return segmentosAcademicos.value.filter((segmento) => normalizarTexto(segmento.nome).includes(termo));
+});
 const habilidadesFiltradas = computed(() => {
     const termo = normalizarTexto(buscaHabilidade.value);
 
@@ -408,6 +486,8 @@ watch(() => filtros.tipo_curso, async (novoTipo, tipoAnterior) => {
 
     if (!novoTipo) {
         filtros.segmento = '';
+        buscaSegmento.value = '';
+        mostrarDropdownSegmentos.value = false;
         segmentosAcademicos.value = [];
         erroSegmentos.value = '';
         return;
@@ -417,12 +497,14 @@ watch(() => filtros.tipo_curso, async (novoTipo, tipoAnterior) => {
     await carregarSegmentosAcademicos(novoTipo);
 
     if (segmentoAnterior && segmentosAcademicos.value.some((segmento) => segmento.id === segmentoAnterior)) {
+        buscaSegmento.value = segmentosAcademicos.value.find((segmento) => segmento.id === segmentoAnterior)?.nome || '';
         filtros.segmento = segmentoAnterior;
         return;
     }
 
     if (tipoAnterior !== undefined) {
         filtros.segmento = '';
+        buscaSegmento.value = '';
     }
 });
 
@@ -560,6 +642,14 @@ function fecharDropdownRegioes() {
 }
 
 function aoClicarForaDosDropdowns(evento) {
+    if (tiposCursoDropdownContainer.value && !tiposCursoDropdownContainer.value.contains(evento.target)) {
+        mostrarDropdownTiposCurso.value = false;
+    }
+
+    if (segmentosDropdownContainer.value && !segmentosDropdownContainer.value.contains(evento.target)) {
+        mostrarDropdownSegmentos.value = false;
+    }
+
     if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
         fecharDropdownHabilidades();
     }
@@ -567,6 +657,28 @@ function aoClicarForaDosDropdowns(evento) {
     if (regioesDropdownContainer.value && !regioesDropdownContainer.value.contains(evento.target)) {
         fecharDropdownRegioes();
     }
+}
+
+function aoDigitarTipoCurso() {
+    mostrarDropdownTiposCurso.value = true;
+    filtros.tipo_curso = '';
+}
+
+function selecionarTipoCurso(tipo) {
+    filtros.tipo_curso = tipo?.id || '';
+    buscaTipoCurso.value = tipo?.nome || '';
+    mostrarDropdownTiposCurso.value = false;
+}
+
+function aoDigitarSegmento() {
+    mostrarDropdownSegmentos.value = true;
+    filtros.segmento = '';
+}
+
+function selecionarSegmento(segmento) {
+    filtros.segmento = segmento?.id || '';
+    buscaSegmento.value = segmento?.nome || '';
+    mostrarDropdownSegmentos.value = false;
 }
 
 async function carregarHabilidadesDisponiveis() {
@@ -617,23 +729,23 @@ function tipoContratacaoBitmask() {
     return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0);
 }
 
+function parametrosBusca(pagina = 1) {
+    const params = { page: pagina, per_page: paginacao.per_page };
+    if (filtros.segmento) params.segmento = filtros.segmento;
+    if (filtros.tipo_curso) params.tipo_curso = filtros.tipo_curso;
+    if (filtros.disponibilidade) params.disponibilidade = filtros.disponibilidade;
+    if (filtros.regioes_administrativas.length) params.regioes_administrativas = filtros.regioes_administrativas;
+    if (filtros.habilidades.length) params.habilidades = filtros.habilidades;
+    const mascara = tipoContratacaoBitmask();
+    if (mascara) params.tipo_contratacao = mascara;
+    return params;
+}
+
 async function buscar(pagina = 1) {
     buscando.value = true;
     carregando.value = true;
     try {
-        const params = {
-            page: pagina,
-            per_page: paginacao.per_page,
-        };
-        if (filtros.segmento) params.segmento = filtros.segmento;
-        if (filtros.tipo_curso) params.tipo_curso = filtros.tipo_curso;
-        if (filtros.disponibilidade) params.disponibilidade = filtros.disponibilidade;
-        if (filtros.regioes_administrativas.length) params.regioes_administrativas = filtros.regioes_administrativas;
-        if (filtros.habilidades.length) params.habilidades = filtros.habilidades;
-        const mascara = tipoContratacaoBitmask();
-        if (mascara) params.tipo_contratacao = mascara;
-
-        const { data } = await empresaService.buscarTalentos(params);
+        const { data } = await empresaService.buscarTalentos(parametrosBusca(pagina));
         candidatos.value = data.data || [];
         paginacao.current_page = data.current_page || 1;
         paginacao.last_page = data.last_page || 1;
@@ -645,6 +757,71 @@ async function buscar(pagina = 1) {
         buscando.value = false;
         carregando.value = false;
     }
+}
+
+async function baixarListaFiltrada() {
+    const janela = window.open('', '_blank');
+    if (!janela) return;
+
+    gerandoPdf.value = true;
+    janela.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Preparando lista</title></head><body><p style="font:16px Arial;padding:24px">Preparando a lista filtrada...</p></body></html>');
+    janela.document.close();
+
+    try {
+        const primeira = (await empresaService.buscarTalentos(parametrosBusca(1))).data;
+        const lista = [...(primeira.data || [])];
+
+        for (let inicio = 2; inicio <= primeira.last_page; inicio += 10) {
+            const paginas = Array.from({ length: Math.min(10, primeira.last_page - inicio + 1) }, (_, indice) => inicio + indice);
+            const respostas = await Promise.all(paginas.map((pagina) => empresaService.buscarTalentos(parametrosBusca(pagina))));
+            respostas.forEach(({ data }) => lista.push(...(data.data || [])));
+        }
+
+        const linhas = lista.map((candidato) => {
+            const academico = cursoPrincipal(candidato);
+            return `<tr><td>${escaparHtml(candidato.pessoa?.nome || '—')}</td><td>${escaparHtml(telefoneFormatado(candidato) || '—')}</td><td>${escaparHtml(academico?.curso || '—')}</td><td>${escaparHtml(academico?.unidade || '—')}</td></tr>`;
+        }).join('');
+        const titulo = `Candidatos encontrados - ${new Date().toLocaleDateString('pt-BR')}`;
+        janela.document.open();
+        janela.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escaparHtml(titulo)}</title><style>@page{size:landscape;margin:14mm}body{color:#212529;font:12px Arial,sans-serif}h1{color:#163f70;font-size:20px}p{color:#5c6670}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd2d9;padding:8px;text-align:left}th{background:#edf2f7;color:#163f70}tr{break-inside:avoid}</style></head><body><h1>Candidatos encontrados</h1><p>${lista.length} candidato(s) · Gerado em ${new Date().toLocaleString('pt-BR')}</p><table><thead><tr><th>Candidato</th><th>Telefone</th><th>Curso</th><th>Unidade</th></tr></thead><tbody>${linhas || '<tr><td colspan="4">Nenhum candidato encontrado.</td></tr>'}</tbody></table><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),250));<\/script></body></html>`);
+        janela.document.close();
+    } catch (error) {
+        janela.close();
+        toast.error('Não foi possível preparar a lista filtrada. Tente novamente.');
+    } finally {
+        gerandoPdf.value = false;
+    }
+}
+
+async function baixarCurriculosDaPagina() {
+    baixandoCurriculos.value = true;
+    try {
+        const { data } = await empresaService.baixarCurriculosCandidatos({
+            ...parametrosBusca(paginacao.current_page),
+            pagina_inicial: paginacao.current_page,
+            pagina_final: paginacao.current_page,
+        });
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Curriculos_Pagina_${paginacao.current_page}.zip`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        toast.error('Não foi possível preparar os currículos desta página.');
+    } finally {
+        baixandoCurriculos.value = false;
+    }
+}
+
+function escaparHtml(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, (caractere) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    })[caractere]);
 }
 
 function aplicarFiltros() {
@@ -663,6 +840,10 @@ function mudarPagina(pagina) {
 function limparFiltros() {
     filtros.tipo_curso = '';
     filtros.segmento = '';
+    buscaTipoCurso.value = '';
+    buscaSegmento.value = '';
+    mostrarDropdownTiposCurso.value = false;
+    mostrarDropdownSegmentos.value = false;
     segmentosAcademicos.value = [];
     erroSegmentos.value = '';
     filtros.clt = false;
