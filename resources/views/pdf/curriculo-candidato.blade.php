@@ -2,19 +2,23 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <title>Currículo - {{ $curriculo['nome'] }}</title>
+    <title>{{ $curriculo['nome'] }}</title>
     <style>
-        @page { size: A4; margin: 24mm 20mm; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; color: #1f2937; font-size: 12px; line-height: 1.45; }
-        h1 { color: #0d6efd; font-size: 24px; margin: 0 0 4px; text-transform: uppercase; }
-        .area { color: #4b5563; font-size: 14px; margin-bottom: 16px; }
-        h2 { color: #0d6efd; font-size: 13px; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; margin: 18px 0 8px; text-transform: uppercase; }
+        @page { size: A4; margin: 20mm; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; color: #1f2937; font-size: 11px; line-height: 1.45; }
+        h1 { color: #004587; font-size: 25px; margin: 0 0 3px; text-transform: uppercase; letter-spacing: .4px; }
+        .area { color: #4b5563; font-size: 14px; margin: 0 0 14px; }
+        h2 { color: #004587; font-size: 12.5px; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; margin: 16px 0 8px; text-transform: uppercase; }
         p { margin: 0 0 4px; }
         ul { margin: 0; padding-left: 18px; }
         li { margin-bottom: 3px; }
-        .item { margin-bottom: 10px; page-break-inside: avoid; }
-        .titulo { font-weight: bold; }
+        .contato { background: #f8fbff; border: 1px solid #dbeafe; padding: 8px 10px; margin-bottom: 12px; }
+        .item { margin-bottom: 11px; page-break-inside: avoid; }
+        .titulo { font-weight: bold; color: #111827; text-transform: uppercase; }
+        .empresa { font-weight: bold; color: #004587; }
         .muted { color: #6b7280; }
+        .label { color: #6b7280; font-weight: bold; font-size: 10px; }
+        .divisor { border-bottom: 1px solid #eef2f7; padding-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -24,16 +28,20 @@
     @endif
 
     @if($curriculo['contato'])
-        <h2>Informações de Contato</h2>
-        @foreach($curriculo['contato'] as $rotulo => $valor)
-            <p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>
-        @endforeach
+        <div class="contato">
+            @foreach($curriculo['contato'] as $rotulo => $valor)
+                @if(!empty($valor))<span><strong>{{ $rotulo }}:</strong> {{ $valor }}</span>@if(!$loop->last)<span> &nbsp;|&nbsp; </span>@endif @endif
+            @endforeach
+        </div>
     @endif
 
     @if($curriculo['objetivo'])
-        <h2>Objetivo / Informações Profissionais</h2>
+        <h2>Informações Profissionais</h2>
         @foreach($curriculo['objetivo'] as $rotulo => $valor)
-            <p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>
+            @if(!empty($valor))
+                <p class="label">{{ $rotulo }}</p>
+                <p>{{ $valor }}</p>
+            @endif
         @endforeach
     @endif
 
@@ -51,21 +59,19 @@
 
     @if($curriculo['habilidades'])
         <h2>Habilidades Técnicas</h2>
-        <ul>
-            @foreach($curriculo['habilidades'] as $habilidade)
-                <li>{{ $habilidade }}</li>
-            @endforeach
-        </ul>
+        <p>{{ implode(' • ', array_filter($curriculo['habilidades'])) }}</p>
     @endif
 
     @if($curriculo['experiencias'])
-        <h2>Experiências Profissionais</h2>
+        <h2>Experiência Profissional</h2>
         @foreach($curriculo['experiencias'] as $experiencia)
-            <div class="item">
+            <div class="item divisor">
                 @if(!empty($experiencia['cargo']))<p class="titulo">{{ $experiencia['cargo'] }}</p>@endif
-                @foreach(['empresa' => 'Empresa', 'periodo' => 'Período', 'tipo' => 'Tipo', 'local' => 'Local', 'descricao' => 'Descrição'] as $campo => $rotulo)
-                    @if(!empty($experiencia[$campo]))<p>{{ $rotulo }}: {{ $experiencia[$campo] }}</p>@endif
-                @endforeach
+                @if(!empty($experiencia['empresa']))<p class="empresa">{{ $experiencia['empresa'] }}</p>@endif
+                @if(!empty($experiencia['periodo']))<p class="muted">{{ $experiencia['periodo'] }}</p>@endif
+                @php($metaExperiencia = implode(' | ', array_filter([$experiencia['tipo'] ?? null, $experiencia['local'] ?? null])))
+                @if($metaExperiencia)<p class="muted">{{ $metaExperiencia }}</p>@endif
+                @if(!empty($experiencia['descricao']))<p>{{ $experiencia['descricao'] }}</p>@endif
             </div>
         @endforeach
     @endif

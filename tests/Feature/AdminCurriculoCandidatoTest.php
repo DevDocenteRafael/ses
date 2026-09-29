@@ -13,6 +13,7 @@ use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
 use App\Models\ResponsavelContratual;
 use App\Services\Curriculo\CurriculoCandidatoBuilder;
+use App\Services\Curriculo\CurriculoPdfRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -35,6 +36,14 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertSame('application/pdf', $response->headers->get('content-type'));
         $this->assertStringContainsString('attachment; filename="Curriculo_Joao_da_Silva.pdf"', $response->headers->get('content-disposition'));
         $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $this->assertGreaterThan(2000, strlen($response->getContent()));
+        $this->assertStringContainsString('/Type /Page', $response->getContent());
+        $this->assertStringContainsString('João da Silva', $this->normalizarPdfParaTeste($response->getContent()));
+        $this->assertStringNotContainsString('@page', $response->getContent());
+        $this->assertStringNotContainsString('font-family', $response->getContent());
+        $this->assertStringNotContainsString('.item', $response->getContent());
+        $this->assertStringNotContainsString('<style>', $response->getContent());
+        $this->assertStringNotContainsString('<body>', $response->getContent());
     }
 
     public function test_sem_autenticacao_recebe_401(): void
@@ -83,6 +92,47 @@ class AdminCurriculoCandidatoTest extends TestCase
 
         $this->assertSame(['PHP', 'Laravel', 'Docker Personalizado'], $curriculo['habilidades']);
         $this->assertNotContains('Excel', $curriculo['habilidades']);
+    }
+
+    public function test_builder_inclui_formacao_cursos_e_ordena_experiencias_mais_recentes(): void
+    {
+        $candidato = $this->criarCandidatoCompleto();
+
+        ExperienciaProfissional::query()->create([
+            'tipo' => 'Jovem Aprendiz',
+            'cargo' => 'Experiência Antiga',
+            'empresa' => 'Empresa ABC',
+            'local' => 'Brasília - DF',
+            'data_inicio' => '2024-01-01',
+            'data_fim' => '2024-12-31',
+            'descricao' => 'Atendimento administrativo.',
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        $curriculo = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula);
+
+        $this->assertSame('Técnico em Desenvolvimento de Sistemas', $curriculo['formacao'][0]['curso']);
+        $this->assertSame('Laravel Avançado', $curriculo['cursos_complementares'][0]['curso']);
+        $this->assertSame('Analista de Sistemas', $curriculo['experiencias'][0]['cargo']);
+        $this->assertSame('Experiência Antiga', $curriculo['experiencias'][1]['cargo']);
+    }
+
+    public function test_dados_dinamicos_ficam_escapados_no_html_controlado_pela_aplicacao(): void
+    {
+        $candidato = $this->criarCandidatoBasico('Arlinson <script>alert(1)</script> Santos');
+        InformacoesProfissionais::query()->create([
+            'sobre_mim' => 'Experiência com <script>malicioso</script> & gestão',
+            'area_de_atuacao' => 'Administração',
+            'habilidades' => ['Excel <b>avançado</b>'],
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        $curriculo = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula);
+        $html = app(CurriculoPdfRenderer::class)->renderHtml($curriculo);
+
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+        $this->assertStringContainsString('&lt;script&gt;malicioso&lt;/script&gt; &amp; gestão', $html);
+        $this->assertStringNotContainsString('Experiência com <script>malicioso</script>', $html);
     }
 
     private function criarCandidatoCompleto(): Candidato
@@ -203,5 +253,10 @@ class AdminCurriculoCandidatoTest extends TestCase
         Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
 
         return $token;
+    }
+
+    private function normalizarPdfParaTeste(string $pdf): string
+    {
+        return iconv('Windows-1252', 'UTF-8//IGNORE', $pdf) ?: $pdf;
     }
 }

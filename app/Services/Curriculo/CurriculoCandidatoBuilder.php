@@ -35,11 +35,11 @@ class CurriculoCandidatoBuilder
                 'Localidade' => $this->cidadeUf($pessoa?->endereco_cidade, $pessoa?->endereco_uf),
             ]),
             'objetivo' => array_filter([
-                'Resumo' => $this->texto($info?->sobre_mim),
                 'Cargo de interesse' => $this->texto($info?->cargo_de_interesse),
                 'Área de atuação' => $this->texto($info?->area_de_atuacao),
-                'Disponibilidade' => $this->formatarDisponibilidade($preferencias?->disponibilidade_de_horario),
                 'Pretensão salarial' => $this->formatarPretensao($preferencias?->pretensao_salarial),
+                'Disponibilidade' => $this->formatarDisponibilidade($preferencias?->disponibilidade_de_horario),
+                'Resumo profissional' => $this->texto($info?->sobre_mim),
             ]),
             'formacao' => $this->formatarFormacao($candidato->dadosAcademicos),
             'habilidades' => $this->habilidadesDaAreaAtual($info),
@@ -95,7 +95,10 @@ class CurriculoCandidatoBuilder
     private function formatarExperiencias(Collection $experiencias): array
     {
         return $experiencias
-            ->sortByDesc(fn ($item) => $item->data_inicio?->timestamp ?? 0)
+            ->sortByDesc(fn ($item) => [
+                $item->data_fim ? 0 : 1,
+                $item->data_inicio?->timestamp ?? 0,
+            ])
             ->map(fn ($item) => array_filter([
                 'cargo' => $this->texto($item->cargo),
                 'empresa' => $this->texto($item->empresa),
