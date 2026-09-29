@@ -123,6 +123,20 @@ const toggleCollapse = () => {
     transition: all 0.2s ease;
 }
 
+.ses-nav-link > span:first-child {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.ses-nav-link > span:first-child > .bi {
+    flex-shrink: 0;
+}
+
+.sidebar-label {
+    white-space: nowrap;
+}
+
 .ses-nav-link:hover {
     background-color: rgba(255, 255, 255, 0.08);
     color: #fff;
