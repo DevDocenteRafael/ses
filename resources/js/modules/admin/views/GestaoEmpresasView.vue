@@ -31,10 +31,6 @@
                                 <option value="1">Liberado</option>
                                 <option value="0">Bloqueado</option>
                             </select>
-                            <button class="btn btn-primary" type="button" @click="abrirModalCadastro">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                Nova Empresa
-                            </button>
                         </div>
                     </div>
 
@@ -186,19 +182,22 @@
                                         <th>Empresa</th>
                                         <th>Responsável</th>
                                         <th>CNPJ</th>
+                                        <th>Telefone</th>
                                         <th>Atividade</th>
                                         <th>Status</th>
                                         <th class="text-end">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="empresa in admin.empresas" :key="empresa.cnpj">
+                                    <template v-for="empresa in admin.empresas" :key="empresa.cnpj">
+                                    <tr>
                                         <td><p class="fw-semibold mb-0">{{ empresa.razao_social }}</p></td>
                                         <td>
                                             <p class="mb-0">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
                                             <p class="text-secondary small mb-0">{{ empresa.responsavel_contratual?.pessoa?.email || '—' }}</p>
                                         </td>
                                         <td>{{ formatarCnpj(empresa.cnpj) }}</td>
+                                        <td>{{ formatarTelefone(empresa.pessoa?.telefone) || '—' }}</td>
                                         <td>{{ empresa.atividade_economica }}</td>
                                         <td>
                                             <span
@@ -212,6 +211,12 @@
                                         </td>
                                         <td class="text-end">
                                             <button
+                                                class="btn btn-sm btn-outline-primary me-2"
+                                                @click="alternarDetalhes(empresa.cnpj)"
+                                            >
+                                                {{ empresaExpandida === empresa.cnpj ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
+                                            </button>
+                                            <button
                                                 class="btn btn-sm"
                                                 :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
                                                 :disabled="alterando === empresa.cnpj"
@@ -221,6 +226,47 @@
                                             </button>
                                         </td>
                                     </tr>
+                                    <tr v-if="empresaExpandida === empresa.cnpj" :key="`detalhes-${empresa.cnpj}`">
+                                        <td colspan="7" class="bg-light-subtle">
+                                            <div class="p-3">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">Razão Social</small>
+                                                        <span>{{ empresa.razao_social || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">CNPJ</small>
+                                                        <span>{{ formatarCnpj(empresa.cnpj) }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">Atividade Econômica</small>
+                                                        <span>{{ empresa.atividade_economica || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">E-mail da Empresa</small>
+                                                        <span>{{ empresa.pessoa?.email || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">Telefone da Empresa</small>
+                                                        <span>{{ formatarTelefone(empresa.pessoa?.telefone) || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">Responsável Contratual</small>
+                                                        <span>{{ empresa.responsavel_contratual?.pessoa?.nome || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">E-mail do Responsável</small>
+                                                        <span>{{ empresa.responsavel_contratual?.pessoa?.email || 'Não informado' }}</span>
+                                                    </div>
+                                                    <div class="col-md-6 col-lg-4">
+                                                        <small class="text-secondary d-block">Telefone do Responsável</small>
+                                                        <span>{{ formatarTelefone(empresa.responsavel_contratual?.pessoa?.telefone) || 'Não informado' }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
@@ -260,6 +306,7 @@ const carregouUmaVez = ref(false);
 const busca = ref('');
 const statusFiltro = ref('');
 const alterando = ref(null);
+const empresaExpandida = ref(null);
 const modalCadastroAberto = ref(false);
 const salvandoCadastro = ref(false);
 const mensagemErro = ref('');
@@ -316,9 +363,10 @@ function mudarPagina(pagina) {
     carregarEmpresasFiltradas(pagina);
 }
 
-// "Sincronizar SIG": ainda não existe uma integração real com o SIG para
-// empresas (nenhuma tabela de log equivalente à `alunos_migrados`), então
-// por ora o botão só recarrega a lista com os dados mais recentes do banco.
+function alternarDetalhes(cnpj) {
+    empresaExpandida.value = empresaExpandida.value === cnpj ? null : cnpj;
+}
+
 async function sincronizar() {
     await carregarEmpresasFiltradas();
 }

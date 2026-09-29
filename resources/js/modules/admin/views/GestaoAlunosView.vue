@@ -60,10 +60,6 @@
                                 <i class="bi bi-download me-1"></i>
                                 Baixar currículos
                             </button>
-                            <button class="btn btn-primary" type="button" @click="abrirModalCadastro">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                Novo Candidato
-                            </button>
                         </div>
                     </div>
 
@@ -500,11 +496,6 @@ function mudarPagina(pagina) {
     carregarAlunosFiltrados(pagina);
 }
 
-// "Sincronizar SIG": no protótipo simula uma re-importação de candidatos.
-// TODO(back-end): expor um endpoint de sincronização em lote com o SIG;
-// hoje só existe POST /administrativo/sincronizar-alunos para um registro
-// por vez. Por enquanto, o botão apenas atualiza a lista com os dados mais
-// recentes já cadastrados.
 async function sincronizar() {
     await carregarAlunosFiltrados();
 }

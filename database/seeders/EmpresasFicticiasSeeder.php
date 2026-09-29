@@ -6,12 +6,6 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * Popula a gestão administrativa com empresas de demonstração.
- *
- * As empresas usam dados claramente fictícios, não possuem vagas nem
- * candidatos associados e podem ser semeadas novamente sem duplicação.
- */
 class EmpresasFicticiasSeeder extends Seeder
 {
     private const TOTAL = 3000;
@@ -54,7 +48,6 @@ class EmpresasFicticiasSeeder extends Seeder
                 ->where('email', 'like', '%@' . self::DOMINIO))
             ->count();
 
-        // A tabela empresa recebe seu status em migration posterior ao schema base.
         $temStatus = DB::getSchemaBuilder()->hasColumn('empresa', 'status');
         $senha = Hash::make('senac123');
         $agora = now();
