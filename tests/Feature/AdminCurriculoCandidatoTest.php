@@ -11,6 +11,7 @@ use App\Models\ExperienciaProfissional;
 use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
+use App\Models\RegiaoPreferidaTrabalho;
 use App\Models\ResponsavelContratual;
 use App\Services\Curriculo\CurriculoCandidatoBuilder;
 use App\Services\Curriculo\CurriculoPdfRenderer;
@@ -231,6 +232,101 @@ class AdminCurriculoCandidatoTest extends TestCase
             ->assertJsonValidationErrors('pagina_final');
     }
 
+    public function test_empresa_baixa_zip_respeitando_pagina_atual_filtros_e_ordem(): void
+    {
+        [, $token] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 25; $i++) {
+            $candidato = $this->criarCandidatoBasico(sprintf('Empresa Manha Taguatinga %02d', $i));
+            $candidato->forceFill(['matricula' => str_pad((string) $i, 15, '0', STR_PAD_LEFT)])->save();
+            $this->adicionarDadosBuscaEmpresa($candidato, disponibilidade: ['Manhã'], regiaoCodigo: 3, habilidade: 'Excel');
+        }
+
+        $foraDoFiltro = $this->criarCandidatoBasico('Empresa Tarde Taguatinga');
+        $foraDoFiltro->forceFill(['matricula' => str_pad('99', 15, '0', STR_PAD_LEFT)])->save();
+        $this->adicionarDadosBuscaEmpresa($foraDoFiltro, disponibilidade: ['Tarde'], regiaoCodigo: 3, habilidade: 'Excel');
+
+        $response = $this->withToken($token)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 2,
+            'pagina_final' => 2,
+            'disponibilidade' => 'Manhã',
+        ]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('Curriculos_Pagina_2.zip', $response->headers->get('content-disposition'));
+
+        $nomes = array_map(fn ($nome) => preg_replace('/_+/', '_', $nome), $this->nomesNoZip($response->getFile()->getPathname()));
+
+        $this->assertCount(10, $nomes);
+        $this->assertContains('Curriculo_Empresa_Manha_Taguatinga_11.pdf', $nomes, implode(', ', $nomes));
+        $this->assertContains('Curriculo_Empresa_Manha_Taguatinga_20.pdf', $nomes, implode(', ', $nomes));
+        $this->assertNotContains('Curriculo_Empresa_Tarde_Taguatinga.pdf', $nomes);
+    }
+
+    public function test_empresa_intervalo_inclui_ultima_pagina_e_quantidade_real(): void
+    {
+        [, $token] = $this->criarEmpresaAutenticada();
+
+        for ($i = 1; $i <= 25; $i++) {
+            $candidato = $this->criarCandidatoBasico(sprintf('Empresa Ultima %02d', $i));
+            $candidato->forceFill(['matricula' => str_pad((string) $i, 15, '0', STR_PAD_LEFT)])->save();
+            $this->adicionarDadosBuscaEmpresa($candidato, disponibilidade: ['Manhã'], regiaoCodigo: 3, habilidade: 'Excel');
+        }
+
+        $response = $this->withToken($token)->post('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 2,
+            'pagina_final' => 3,
+            'disponibilidade' => 'Manhã',
+        ]);
+
+        $response->assertOk();
+        $nomes = $this->nomesNoZip($response->getFile()->getPathname());
+
+        $this->assertCount(15, $nomes);
+    }
+
+    public function test_zip_empresa_valida_autorizacao_intervalo_limite_e_lista_vazia(): void
+    {
+        [, $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [$candidatoAluno] = [$this->criarCandidatoBasico('Aluno Logado')];
+        $tokenAluno = $this->token($candidatoAluno->pessoa);
+        $this->criarCandidatoBasico();
+
+        $this->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 1,
+        ])->assertUnauthorized();
+
+        $this->withToken($tokenAluno)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 1,
+        ])->assertForbidden();
+
+        $this->withToken($tokenEmpresa)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 0,
+            'pagina_final' => 1,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_inicial');
+
+        $this->withToken($tokenEmpresa)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 5,
+            'pagina_final' => 2,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_inicial');
+
+        $this->withToken($tokenEmpresa)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 11,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('pagina_final');
+
+        $this->withToken($tokenEmpresa)->postJson('/api/candidatos/curriculos/zip', [
+            'pagina_inicial' => 1,
+            'pagina_final' => 1,
+            'disponibilidade' => 'Inexistente',
+        ])->assertUnprocessable();
+    }
+
     private function criarCandidatoCompleto(): Candidato
     {
         $candidato = $this->criarCandidatoBasico('João da Silva');
@@ -285,6 +381,40 @@ class AdminCurriculoCandidatoTest extends TestCase
         ]);
 
         return $candidato;
+    }
+
+    private function adicionarDadosBuscaEmpresa(Candidato $candidato, array $disponibilidade, int $regiaoCodigo, string $habilidade): void
+    {
+        DadosAcademicos::query()->create([
+            'instituicao' => 'Senac DF',
+            'curso' => 'Assistente Administrativo',
+            'segmento' => 'gestao-e-negocios',
+            'tipo_curso' => 'tecnico',
+            'unidade' => 'Taguatinga',
+            'ano_de_conclusao' => '2026-12-01',
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        InformacoesProfissionais::query()->create([
+            'sobre_mim' => 'Perfil para busca de talentos.',
+            'area_de_atuacao' => 'Administração',
+            'habilidades' => [$habilidade],
+            'habilidades_por_area' => ['Administração' => [$habilidade]],
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        PreferenciasDeTrabalho::query()->create([
+            'tipo_de_contratacao' => 3,
+            'disponibilidade_de_horario' => $disponibilidade,
+            'regiao_administrativa' => 'Taguatinga',
+            'aceita_todas_regioes' => false,
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        RegiaoPreferidaTrabalho::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'codigo_regiao' => $regiaoCodigo,
+        ]);
     }
 
     private function criarCandidatoBasico(string $nome = 'Candidato Básico'): Candidato

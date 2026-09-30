@@ -239,13 +239,25 @@
                             <i v-else class="bi bi-file-earmark-pdf me-1"></i>
                             {{ gerandoPdf ? 'Preparando PDF...' : 'Baixar' }}
                         </button>
-                        <button type="button" class="btn btn-outline-primary text-nowrap" :disabled="carregando || baixandoCurriculos || !candidatos.length" @click="baixarCurriculosDaPagina">
-                            <span v-if="baixandoCurriculos" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                            <i v-else class="bi bi-download me-1"></i>
-                            {{ baixandoCurriculos ? 'Preparando...' : 'Baixar currículos' }}
+                        <button type="button" class="btn btn-outline-primary text-nowrap" :disabled="carregando || baixandoCurriculos || !candidatos.length" @click="abrirModalCurriculos">
+                            <i class="bi bi-download me-1"></i>
+                            Baixar currículos
                         </button>
                     </div>
                 </div>
+
+                <download-curriculos-modal
+                    v-model:pagina-inicial-model="formularioCurriculos.paginaInicial"
+                    v-model:pagina-final-model="formularioCurriculos.paginaFinal"
+                    :show="modalCurriculosAberto"
+                    :loading="baixandoCurriculos"
+                    :erro="erroCurriculos"
+                    :per-page="Number(paginacao.per_page || 10)"
+                    :last-page="Number(paginacao.last_page || 1)"
+                    :limite-paginas="limitePaginasZip"
+                    @fechar="fecharModalCurriculos"
+                    @gerar="gerarZipCurriculos"
+                />
 
                 <div v-if="carregando" class="text-center text-secondary py-5">
                     <span class="spinner-border spinner-border-sm me-2"></span> Carregando candidatos...
@@ -343,10 +355,17 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import BasePagination from '../../../components/common/BasePagination.vue';
+import DownloadCurriculosModal from '../../../components/common/DownloadCurriculosModal.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { useToast } from '../../../composables/useToast';
+import {
+    LIMITE_PAGINAS_CURRICULOS_ZIP,
+    baixarBlobZipCurriculos,
+    obterMensagemErroDownloadCurriculos,
+    validarIntervaloCurriculos,
+} from '../../../utils/downloadCurriculosZip';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -375,6 +394,9 @@ const carregando = ref(true);
 const buscando = ref(false);
 const gerandoPdf = ref(false);
 const baixandoCurriculos = ref(false);
+const modalCurriculosAberto = ref(false);
+const erroCurriculos = ref('');
+const limitePaginasZip = LIMITE_PAGINAS_CURRICULOS_ZIP;
 const carregandoHabilidades = ref(false);
 const carregandoTiposCurso = ref(false);
 const carregandoSegmentos = ref(false);
@@ -397,6 +419,10 @@ const paginacao = reactive({
     total: 0,
     from: null,
     to: null,
+});
+const formularioCurriculos = reactive({
+    paginaInicial: 1,
+    paginaFinal: 1,
 });
 
 const iniciais = computed(() => iniciaisDe(auth.pessoa?.nome || 'Empresa'));
@@ -741,6 +767,16 @@ function parametrosBusca(pagina = 1) {
     return params;
 }
 
+function parametrosCurriculos(paginaInicial, paginaFinal) {
+    const { page, per_page, ...filtrosAtuais } = parametrosBusca(paginacao.current_page || 1);
+
+    return {
+        ...filtrosAtuais,
+        pagina_inicial: paginaInicial,
+        pagina_final: paginaFinal,
+    };
+}
+
 async function buscar(pagina = 1) {
     buscando.value = true;
     carregando.value = true;
@@ -793,22 +829,45 @@ async function baixarListaFiltrada() {
     }
 }
 
-async function baixarCurriculosDaPagina() {
+function abrirModalCurriculos() {
+    const paginaAtual = paginacao.current_page || 1;
+    formularioCurriculos.paginaInicial = paginaAtual;
+    formularioCurriculos.paginaFinal = paginaAtual;
+    erroCurriculos.value = '';
+    modalCurriculosAberto.value = true;
+}
+
+function fecharModalCurriculos() {
+    if (baixandoCurriculos.value) return;
+    modalCurriculosAberto.value = false;
+    erroCurriculos.value = '';
+}
+
+async function gerarZipCurriculos({ paginaInicial, paginaFinal } = {}) {
+    const inicio = Number(paginaInicial ?? formularioCurriculos.paginaInicial);
+    const fim = Number(paginaFinal ?? formularioCurriculos.paginaFinal);
+    await executarDownloadZipCurriculos(inicio, fim, { fecharModalAoConcluir: true });
+}
+
+async function executarDownloadZipCurriculos(inicio, fim, { fecharModalAoConcluir = false } = {}) {
+    erroCurriculos.value = validarIntervaloCurriculos(inicio, fim, paginacao.last_page, limitePaginasZip);
+
+    if (erroCurriculos.value) {
+        toast.error(erroCurriculos.value);
+        return;
+    }
+
     baixandoCurriculos.value = true;
     try {
-        const { data } = await empresaService.baixarCurriculosCandidatos({
-            ...parametrosBusca(paginacao.current_page),
-            pagina_inicial: paginacao.current_page,
-            pagina_final: paginacao.current_page,
-        });
-        const url = URL.createObjectURL(data);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Curriculos_Pagina_${paginacao.current_page}.zip`;
-        link.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        const response = await empresaService.baixarCurriculosCandidatos(parametrosCurriculos(inicio, fim));
+        baixarBlobZipCurriculos(response, inicio, fim);
+
+        if (fecharModalAoConcluir) {
+            modalCurriculosAberto.value = false;
+        }
     } catch (error) {
-        toast.error('Não foi possível preparar os currículos desta página.');
+        erroCurriculos.value = obterMensagemErroDownloadCurriculos(error);
+        toast.error(erroCurriculos.value);
     } finally {
         baixandoCurriculos.value = false;
     }

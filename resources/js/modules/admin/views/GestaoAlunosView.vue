@@ -296,84 +296,18 @@
                         <div v-if="modalCadastroAberto" class="modal-backdrop fade show"></div>
                     </transition>
 
-                    <transition name="app-modal">
-                        <div
-                            v-if="modalCurriculosAberto"
-                            class="modal fade show d-block"
-                            tabindex="-1"
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="modal-curriculos-titulo"
-                        >
-                            <div class="modal-dialog modal-dialog-centered app-modal-dialog-animated">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h3 id="modal-curriculos-titulo" class="modal-title h5 mb-0">Baixar currículos</h3>
-                                        <button type="button" class="btn-close" aria-label="Fechar" :disabled="gerandoZip" @click="fecharModalCurriculos"></button>
-                                    </div>
-                                    <form @submit.prevent="gerarZipCurriculos">
-                                        <div class="modal-body">
-                                            <p class="text-secondary mb-3">Escolha quais páginas de candidatos deseja incluir no arquivo ZIP.</p>
-
-                                            <div v-if="erroCurriculos" id="erro-curriculos" class="alert alert-danger py-2">
-                                                {{ erroCurriculos }}
-                                            </div>
-
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label for="pagina-inicial-curriculos" class="form-label">Página inicial</label>
-                                                    <input
-                                                        id="pagina-inicial-curriculos"
-                                                        v-model="formularioCurriculos.paginaInicial"
-                                                        type="number"
-                                                        inputmode="numeric"
-                                                        min="1"
-                                                        step="1"
-                                                        class="form-control"
-                                                        :max="admin.alunosPaginacao.last_page"
-                                                        :aria-describedby="erroCurriculos ? 'erro-curriculos' : undefined"
-                                                        required
-                                                    >
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label for="pagina-final-curriculos" class="form-label">Página final</label>
-                                                    <input
-                                                        id="pagina-final-curriculos"
-                                                        v-model="formularioCurriculos.paginaFinal"
-                                                        type="number"
-                                                        inputmode="numeric"
-                                                        min="1"
-                                                        step="1"
-                                                        class="form-control"
-                                                        :max="admin.alunosPaginacao.last_page"
-                                                        :aria-describedby="erroCurriculos ? 'erro-curriculos' : undefined"
-                                                        required
-                                                    >
-                                                </div>
-                                            </div>
-
-                                            <div class="small text-secondary mt-3">
-                                                <p class="mb-1">{{ admin.alunosPaginacao.per_page || 10 }} candidatos por página</p>
-                                                <p class="mb-1">Páginas selecionadas: {{ paginasSelecionadasCurriculos }}</p>
-                                                <p class="mb-1">Até {{ estimativaCurriculos }} currículos serão gerados.</p>
-                                                <p class="mb-0">Você pode gerar até {{ limitePaginasZip }} páginas por arquivo.</p>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-outline-secondary" :disabled="gerandoZip" @click="fecharModalCurriculos">Cancelar</button>
-                                            <button type="submit" class="btn btn-primary" :disabled="gerandoZip">
-                                                <span v-if="gerandoZip" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                {{ gerandoZip ? 'Gerando currículos...' : 'Gerar ZIP' }}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </transition>
-                    <transition name="app-modal">
-                        <div v-if="modalCurriculosAberto" class="modal-backdrop fade show"></div>
-                    </transition>
+                    <download-curriculos-modal
+                        v-model:pagina-inicial-model="formularioCurriculos.paginaInicial"
+                        v-model:pagina-final-model="formularioCurriculos.paginaFinal"
+                        :show="modalCurriculosAberto"
+                        :loading="gerandoZip"
+                        :erro="erroCurriculos"
+                        :per-page="Number(admin.alunosPaginacao.per_page || 10)"
+                        :last-page="Number(admin.alunosPaginacao.last_page || 1)"
+                        :limite-paginas="limitePaginasZip"
+                        @fechar="fecharModalCurriculos"
+                        @gerar="gerarZipCurriculos"
+                    />
 
                     <p v-if="!admin.alunos.length" class="text-secondary small mb-0">
                         Nenhum candidato encontrado.
@@ -512,11 +446,18 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
+import DownloadCurriculosModal from '../../../components/common/DownloadCurriculosModal.vue';
 import { useAdminStore } from '../../../store/admin';
 import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
+import {
+    LIMITE_PAGINAS_CURRICULOS_ZIP,
+    baixarBlobZipCurriculos,
+    obterMensagemErroDownloadCurriculos,
+    validarIntervaloCurriculos as validarIntervaloCurriculosCompartilhado,
+} from '../../../utils/downloadCurriculosZip';
 
 const admin = useAdminStore();
 const toast = useToast();
@@ -547,7 +488,7 @@ const modalCurriculosAberto = ref(false);
 const gerandoZip = ref(false);
 const gerandoRelatorioPdf = ref(false);
 const erroCurriculos = ref('');
-const limitePaginasZip = 10;
+const limitePaginasZip = LIMITE_PAGINAS_CURRICULOS_ZIP;
 const salvandoCadastro = ref(false);
 const mensagemErro = ref('');
 const formularioInicial = () => ({
@@ -648,19 +589,6 @@ function parametrosCurriculos(paginaInicial, paginaFinal) {
         pagina_final: paginaFinal,
     };
 }
-
-const paginasSelecionadasCurriculos = computed(() => {
-    const inicio = Number(formularioCurriculos.paginaInicial);
-    const fim = Number(formularioCurriculos.paginaFinal);
-
-    if (!Number.isInteger(inicio) || !Number.isInteger(fim) || inicio < 1 || fim < inicio) {
-        return 0;
-    }
-
-    return (fim - inicio) + 1;
-});
-
-const estimativaCurriculos = computed(() => paginasSelecionadasCurriculos.value * Number(admin.alunosPaginacao.per_page || 10));
 
 async function carregarAlunosFiltrados(pagina = admin.alunosPaginacao.current_page || 1) {
     await admin.carregarAlunos(parametrosFiltro(pagina));
@@ -853,43 +781,8 @@ function obterMensagemErro(error) {
     return 'Não foi possível cadastrar o candidato. Verifique os dados e tente novamente.';
 }
 
-function obterMensagemErroDownload(error) {
-    if (error?.response?.data instanceof Blob) {
-        return 'Não foi possível gerar o arquivo de currículos. Tente novamente.';
-    }
-
-    if (error?.response?.data?.errors) {
-        const primeiroCampo = Object.values(error.response.data.errors)[0];
-        if (Array.isArray(primeiroCampo) && primeiroCampo.length) {
-            return primeiroCampo[0];
-        }
-    }
-
-    return error?.response?.data?.message || 'Não foi possível gerar o arquivo de currículos. Tente novamente.';
-}
-
 function validarIntervaloCurriculos(inicio, fim) {
-    if (!Number.isInteger(inicio) || inicio < 1) {
-        return 'A página inicial deve ser um número inteiro maior ou igual a 1.';
-    }
-
-    if (!Number.isInteger(fim) || fim < 1) {
-        return 'A página final deve ser um número inteiro maior ou igual a 1.';
-    }
-
-    if (inicio > fim) {
-        return 'A página inicial deve ser menor ou igual à página final.';
-    }
-
-    if (fim > admin.alunosPaginacao.last_page) {
-        return 'A página final não pode ser maior que a última página disponível.';
-    }
-
-    if (((fim - inicio) + 1) > limitePaginasZip) {
-        return `Você pode gerar até ${limitePaginasZip} páginas por arquivo.`;
-    }
-
-    return '';
+    return validarIntervaloCurriculosCompartilhado(inicio, fim, admin.alunosPaginacao.last_page, limitePaginasZip);
 }
 
 function removerMascara(valor) {
@@ -1111,9 +1004,9 @@ function escaparHtml(valor) {
     })[caractere]);
 }
 
-async function gerarZipCurriculos() {
-    const inicio = Number(formularioCurriculos.paginaInicial);
-    const fim = Number(formularioCurriculos.paginaFinal);
+async function gerarZipCurriculos({ paginaInicial, paginaFinal } = {}) {
+    const inicio = Number(paginaInicial ?? formularioCurriculos.paginaInicial);
+    const fim = Number(paginaFinal ?? formularioCurriculos.paginaFinal);
     await executarDownloadZip(inicio, fim, { fecharModalAoConcluir: true });
 }
 
@@ -1129,21 +1022,13 @@ async function executarDownloadZip(inicio, fim, { fecharModalAoConcluir = false 
 
     try {
         const response = await adminService.baixarCurriculosAlunos(parametrosCurriculos(inicio, fim));
-        const blob = new Blob([response.data], { type: 'application/zip' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = nomeArquivoZip(response, inicio, fim);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+        baixarBlobZipCurriculos(response, inicio, fim);
 
         if (fecharModalAoConcluir) {
             modalCurriculosAberto.value = false;
         }
     } catch (error) {
-        erroCurriculos.value = obterMensagemErroDownload(error);
+        erroCurriculos.value = obterMensagemErroDownloadCurriculos(error);
         toast.error(erroCurriculos.value);
     } finally {
         gerandoZip.value = false;
@@ -1165,17 +1050,6 @@ function nomeArquivoCurriculo(response, aluno) {
         .replace(/^_+|_+$/g, '');
 
     return `Curriculo_${nome || 'Candidato'}.pdf`;
-}
-
-function nomeArquivoZip(response, inicio, fim) {
-    const disposicao = response.headers?.['content-disposition'] || '';
-    const encontrado = disposicao.match(/filename="?([^";]+)"?/i);
-
-    if (encontrado?.[1]) {
-        return encontrado[1];
-    }
-
-    return inicio === fim ? `Curriculos_Pagina_${inicio}.zip` : `Curriculos_Paginas_${inicio}_a_${fim}.zip`;
 }
 
 function alternarDetalhes(matricula) {
