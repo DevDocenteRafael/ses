@@ -150,9 +150,10 @@ class CandidatoController extends Controller
         $perPage = (int) $request->query('per_page', 10);
         $perPage = min(max($perPage, 1), 10);
 
-        return response()->json(
-            $query->paginate($perPage)
-        );
+        $paginacao = $query->paginate($perPage);
+        $paginacao->getCollection()->transform(fn (Candidato $candidato) => $this->formatarCandidato($candidato));
+
+        return response()->json($paginacao);
     }
 
     public function tiposCurso(Request $request): JsonResponse

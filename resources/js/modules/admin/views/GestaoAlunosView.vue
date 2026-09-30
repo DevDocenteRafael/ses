@@ -452,6 +452,7 @@ import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
+import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import {
     LIMITE_PAGINAS_CURRICULOS_ZIP,
     baixarBlobZipCurriculos,
@@ -1061,8 +1062,7 @@ function formatarPretensao(valor) {
 }
 
 function formatarDisponibilidade(valor) {
-    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
-    return lista.length ? lista.join(' + ') : 'Não informado';
+    return formatarDisponibilidadeHorario(valor, 'Não informado');
 }
 
 </script>

@@ -272,6 +272,44 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonFragment(['matricula' => $guara->matricula]);
     }
 
+    public function test_empresa_api_retorna_todas_as_regioes_preferidas_e_filtra_por_regioes_posteriores(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        $candidato = $this->criarCandidatoParaBusca('Aluno Cinco Regioes');
+        
+        foreach ([6, 15, 3, 5, 2] as $codigoRegiao) {
+            \App\Models\RegiaoPreferidaTrabalho::query()->create([
+                'candidato_matricula' => $candidato->matricula,
+                'codigo_regiao' => $codigoRegiao,
+            ]);
+        }
+
+        $this->assertSame(5, \App\Models\RegiaoPreferidaTrabalho::where('candidato_matricula', $candidato->matricula)->count());
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('data.0.regioes_preferidas_trabalho.0.codigo', 2)
+            ->assertJsonPath('data.0.regioes_preferidas_trabalho.1.codigo', 3)
+            ->assertJsonPath('data.0.regioes_preferidas_trabalho.2.codigo', 5)
+            ->assertJsonPath('data.0.regioes_preferidas_trabalho.3.codigo', 6)
+            ->assertJsonPath('data.0.regioes_preferidas_trabalho.4.codigo', 15)
+            ->assertJsonCount(5, 'data.0.regioes_preferidas_trabalho');
+
+        foreach ([6, 15, 3] as $codigoRegiao) {
+            $this->withToken($tokenEmpresa)
+                ->getJson("/api/candidatos?regioes_administrativas[]={$codigoRegiao}&page=1&per_page=10")
+                ->assertOk()
+                ->assertJsonFragment(['matricula' => $candidato->matricula]);
+        }
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?regioes_administrativas[]=10&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonMissing(['matricula' => $candidato->matricula]);
+    }
+
     public function test_filtro_de_regiao_administrativa_rejeita_codigo_invalido(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();

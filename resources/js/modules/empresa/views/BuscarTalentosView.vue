@@ -306,11 +306,22 @@
                                                     +{{ habilidadesExtras(c) }}
                                                 </span>
                                             </div>
-                                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                                 <small class="text-secondary"><i class="bi bi-geo-alt me-1"></i>{{ c.preferencias_de_trabalho?.regiao_administrativa }} - DF</small>
-                                                 <a
-                                                     v-if="telefoneFormatado(c)"
-                                                     class="text-secondary text-decoration-none candidato-contato-link"
+                                             <div class="d-flex align-items-center flex-wrap gap-2 candidato-metadados-compacto">
+                                                  <small v-if="regioesCard(c).texto" class="text-secondary candidato-regioes-card">
+                                                      <i class="bi bi-geo-alt me-1"></i>{{ regioesCard(c).texto }}
+                                                      <span
+                                                          v-if="regioesCard(c).quantidadeRestante"
+                                                          class="badge bg-light text-secondary border fw-normal ms-1 candidato-regioes-restantes"
+                                                          tabindex="0"
+                                                          :title="regioesCard(c).restantes.map((regiao) => regiao.nome).join('\n')"
+                                                          :aria-label="`${regioesCard(c).quantidadeRestante} outras regiões de interesse: ${regioesCard(c).restantes.map((regiao) => regiao.nome).join(', ')}`"
+                                                      >
+                                                          +{{ regioesCard(c).quantidadeRestante }}
+                                                      </span>
+                                                  </small>
+                                                  <a
+                                                      v-if="telefoneFormatado(c)"
+                                                      class="text-secondary text-decoration-none candidato-contato-link"
                                                      :href="`tel:${telefoneNormalizado(c)}`"
                                                      :aria-label="`Telefone: ${telefoneFormatado(c)}`"
                                                  >
@@ -357,8 +368,10 @@ import empresaService from '../../../services/empresaServices';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import DownloadCurriculosModal from '../../../components/common/DownloadCurriculosModal.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
+import { formatarRegioesPreferidasCard } from '../../../utils/regioesPreferidasTrabalho';
 import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
+import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import { useToast } from '../../../composables/useToast';
 import {
     LIMITE_PAGINAS_CURRICULOS_ZIP,
@@ -585,8 +598,7 @@ function normalizarTexto(valor) {
 }
 
 function formatarDisponibilidade(valor) {
-    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
-    return lista.length ? lista.join(' + ') : '-';
+    return formatarDisponibilidadeHorario(valor, '-');
 }
 
 function telefoneNormalizado(candidato) {
@@ -596,6 +608,10 @@ function telefoneNormalizado(candidato) {
 function telefoneFormatado(candidato) {
     const telefone = telefoneNormalizado(candidato);
     return telefone ? formatarTelefone(telefone) : '';
+}
+
+function regioesCard(candidato) {
+    return formatarRegioesPreferidasCard(candidato);
 }
 
 function regiaoSelecionada(codigo) {

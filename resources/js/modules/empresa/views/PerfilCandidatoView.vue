@@ -59,9 +59,9 @@
                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                         <span class="badge bg-secondary">{{ statusLabel }}</span>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3 text-secondary small">
-                                        <span v-if="candidato.preferencias_de_trabalho?.regiao_administrativa">
-                                            <i class="bi bi-geo-alt me-1"></i>{{ candidato.preferencias_de_trabalho.regiao_administrativa }}, DF
+                                    <div class="d-flex align-items-center gap-3 text-secondary small flex-wrap">
+                                        <span v-if="localizacaoResidencialResumo">
+                                            <i class="bi bi-geo-alt me-1"></i>{{ localizacaoResidencialResumo }}
                                         </span>
                                         <span v-if="ultimaAtualizacao">
                                             <i class="bi bi-calendar3 me-1"></i>Última atualização: {{ ultimaAtualizacao }}
@@ -147,6 +147,15 @@
                                 <div class="col-md-4">
                                     <small class="text-secondary d-block">Pretensão</small>
                                     <span class="fw-bold">{{ pretensaoFormatada }}</span>
+                                </div>
+                                <div class="col-12">
+                                    <small class="text-secondary d-block mb-2">Regiões de interesse para trabalho</small>
+                                    <div v-if="regioesPreferidas.length" class="d-flex flex-wrap gap-2">
+                                        <span v-for="regiao in regioesPreferidas" :key="regiao.codigo ?? regiao.nome" class="badge bg-light text-primary border fw-normal perfil-regiao-chip">
+                                            {{ regiao.nome }}
+                                        </span>
+                                    </div>
+                                    <p v-else class="text-secondary small mb-0">Nenhuma região de interesse informada.</p>
                                 </div>
                             </div>
                         </div>
@@ -258,6 +267,8 @@ import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import { formatarTelefone } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
+import { normalizarRegioesPreferidas } from '../../../utils/regioesPreferidasTrabalho';
+import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import { useToast } from '../../../composables/useToast';
 
 const props = defineProps({
@@ -326,6 +337,23 @@ const ultimaAtualizacao = computed(() => {
     const data = candidato.value.updated_at;
     if (!data) return null;
     return new Date(data).toLocaleDateString('pt-BR');
+});
+
+const regioesPreferidas = computed(() => normalizarRegioesPreferidas(candidato.value));
+
+const localizacaoResidencialResumo = computed(() => {
+    const endereco = candidato.value.pessoa?.endereco || {};
+    const bairro = textoEndereco(endereco.bairro);
+    const cidade = textoEndereco(endereco.cidade);
+    const uf = textoEndereco(endereco.uf);
+
+    if (bairro && uf) return `${bairro} - ${uf}`;
+    if (cidade && uf) return `${cidade} - ${uf}`;
+    if (bairro) return bairro;
+    if (cidade) return cidade;
+    if (uf) return uf;
+
+    return '';
 });
 
 const tipoContratacaoLabel = computed(() => {
@@ -413,8 +441,7 @@ function formatarCep(valor) {
 }
 
 function formatarDisponibilidade(valor) {
-    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
-    return lista.length ? lista.join(' + ') : '-';
+    return formatarDisponibilidadeHorario(valor, '-');
 }
 
 function dataLocalNormalizada(data) {

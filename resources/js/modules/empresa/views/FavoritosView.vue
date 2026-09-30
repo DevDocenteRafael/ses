@@ -209,6 +209,7 @@ import { useEmpresaStore } from '../../../store/empresa';
 import { useAuthStore } from '../../../store/auth';
 import { useListasFavoritos } from '../../../composables/useListasFavoritos';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
+import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 
 const auth = useAuthStore();
 const empresa = useEmpresaStore();
@@ -254,8 +255,7 @@ function formatarPretensao(valor) {
 }
 
 function formatarDisponibilidade(valor) {
-    const lista = Array.isArray(valor) ? valor : [valor].filter(Boolean);
-    return lista.length ? lista.join(' + ') : '—';
+    return formatarDisponibilidadeHorario(valor, '—');
 }
 
 onMounted(async () => {

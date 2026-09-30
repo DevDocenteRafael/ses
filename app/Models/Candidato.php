@@ -46,7 +46,8 @@ class Candidato extends Model
 
     public function regioesPreferidasTrabalho()
     {
-        return $this->hasMany(RegiaoPreferidaTrabalho::class, 'candidato_matricula', 'matricula');
+        return $this->hasMany(RegiaoPreferidaTrabalho::class, 'candidato_matricula', 'matricula')
+            ->orderBy('codigo_regiao');
     }
 
     public function dadosAcademicos()

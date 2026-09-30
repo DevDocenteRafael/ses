@@ -3,6 +3,7 @@
 namespace App\Services\Curriculo;
 
 use App\Models\Candidato;
+use App\Support\FormatadorListaPtBr;
 use Illuminate\Support\Collection;
 
 class CurriculoCandidatoBuilder
@@ -153,8 +154,7 @@ class CurriculoCandidatoBuilder
 
     private function formatarDisponibilidade($valor): ?string
     {
-        $lista = array_filter((array) $valor);
-        return $lista ? implode(' + ', $lista) : null;
+        return FormatadorListaPtBr::formatar($valor);
     }
 
     private function formatarPretensao($valor): ?string
