@@ -23,6 +23,11 @@ use Illuminate\Support\Str;
  * Como executar:
  *   php artisan db:seed --class=CandidatosFicticiosSeeder
  *
+ * Perfis fixos (os 3 primeiros candidatos):
+ *   arlinson.santos@ficticio.senac.test
+ *   barbara.machado@ficticio.senac.test
+ *   ana.biatriz@ficticio.senac.test
+ *
  * Login de qualquer candidato gerado:
  *   email: (veja na tabela pessoa, domínio @ficticio.senac.test)
  *   senha: senac123
@@ -41,6 +46,17 @@ class CandidatosFicticiosSeeder extends Seeder
     private const LOTE = 500;
     private const DOMINIO = 'ficticio.senac.test';
     private const SENHA = 'senac123';
+
+    /**
+     * Perfis com nome definido. São criados primeiro (entram na contagem de TOTAL),
+     * com e-mail sem número: nome.sobrenome@ficticio.senac.test
+     * Os demais dados (CPF, endereço, cursos etc.) são gerados normalmente.
+     */
+    private const PERFIS_FIXOS = [
+        'Arlinson Santos',
+        'Bárbara Machado',
+        'Ana Biatriz',
+    ];
 
     /** Unidades fictícias do Senac usadas em dados_academicos e cursos_senac. Ajuste à vontade. */
     private const UNIDADES = [
@@ -189,7 +205,9 @@ class CandidatosFicticiosSeeder extends Seeder
 
             for ($i = 0; $i < $tamanho; $i++) {
                 $matricula = $this->proximaMatricula($sequencia);
-                $this->gerarCandidato($lote, $idPessoa, $matricula, $criados + $i + 1, $senhaHash);
+                $indice    = $criados + $i;
+                $nomeFixo  = self::PERFIS_FIXOS[$indice] ?? null;
+                $this->gerarCandidato($lote, $idPessoa, $matricula, $indice + 1, $senhaHash, $nomeFixo);
                 $idPessoa++;
             }
 
@@ -209,20 +227,26 @@ class CandidatosFicticiosSeeder extends Seeder
         }
 
         $this->command?->info(self::TOTAL . ' candidatos fictícios criados. Senha de todos: ' . self::SENHA);
+
+        foreach (self::PERFIS_FIXOS as $nome) {
+            $this->command?->info('  • ' . $nome . ' → ' . Str::slug($nome, '.') . '@' . self::DOMINIO);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
 
-    private function gerarCandidato(array &$lote, int $idPessoa, string $matricula, int $numero, string $senhaHash): void
+    private function gerarCandidato(array &$lote, int $idPessoa, string $matricula, int $numero, string $senhaHash, ?string $nomeFixo = null): void
     {
         $f     = $this->faker;
         $agora = now()->format('Y-m-d H:i:s');
 
         // Identidade -------------------------------------------------
         $genero = $f->randomElement(['male', 'female']);
-        $nome   = trim($f->firstName($genero) . ' ' . $f->lastName() . ' ' . $f->lastName());
+        $nome   = $nomeFixo ?? trim($f->firstName($genero) . ' ' . $f->lastName() . ' ' . $f->lastName());
         $slug   = Str::limit(Str::slug($nome, '.'), 60, '');
-        $email  = "{$slug}.{$numero}@" . self::DOMINIO;
+        $email  = $nomeFixo
+            ? "{$slug}@" . self::DOMINIO
+            : "{$slug}.{$numero}@" . self::DOMINIO;
 
         $regiaoResidencia = $f->randomElement($this->regioes);
 
