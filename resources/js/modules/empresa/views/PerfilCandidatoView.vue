@@ -8,6 +8,7 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
+                <AccessibilityMenu />
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Empresa' }}</p>
                     <p class="small mb-0 opacity-75">{{ auth.pessoa?.email }}</p>
@@ -265,6 +266,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
+import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
 import { formatarTelefone } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 import { normalizarRegioesPreferidas } from '../../../utils/regioesPreferidasTrabalho';

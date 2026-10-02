@@ -9,6 +9,7 @@
             <slot name="acoes" />
 
             <div v-if="auth.pessoa" class="d-flex align-items-center gap-3">
+                <AccessibilityMenu />
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">Administrador SENAC DF</p>
                     <p class="ses-topbar-subtitle small mb-0">{{ cargoLabel }}</p>
@@ -25,6 +26,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import AccessibilityMenu from './AccessibilityMenu.vue';
 import { useAuthStore } from '../../store/auth';
 
 defineProps({

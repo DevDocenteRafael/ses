@@ -1,5 +1,17 @@
 <template>
-    <div ref="menuRef" class="ses-accessibility" :class="{ 'is-open': aberto }">
+    <div ref="menuRef" class="ses-accessibility" :class="[`ses-accessibility--${variant}`, { 'is-open': aberto }]">
+        <button
+            type="button"
+            class="ses-accessibility__trigger"
+            :aria-expanded="aberto"
+            aria-controls="ses-accessibility-panel"
+            aria-label="Abrir opções de acessibilidade"
+            title="Acessibilidade"
+            @click="alternarMenu"
+        >
+            <i class="bi bi-universal-access" aria-hidden="true"></i>
+        </button>
+
         <Transition name="ses-accessibility-panel">
             <section
                 v-if="aberto"
@@ -74,23 +86,20 @@
                     </div>
             </section>
         </Transition>
-
-        <button
-            type="button"
-            class="ses-accessibility__trigger"
-            :aria-expanded="aberto"
-            aria-controls="ses-accessibility-panel"
-            aria-label="Abrir menu de acessibilidade"
-            @click="alternarMenu"
-        >
-            <i class="bi bi-universal-access" aria-hidden="true"></i>
-        </button>
     </div>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useThemeStore } from '../../store/theme';
+
+defineProps({
+    variant: {
+        type: String,
+        default: 'header',
+        validator: (value) => ['header', 'floating'].includes(value),
+    },
+});
 
 const STORAGE_KEY = 'ses_font_scale';
 const FONTE_PADRAO = 100;
@@ -171,11 +180,17 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .ses-accessibility {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ses-accessibility--floating {
     position: fixed;
     right: 20px;
     top: 50%;
     z-index: 1080;
-    display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 12px;
@@ -183,15 +198,15 @@ onBeforeUnmount(() => {
 }
 
 .ses-accessibility__trigger {
-    width: 56px;
-    height: 56px;
+    width: 38px;
+    height: 38px;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.32);
     border-radius: 999px;
-    background: var(--ses-primary, #004587);
+    background: var(--ses-accent, #F78B1F);
     color: #ffffff;
-    box-shadow: 0 14px 32px rgba(0, 69, 135, 0.32), 0 4px 14px rgba(15, 23, 42, 0.2);
-    font-size: 1.65rem;
+    box-shadow: 0 8px 18px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.3), 0 2px 6px rgba(15, 23, 42, 0.14);
+    font-size: 1.15rem;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -199,11 +214,24 @@ onBeforeUnmount(() => {
     transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
+.ses-accessibility--floating .ses-accessibility__trigger {
+    width: 56px;
+    height: 56px;
+    box-shadow: 0 14px 32px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.34), 0 4px 14px rgba(15, 23, 42, 0.2);
+    font-size: 1.65rem;
+}
+
 .ses-accessibility__trigger:hover,
 .ses-accessibility.is-open .ses-accessibility__trigger {
-    background: var(--ses-primary-hover, #003366);
+    background: var(--ses-accent-hover, #d77c0a);
     border-color: rgba(255, 255, 255, 0.48);
-    box-shadow: 0 16px 36px rgba(0, 51, 102, 0.38), 0 5px 16px rgba(15, 23, 42, 0.24);
+    box-shadow: 0 10px 22px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.38), 0 3px 8px rgba(15, 23, 42, 0.16);
+    transform: translateY(-1px);
+}
+
+.ses-accessibility--floating .ses-accessibility__trigger:hover,
+.ses-accessibility--floating.is-open .ses-accessibility__trigger {
+    box-shadow: 0 16px 36px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.42), 0 5px 16px rgba(15, 23, 42, 0.24);
     transform: translateY(-2px);
 }
 
@@ -211,10 +239,14 @@ onBeforeUnmount(() => {
 .ses-accessibility__option:focus-visible {
     outline: 3px solid #ffffff;
     outline-offset: 3px;
-    box-shadow: 0 0 0 0.25rem rgba(var(--ses-primary-rgb, 0, 69, 135), 0.35);
+    box-shadow: 0 0 0 0.25rem rgba(var(--ses-accent-rgb, 247, 139, 31), 0.45), 0 0 0 0.45rem rgba(var(--ses-primary-rgb, 0, 69, 135), 0.35);
 }
 
 .ses-accessibility__panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 1030;
     width: min(280px, calc(100vw - 40px));
     padding: 18px;
     border: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
@@ -224,17 +256,31 @@ onBeforeUnmount(() => {
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
 }
 
+.ses-accessibility--floating .ses-accessibility__panel {
+    top: auto;
+    bottom: calc(100% + 12px);
+}
+
 .ses-accessibility__panel::after {
     content: '';
     position: absolute;
     right: 21px;
-    bottom: 68px;
+    top: -9px;
     width: 18px;
     height: 18px;
     background: var(--ses-surface, #ffffff);
+    border-left: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
+    border-top: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
+    transform: rotate(45deg);
+}
+
+.ses-accessibility--floating .ses-accessibility__panel::after {
+    top: auto;
+    bottom: -9px;
+    border-top: 0;
+    border-left: 0;
     border-right: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
     border-bottom: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
-    transform: rotate(45deg);
 }
 
 .ses-accessibility__title {
@@ -362,13 +408,17 @@ onBeforeUnmount(() => {
 }
 
 :global(html.dark) .ses-accessibility__trigger {
-    background: #0056a8;
-    box-shadow: 0 14px 34px rgba(0, 86, 168, 0.42), 0 4px 16px rgba(0, 0, 0, 0.44);
+    background: var(--ses-accent, #F78B1F);
+    box-shadow: 0 8px 20px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.34), 0 2px 8px rgba(0, 0, 0, 0.42);
+}
+
+:global(html.dark) .ses-accessibility--floating .ses-accessibility__trigger {
+    box-shadow: 0 14px 34px rgba(var(--ses-accent-rgb, 247, 139, 31), 0.4), 0 4px 16px rgba(0, 0, 0, 0.44);
 }
 
 :global(html.dark) .ses-accessibility__trigger:hover,
 :global(html.dark) .ses-accessibility.is-open .ses-accessibility__trigger {
-    background: #0069cc;
+    background: var(--ses-accent-hover, #d77c0a);
 }
 
 :global(html.dark) .ses-accessibility__panel {
@@ -376,8 +426,25 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 575.98px) {
-    .ses-accessibility {
+    .ses-accessibility__panel {
+        width: min(280px, calc(100vw - 24px));
+        right: -56px;
+    }
+
+    .ses-accessibility__panel::after {
+        right: 77px;
+    }
+
+    .ses-accessibility--floating {
         right: 16px;
+    }
+
+    .ses-accessibility--floating .ses-accessibility__panel {
+        right: 0;
+    }
+
+    .ses-accessibility--floating .ses-accessibility__panel::after {
+        right: 21px;
     }
 }
 

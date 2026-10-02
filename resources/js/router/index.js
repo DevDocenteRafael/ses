@@ -46,13 +46,6 @@ const routes = [
         meta: alunoRoutes[0].meta,
     },
     {
-        // Única página do aluno após o login (sem Dashboard/Convites).
-        path: '/aluno/perfil',
-        name: 'aluno.perfil',
-        component: () => import('../modules/aluno/views/MeuPerfilView.vue'),
-        meta: { requiresAuth: true, role: 'candidato' },
-    },
-    {
         // Qualquer rota não mapeada cai aqui
         path: '/:pathMatch(.*)*',
         redirect: '/login',

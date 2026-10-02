@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
+import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
 import '../../../../css/modules/auth/login.css';
 
 const auth = useAuthStore();
@@ -138,6 +139,8 @@ async function enviarLogin() {
 
 <template>
 	<div class="auth-login-page">
+		<AccessibilityMenu variant="floating" />
+
 		<div class="auth-login-card shadow-sm">
 			<div class="row g-0 h-100">
 				<section class="col-12 col-lg-5 auth-login-aside text-center text-white">

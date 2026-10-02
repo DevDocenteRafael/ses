@@ -19,6 +19,9 @@
     --ses-primary-hover: #003366;
     --ses-primary-hover-rgb: 0, 51, 102;
     --ses-primary-active: #002850;
+    --ses-accent: #F78B1F;
+    --ses-accent-rgb: 247, 139, 31;
+    --ses-accent-hover: #d77c0a;
     --ses-admin-old-primary: #142a4d;
     --ses-bg: #f8f9fa;
     --ses-surface: #ffffff;

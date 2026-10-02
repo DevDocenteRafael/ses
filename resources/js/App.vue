@@ -1,6 +1,5 @@
 <script setup>
 import { onMounted } from 'vue';
-import AccessibilityMenu from './components/common/AccessibilityMenu.vue';
 import ToastContainer from './components/common/ToastContainer.vue';
 import { useAuthStore } from './store/auth';
 import { useThemeStore } from './store/theme';
@@ -25,5 +24,4 @@ onMounted(() => {
     -->
     <router-view />
     <ToastContainer />
-    <AccessibilityMenu />
 </template>

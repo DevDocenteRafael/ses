@@ -1,6 +1,6 @@
 <template>
     <div class="d-flex vh-100 overflow-hidden">
-        <SlideBar :items="menu" @sair="sair" />
+        <SlideBar v-if="!rotaPerfil" :items="menu" @sair="sair" />
 
         <main class="flex-grow-1 bg-body-tertiary overflow-y-auto">
             <router-view />
@@ -9,12 +9,15 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
 import SlideBar from '../components/common/slideBar.vue';
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuthStore();
+const rotaPerfil = computed(() => route.name === 'aluno.perfil');
 
 // TODO: substituir pelo total real de convites pendentes vindo da API
 // (ex.: auth.convitesPendentes ou uma store dedicada de convites).

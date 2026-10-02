@@ -11,6 +11,7 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
+                <AccessibilityMenu />
                 <div class="dropdown">
                     <button
                         type="button"
@@ -618,6 +619,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
 import cepService, { formatarCep } from '../../../services/cepService';
+import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
