@@ -23,7 +23,7 @@ use Illuminate\Support\Str;
  * Como executar:
  *   php artisan db:seed --class=CandidatosFicticiosSeeder
  *
- * Perfis fixos (os 3 primeiros candidatos):
+ * Perfis fixos (os 3 primeiros candidatos, criados VAZIOS: só conta básica):
  *   arlinson.santos@ficticio.senac.test
  *   barbara.machado@ficticio.senac.test
  *   ana.biatriz@ficticio.senac.test
@@ -50,7 +50,9 @@ class CandidatosFicticiosSeeder extends Seeder
     /**
      * Perfis com nome definido. São criados primeiro (entram na contagem de TOTAL),
      * com e-mail sem número: nome.sobrenome@ficticio.senac.test
-     * Os demais dados (CPF, endereço, cursos etc.) são gerados normalmente.
+     * São criados VAZIOS: apenas pessoa + candidato (nome, e-mail, telefone, CPF,
+     * matrícula e senha). Endereço, links, habilidades, preferências, dados
+     * acadêmicos, cursos e experiências ficam em branco para preencher no sistema.
      */
     private const PERFIS_FIXOS = [
         'Arlinson Santos',
@@ -247,6 +249,32 @@ class CandidatosFicticiosSeeder extends Seeder
         $email  = $nomeFixo
             ? "{$slug}@" . self::DOMINIO
             : "{$slug}.{$numero}@" . self::DOMINIO;
+
+        // Perfis fixos: só a conta básica (igual a um cadastro recém-feito).
+        // Nenhuma outra tabela é preenchida, para a pessoa completar pelo sistema.
+        if ($nomeFixo !== null) {
+            $lote['pessoa'][] = [
+                'id_pessoa'     => $idPessoa,
+                'nome'          => $nome,
+                'email'         => $email,
+                'telefone'      => $this->telefoneUnico(),
+                'senha'         => $senhaHash,
+                'data_cadastro' => $agora,
+                'created_at'    => $agora,
+                'updated_at'    => $agora,
+            ];
+
+            $lote['candidato'][] = [
+                'matricula'        => $matricula,
+                'cpf'              => $this->cpfUnico(),
+                'status'           => 1,
+                'pessoa_id_pessoa' => $idPessoa,
+                'created_at'       => $agora,
+                'updated_at'       => $agora,
+            ];
+
+            return;
+        }
 
         $regiaoResidencia = $f->randomElement($this->regioes);
 
