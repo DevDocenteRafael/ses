@@ -11,6 +11,7 @@ use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use App\Services\Candidatos\CandidatoQueryService;
+use App\Support\AreasAtuacaoCatalogo;
 use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\HabilidadesCatalogo;
 use App\Support\RegioesAdministrativasDf;
@@ -131,10 +132,9 @@ class CandidatoController extends Controller
 
     /**
      * Lista candidatos. Uso principal: busca de talentos pela empresa —
-     * por isso os filtros (FR16/17/18 + segmento/tipo de curso) são
-     * aplicados aqui no servidor, e não no cliente. O filtro "segmento"
-     * representa a classificação acadêmica/curricular em dados_academicos,
-     * não a área de atuação profissional do candidato.
+     * por isso os filtros (FR16/17/18 + segmento) são aplicados aqui no
+     * servidor, e não no cliente. O filtro "segmento" da empresa representa
+     * a Área de Atuação profissional atual do candidato.
      */
     public function index(Request $request, CandidatoQueryService $queryService): JsonResponse
     {
@@ -175,11 +175,7 @@ class CandidatoController extends Controller
             abort(403, 'Voce nao tem permissao para listar segmentos acadêmicos.');
         }
 
-        $request->validate([
-            'tipo_curso' => ['required', 'string', Rule::in(array_column(CatalogoAcademicoSenacDf::tipos(), 'id'))],
-        ]);
-
-        return response()->json(CatalogoAcademicoSenacDf::segmentos((string) $request->query('tipo_curso')));
+        return response()->json(AreasAtuacaoCatalogo::opcoes());
     }
 
     /**

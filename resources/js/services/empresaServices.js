@@ -47,12 +47,8 @@ export default {
         return api.get('/candidatos/habilidades');
     },
 
-    listarTiposCurso() {
-        return api.get('/candidatos/tipos-curso');
-    },
-
-    listarSegmentosAcademicos(tipoCurso) {
-        return api.get('/candidatos/segmentos-academicos', { params: { tipo_curso: tipoCurso } });
+    listarSegmentosAcademicos() {
+        return api.get('/candidatos/segmentos-academicos');
     },
 
     verTalento(matricula) {

@@ -28,76 +28,6 @@
                 <h2 class="h6 fw-bold mb-4">Filtros Inteligentes</h2>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
-                    <div class="mb-2">
-                        <label class="form-label small text-secondary mb-1">Tipo de Curso</label>
-                        <div class="position-relative" ref="tiposCursoDropdownContainer">
-                            <input
-                                v-model="buscaTipoCurso"
-                                class="form-control form-control-sm"
-                                type="search"
-                                placeholder="Pesquisar tipo de curso"
-                                aria-label="Pesquisar tipo de curso"
-                                autocomplete="off"
-                                :disabled="carregandoTiposCurso"
-                                @focus="mostrarDropdownTiposCurso = true"
-                                @input="aoDigitarTipoCurso"
-                            >
-                            <div v-if="mostrarDropdownTiposCurso" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
-                                <button type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarTipoCurso(null)">
-                                    Todos os tipos
-                                </button>
-                                <button
-                                    v-for="tipo in tiposCursoFiltrados"
-                                    :key="tipo.id"
-                                    type="button"
-                                    class="list-group-item list-group-item-action text-start"
-                                    @mousedown.prevent="selecionarTipoCurso(tipo)"
-                                >
-                                    {{ tipo.nome }}
-                                </button>
-                                <p v-if="!tiposCursoFiltrados.length" class="list-group-item small text-secondary mb-0">Nenhum tipo de curso encontrado.</p>
-                            </div>
-                        </div>
-                        <div v-if="erroTiposCurso" class="form-text text-danger">{{ erroTiposCurso }}</div>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small text-secondary mb-1">Segmento</label>
-                        <div class="position-relative" ref="segmentosDropdownContainer">
-                            <input
-                                v-model="buscaSegmento"
-                                class="form-control form-control-sm"
-                                type="search"
-                                :placeholder="rotuloOpcaoInicialSegmento"
-                                aria-label="Pesquisar segmento"
-                                autocomplete="off"
-                                :disabled="segmentoDesabilitado"
-                                @focus="mostrarDropdownSegmentos = true"
-                                @input="aoDigitarSegmento"
-                            >
-                            <div v-if="mostrarDropdownSegmentos && !segmentoDesabilitado" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
-                                <button type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarSegmento(null)">
-                                    Todos os segmentos
-                                </button>
-                                <button
-                                    v-for="segmento in segmentosFiltrados"
-                                    :key="segmento.id"
-                                    type="button"
-                                    class="list-group-item list-group-item-action text-start"
-                                    @mousedown.prevent="selecionarSegmento(segmento)"
-                                >
-                                    {{ segmento.nome }}
-                                </button>
-                                <p v-if="!segmentosFiltrados.length" class="list-group-item small text-secondary mb-0">Nenhum segmento encontrado.</p>
-                            </div>
-                        </div>
-                        <div v-if="carregandoSegmentos" class="form-text text-secondary">Carregando segmentos...</div>
-                        <div v-else-if="erroSegmentos" class="form-text text-danger">{{ erroSegmentos }}</div>
-                        <div v-else-if="filtros.tipo_curso && !segmentosAcademicos.length" class="form-text text-secondary">Nenhum segmento disponível para este tipo de curso.</div>
-                    </div>
-                </div>
-
-                <div class="mb-4">
                     <label class="form-label small fw-bold text-secondary text-uppercase">Contratação</label>
                     <div class="form-check small mb-1">
                         <input v-model="filtros.clt" class="form-check-input" type="checkbox" id="fCLT">
@@ -106,6 +36,51 @@
                     <div class="form-check small mb-1">
                         <input v-model="filtros.estagio" class="form-check-input" type="checkbox" id="fEstagio">
                         <label class="form-check-label" for="fEstagio">Estágio</label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
+                    <div class="mb-2 position-relative" ref="segmentosDropdownContainer">
+                        <label class="form-label small text-secondary mb-1">Segmento</label>
+                        <button
+                            type="button"
+                            class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
+                            :aria-expanded="mostrarDropdownSegmentos"
+                            @click.stop="alternarDropdownSegmentos"
+                        >
+                            <span :class="filtros.segmento.length ? 'text-body' : 'text-secondary'">
+                                {{ rotuloFiltroSegmentos }}
+                            </span>
+                            <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                        </button>
+
+                        <div v-if="mostrarDropdownSegmentos" class="filtro-multiselect-dropdown border rounded shadow-sm bg-white mt-1">
+                            <div class="p-2 border-bottom">
+                                <label class="form-label small text-secondary mb-1" for="busca-segmento-filtro">
+                                    <i class="bi bi-search me-1"></i> Pesquisar segmento...
+                                </label>
+                                <input
+                                    id="busca-segmento-filtro"
+                                    ref="segmentoBuscaInput"
+                                    v-model="buscaSegmento"
+                                    type="text"
+                                    class="form-control form-control-sm"
+                                    placeholder="Digite parte do nome..."
+                                    autocomplete="off"
+                                >
+                            </div>
+
+                            <div class="filtro-multiselect-lista p-2">
+                                <template v-if="segmentosFiltrados.length">
+                                    <label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                                        <input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)">
+                                        <span class="form-check-label">{{ segmento.nome }}</span>
+                                    </label>
+                                </template>
+                                <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -371,7 +346,7 @@ import DownloadCurriculosModal from '../../../components/common/DownloadCurricul
 import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { formatarRegioesPreferidasCard } from '../../../utils/regioesPreferidasTrabalho';
-import { deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
+import { areasAtuacao, deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import { useToast } from '../../../composables/useToast';
@@ -386,18 +361,13 @@ const auth = useAuthStore();
 const router = useRouter();
 const toast = useToast();
 
-const tiposCurso = ref([]);
-const segmentosAcademicos = ref([]);
-const buscaTipoCurso = ref('');
+const segmentosAcademicos = ref(areasAtuacao.map((area) => ({ id: area, nome: area })));
 const buscaSegmento = ref('');
-const mostrarDropdownTiposCurso = ref(false);
 const mostrarDropdownSegmentos = ref(false);
-const tiposCursoDropdownContainer = ref(null);
 const segmentosDropdownContainer = ref(null);
 
 const filtros = reactive({
-    segmento: '',
-    tipo_curso: '',
+    segmento: [],
     clt: false,
     estagio: false,
     regioes_administrativas: [],
@@ -413,10 +383,6 @@ const modalCurriculosAberto = ref(false);
 const erroCurriculos = ref('');
 const limitePaginasZip = LIMITE_PAGINAS_CURRICULOS_ZIP;
 const carregandoHabilidades = ref(false);
-const carregandoTiposCurso = ref(false);
-const carregandoSegmentos = ref(false);
-const erroTiposCurso = ref('');
-const erroSegmentos = ref('');
 const candidatos = ref([]);
 const habilidadesDisponiveis = ref([]);
 const buscaHabilidade = ref('');
@@ -425,6 +391,7 @@ const mostrarDropdownHabilidades = ref(false);
 const mostrarDropdownRegioes = ref(false);
 const habilidadeBuscaInput = ref(null);
 const regiaoBuscaInput = ref(null);
+const segmentoBuscaInput = ref(null);
 const habilidadesDropdownContainer = ref(null);
 const regioesDropdownContainer = ref(null);
 const paginacao = reactive({
@@ -463,29 +430,18 @@ const rotuloFiltroRegioes = computed(() => {
 
     return `${total} regiões selecionadas`;
 });
-const segmentoDesabilitado = computed(() => !filtros.tipo_curso || carregandoSegmentos.value || Boolean(erroSegmentos.value) || !segmentosAcademicos.value.length);
-const rotuloOpcaoInicialSegmento = computed(() => {
-    if (!filtros.tipo_curso) {
-        return 'Selecione primeiro o Tipo de Curso';
+const rotuloFiltroSegmentos = computed(() => {
+    const total = filtros.segmento.length;
+
+    if (!total) {
+        return 'Selecione segmentos...';
     }
 
-    if (carregandoSegmentos.value) {
-        return 'Carregando segmentos...';
+    if (total === 1) {
+        return filtros.segmento[0];
     }
 
-    if (erroSegmentos.value) {
-        return 'Não foi possível carregar os segmentos';
-    }
-
-    if (!segmentosAcademicos.value.length) {
-        return 'Nenhum segmento disponível para este tipo de curso';
-    }
-
-    return 'Todos os segmentos';
-});
-const tiposCursoFiltrados = computed(() => {
-    const termo = normalizarTexto(buscaTipoCurso.value);
-    return tiposCurso.value.filter((tipo) => normalizarTexto(tipo.nome).includes(termo));
+    return `${total} segmentos selecionados`;
 });
 const segmentosFiltrados = computed(() => {
     const termo = normalizarTexto(buscaSegmento.value);
@@ -522,34 +478,7 @@ watch(() => [...filtros.regioes_administrativas], () => {
     paginacao.current_page = 1;
 });
 
-watch(() => filtros.tipo_curso, async (novoTipo, tipoAnterior) => {
-    paginacao.current_page = 1;
-
-    if (!novoTipo) {
-        filtros.segmento = '';
-        buscaSegmento.value = '';
-        mostrarDropdownSegmentos.value = false;
-        segmentosAcademicos.value = [];
-        erroSegmentos.value = '';
-        return;
-    }
-
-    const segmentoAnterior = filtros.segmento;
-    await carregarSegmentosAcademicos(novoTipo);
-
-    if (segmentoAnterior && segmentosAcademicos.value.some((segmento) => segmento.id === segmentoAnterior)) {
-        buscaSegmento.value = segmentosAcademicos.value.find((segmento) => segmento.id === segmentoAnterior)?.nome || '';
-        filtros.segmento = segmentoAnterior;
-        return;
-    }
-
-    if (tipoAnterior !== undefined) {
-        filtros.segmento = '';
-        buscaSegmento.value = '';
-    }
-});
-
-watch(() => filtros.segmento, () => {
+watch(() => [...filtros.segmento], () => {
     paginacao.current_page = 1;
 });
 
@@ -686,12 +615,8 @@ function fecharDropdownRegioes() {
 }
 
 function aoClicarForaDosDropdowns(evento) {
-    if (tiposCursoDropdownContainer.value && !tiposCursoDropdownContainer.value.contains(evento.target)) {
-        mostrarDropdownTiposCurso.value = false;
-    }
-
     if (segmentosDropdownContainer.value && !segmentosDropdownContainer.value.contains(evento.target)) {
-        mostrarDropdownSegmentos.value = false;
+        fecharDropdownSegmentos();
     }
 
     if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
@@ -703,26 +628,32 @@ function aoClicarForaDosDropdowns(evento) {
     }
 }
 
-function aoDigitarTipoCurso() {
-    mostrarDropdownTiposCurso.value = true;
-    filtros.tipo_curso = '';
+function segmentoSelecionado(segmento) {
+    return filtros.segmento.includes(segmento);
 }
 
-function selecionarTipoCurso(tipo) {
-    filtros.tipo_curso = tipo?.id || '';
-    buscaTipoCurso.value = tipo?.nome || '';
-    mostrarDropdownTiposCurso.value = false;
+function alternarSegmento(segmento) {
+    const indice = filtros.segmento.indexOf(segmento);
+
+    if (indice >= 0) {
+        filtros.segmento.splice(indice, 1);
+        return;
+    }
+
+    filtros.segmento.push(segmento);
 }
 
-function aoDigitarSegmento() {
-    mostrarDropdownSegmentos.value = true;
-    filtros.segmento = '';
+function alternarDropdownSegmentos() {
+    mostrarDropdownSegmentos.value = !mostrarDropdownSegmentos.value;
+
+    if (mostrarDropdownSegmentos.value) {
+        nextTick(() => segmentoBuscaInput.value?.focus());
+    }
 }
 
-function selecionarSegmento(segmento) {
-    filtros.segmento = segmento?.id || '';
-    buscaSegmento.value = segmento?.nome || '';
+function fecharDropdownSegmentos() {
     mostrarDropdownSegmentos.value = false;
+    buscaSegmento.value = '';
 }
 
 async function carregarHabilidadesDisponiveis() {
@@ -738,45 +669,13 @@ async function carregarHabilidadesDisponiveis() {
     }
 }
 
-async function carregarTiposCurso() {
-    carregandoTiposCurso.value = true;
-    erroTiposCurso.value = '';
-
-    try {
-        const { data } = await empresaService.listarTiposCurso();
-        tiposCurso.value = Array.isArray(data) ? data : [];
-    } catch (e) {
-        erroTiposCurso.value = 'Não foi possível carregar os tipos de curso.';
-        tiposCurso.value = [];
-    } finally {
-        carregandoTiposCurso.value = false;
-    }
-}
-
-async function carregarSegmentosAcademicos(tipoCurso) {
-    carregandoSegmentos.value = true;
-    erroSegmentos.value = '';
-    segmentosAcademicos.value = [];
-
-    try {
-        const { data } = await empresaService.listarSegmentosAcademicos(tipoCurso);
-        segmentosAcademicos.value = Array.isArray(data) ? data : [];
-    } catch (e) {
-        erroSegmentos.value = 'Não foi possível carregar os segmentos.';
-        segmentosAcademicos.value = [];
-    } finally {
-        carregandoSegmentos.value = false;
-    }
-}
-
 function tipoContratacaoBitmask() {
     return (filtros.clt ? 1 : 0) + (filtros.estagio ? 2 : 0);
 }
 
 function parametrosBusca(pagina = 1) {
     const params = { page: pagina, per_page: paginacao.per_page };
-    if (filtros.segmento) params.segmento = filtros.segmento;
-    if (filtros.tipo_curso) params.tipo_curso = filtros.tipo_curso;
+    if (filtros.segmento.length) params.segmento = filtros.segmento;
     if (filtros.disponibilidade) params.disponibilidade = filtros.disponibilidade;
     if (filtros.regioes_administrativas.length) params.regioes_administrativas = filtros.regioes_administrativas;
     if (filtros.habilidades.length) params.habilidades = filtros.habilidades;
@@ -915,14 +814,9 @@ function mudarPagina(pagina) {
 }
 
 function limparFiltros() {
-    filtros.tipo_curso = '';
-    filtros.segmento = '';
-    buscaTipoCurso.value = '';
+    filtros.segmento = [];
     buscaSegmento.value = '';
-    mostrarDropdownTiposCurso.value = false;
-    mostrarDropdownSegmentos.value = false;
-    segmentosAcademicos.value = [];
-    erroSegmentos.value = '';
+    fecharDropdownSegmentos();
     filtros.clt = false;
     filtros.estagio = false;
     filtros.regioes_administrativas = [];
@@ -941,7 +835,6 @@ async function sair() {
 }
 
 onMounted(() => {
-    carregarTiposCurso();
     buscar();
     carregarHabilidadesDisponiveis();
     document.addEventListener('click', aoClicarForaDosDropdowns);

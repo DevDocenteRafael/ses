@@ -11,6 +11,7 @@ use App\Models\CursoSenac;
 use App\Models\CursoExterno;
 use App\Models\ExperienciaProfissional;
 use App\Models\RegiaoPreferidaTrabalho;
+use App\Support\AreasAtuacaoCatalogo;
 use App\Support\RegioesAdministrativasDf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -48,7 +49,7 @@ class PerfilCandidatoController extends Controller
         $validated = $request->validate([
             'sobre_mim'          => 'nullable|string|max:200',
             'cargo_de_interesse' => 'nullable|string|max:45',
-            'area_de_atuacao'    => 'required|string|max:45',
+            'area_de_atuacao'    => ['required', 'string', Rule::in(AreasAtuacaoCatalogo::areas())],
             'habilidades'        => 'nullable|array',
             'habilidades.*'      => 'string|max:45',
             'habilidades_por_area'        => 'nullable|array',

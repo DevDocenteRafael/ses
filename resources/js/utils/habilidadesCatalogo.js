@@ -1,8 +1,17 @@
 import catalogoHabilidades from '../../catalogos/habilidades.json';
 
-export const habilidadesPorArea = catalogoHabilidades.habilidadesPorArea;
+export const areasAtuacao = [
+    'Tecnologia da Informação',
+    'Ambiente e Saúde',
+    'Negócios, Finanças e Gestão',
+    'Direito e Políticas Públicas',
+    'Engenharia e Indústria',
+    'Educação, Humanas e Sociais',
+    'Comunicação, Arte e Design',
+    'Ciências Exatas e da Terra',
+];
 
-export const areasAtuacao = Object.keys(habilidadesPorArea);
+export const habilidadesPorArea = catalogoHabilidades.habilidadesPorArea;
 
 export const sugestoesSoftSkills = catalogoHabilidades.sugestoesSoftSkills;
 

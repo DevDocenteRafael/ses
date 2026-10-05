@@ -14,7 +14,7 @@
       "Segurança da Informação",
       "Banco de Dados"
     ],
-    "Administração": [
+    "Negócios, Finanças e Gestão": [
       "Excel",
       "Word",
       "PowerPoint",
@@ -28,7 +28,7 @@
       "Organização de Arquivos",
       "Controle Financeiro"
     ],
-    "Marketing": [
+    "Comunicação, Arte e Design": [
       "Marketing Digital",
       "Redes Sociais",
       "Copywriting",
@@ -42,7 +42,7 @@
       "Pesquisa de Mercado",
       "Branding"
     ],
-    "Recursos Humanos": [
+    "Educação, Humanas e Sociais": [
       "Recrutamento e Seleção",
       "Triagem de Currículos",
       "Entrevistas",
@@ -55,6 +55,46 @@
       "Comunicação Interna",
       "Departamento Pessoal",
       "Gestão de Pessoas"
+    ],
+    "Ambiente e Saúde": [
+      "Atendimento ao Paciente",
+      "Primeiros Socorros",
+      "Biossegurança",
+      "Controle de Infecção",
+      "Saúde Coletiva",
+      "Cuidados Básicos",
+      "Ética em Saúde",
+      "Registro de Informações"
+    ],
+    "Direito e Políticas Públicas": [
+      "Legislação",
+      "Direito Administrativo",
+      "Políticas Públicas",
+      "Atendimento ao Cidadão",
+      "Análise de Processos",
+      "Redação Oficial",
+      "Mediação de Conflitos",
+      "Compliance"
+    ],
+    "Engenharia e Indústria": [
+      "Desenho Técnico",
+      "Controle de Qualidade",
+      "Segurança do Trabalho",
+      "Processos Industriais",
+      "Manutenção",
+      "Logística",
+      "Metrologia",
+      "Lean Manufacturing"
+    ],
+    "Ciências Exatas e da Terra": [
+      "Matemática",
+      "Estatística",
+      "Análise de Dados",
+      "Modelagem",
+      "Pesquisa Quantitativa",
+      "Geoprocessamento",
+      "Raciocínio Lógico",
+      "Excel Avançado"
     ],
     "Outra": [
       "Pacote Office",

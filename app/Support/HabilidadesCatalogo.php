@@ -23,7 +23,7 @@ class HabilidadesCatalogo
 
     public static function areas(): array
     {
-        return array_keys(self::catalogo()['habilidadesPorArea'] ?? []);
+        return AreasAtuacaoCatalogo::areas();
     }
 
     public static function deduplicar(array $habilidades): array

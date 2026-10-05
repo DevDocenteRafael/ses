@@ -11,29 +11,31 @@
             </div>
 
             <div class="perfil-header__actions d-flex align-items-center gap-2">
-                <AccessibilityMenu />
-                <div class="dropdown">
-                    <button
-                        type="button"
-                        class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0 dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                    >
-                        <div class="text-end d-none d-sm-block">
-                            <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
-                        </div>
-                        <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
-                              style="width: 38px; height: 38px;">
-                            {{ iniciais }}
-                        </span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li>
-                            <button type="button" class="dropdown-item" @click="abrirModalInformacoesPessoais">
-                                <i class="bi bi-person-lines-fill me-2"></i> Meus dados
-                            </button>
-                        </li>
-                    </ul>
+                <div class="perfil-header__identity d-flex align-items-center gap-2">
+                    <AccessibilityMenu />
+                    <div class="dropdown">
+                        <button
+                            type="button"
+                            class="perfil-pessoal-botao d-flex align-items-center gap-2 border-0 bg-transparent text-white p-0 dropdown-toggle"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <div class="text-end d-none d-sm-block">
+                                <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Aluno' }}</p>
+                            </div>
+                            <span class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center fw-semibold flex-shrink-0"
+                                  style="width: 38px; height: 38px;">
+                                {{ iniciais }}
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li>
+                                <button type="button" class="dropdown-item" @click="abrirModalInformacoesPessoais">
+                                    <i class="bi bi-person-lines-fill me-2"></i> Meus dados
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-light ms-2" @click="sair">
                     <i class="bi bi-box-arrow-left me-1"></i> Sair
@@ -1522,6 +1524,7 @@ onBeforeUnmount(() => {
 .perfil-header__brand,
 .perfil-header__title-wrap,
 .perfil-header__actions,
+.perfil-header__identity,
 .card-section-header,
 .perfil-list-item {
     min-width: 0;
@@ -1645,6 +1648,11 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
 }
 
+:global(html.ses-font-scale-175) .perfil-header__identity,
+:global(html.ses-font-scale-200) .perfil-header__identity {
+    flex-wrap: wrap;
+}
+
 @media (max-width: 767.98px) {
     .meu-perfil-container {
         padding: 1rem !important;
@@ -1681,8 +1689,13 @@ onBeforeUnmount(() => {
 
     .perfil-header__actions {
         width: 100%;
-        justify-content: flex-start;
+        justify-content: space-between;
         flex-wrap: wrap;
+        gap: 0.5rem !important;
+    }
+
+    .perfil-header__identity {
+        flex: 0 1 auto;
         gap: 0.5rem !important;
     }
 
@@ -1743,7 +1756,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 360px) {
     .perfil-header__actions {
-        justify-content: flex-start;
+        justify-content: space-between;
     }
 
     .perfil-header__actions .btn-outline-light .bi {

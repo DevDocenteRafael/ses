@@ -11,6 +11,7 @@ use App\Models\Empresa;
 use App\Models\Pessoa;
 use App\Models\ResponsavelContratual;
 use App\Models\Vaga;
+use App\Support\AreasAtuacaoCatalogo;
 use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\HabilidadesCatalogo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -325,91 +326,86 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         for ($i = 1; $i <= 12; $i++) {
-            $this->criarCandidatoParaBusca('Aluno Tecnologia ' . $i, segmento: 'tecnologia-da-informacao');
+            $this->criarCandidatoParaBusca('Aluno Tecnologia ' . $i, areaAtuacao: 'Tecnologia da Informação');
         }
 
         for ($i = 1; $i <= 5; $i++) {
-            $this->criarCandidatoParaBusca('Aluno Moda ' . $i, segmento: 'moda', tipoCurso: 'livres');
+            $this->criarCandidatoParaBusca('Aluno Comunicação ' . $i, areaAtuacao: 'Comunicação, Arte e Design');
         }
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?tipo_curso=livres&segmento=moda&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Comunica%C3%A7%C3%A3o%2C%20Arte%20e%20Design&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 5)
             ->assertJsonPath('last_page', 1)
             ->assertJsonCount(5, 'data');
     }
 
-    public function test_empresa_lista_tipos_e_segmentos_academicos_por_tipo(): void
+    public function test_empresa_lista_segmentos_como_areas_de_atuacao_canonicas(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos/tipos-curso')
+            ->getJson('/api/candidatos/segmentos-academicos')
             ->assertOk()
-            ->assertJsonFragment(['id' => 'tecnico', 'nome' => 'Cursos Técnicos']);
-
-        $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos/segmentos-academicos?tipo_curso=tecnico')
-            ->assertOk()
-            ->assertJsonFragment(['id' => 'tecnologia-da-informacao', 'nome' => 'Tecnologia da Informação'])
+            ->assertJsonCount(8)
+            ->assertJsonFragment(['id' => 'Tecnologia da Informação', 'nome' => 'Tecnologia da Informação'])
+            ->assertJsonFragment(['id' => 'Ciências Exatas e da Terra', 'nome' => 'Ciências Exatas e da Terra'])
             ->assertJsonMissing(['id' => 'moda', 'nome' => 'Moda']);
     }
 
-    public function test_tipo_e_segmento_academicos_filtram_candidatos_antes_da_paginacao(): void
+    public function test_segmento_filtra_area_de_atuacao_antes_da_paginacao(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         for ($i = 1; $i <= 12; $i++) {
-            $this->criarCandidatoParaBusca('Tecnico TI ' . $i, segmento: 'tecnologia-da-informacao', tipoCurso: 'tecnico');
+            $this->criarCandidatoParaBusca('TI ' . $i, areaAtuacao: 'Tecnologia da Informação');
         }
 
-        $this->criarCandidatoParaBusca('Tecnico Gestao', segmento: 'gestao-e-negocios', tipoCurso: 'tecnico');
-        $this->criarCandidatoParaBusca('Graduacao TI', segmento: 'tecnologia-da-informacao', tipoCurso: 'graduacao');
+        $this->criarCandidatoParaBusca('Saúde', areaAtuacao: 'Ambiente e Saúde');
+        $this->criarCandidatoParaBusca('Comunicação', areaAtuacao: 'Comunicação, Arte e Design');
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?tipo_curso=tecnico&segmento=tecnologia-da-informacao&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 12)
             ->assertJsonPath('last_page', 2)
             ->assertJsonCount(10, 'data');
     }
 
-    public function test_tipo_sem_segmento_filtra_todos_os_segmentos_validos_do_tipo(): void
+    public function test_sem_segmento_nao_restringe_area_de_atuacao(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
-        $tecnicoTi = $this->criarCandidatoParaBusca('Tecnico TI Todos', segmento: 'tecnologia-da-informacao', tipoCurso: 'tecnico');
-        $tecnicoGestao = $this->criarCandidatoParaBusca('Tecnico Gestao Todos', segmento: 'gestao-e-negocios', tipoCurso: 'tecnico');
-        $graduacaoTi = $this->criarCandidatoParaBusca('Graduacao TI Todos', segmento: 'tecnologia-da-informacao', tipoCurso: 'graduacao');
+        $ti = $this->criarCandidatoParaBusca('TI Todos', areaAtuacao: 'Tecnologia da Informação');
+        $saude = $this->criarCandidatoParaBusca('Saude Todos', areaAtuacao: 'Ambiente e Saúde');
+        $semAreaCanonica = $this->criarCandidatoParaBusca('Legado Todos', areaAtuacao: 'Outra');
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?tipo_curso=tecnico&page=1&per_page=10')
+            ->getJson('/api/candidatos?page=1&per_page=10')
             ->assertOk()
-            ->assertJsonPath('total', 2)
-            ->assertJsonFragment(['matricula' => $tecnicoTi->matricula])
-            ->assertJsonFragment(['matricula' => $tecnicoGestao->matricula])
-            ->assertJsonMissing(['matricula' => $graduacaoTi->matricula]);
+            ->assertJsonPath('total', 3)
+            ->assertJsonFragment(['matricula' => $ti->matricula])
+            ->assertJsonFragment(['matricula' => $saude->matricula])
+            ->assertJsonFragment(['matricula' => $semAreaCanonica->matricula]);
     }
 
-    public function test_backend_rejeita_combinacao_invalida_de_tipo_e_segmento(): void
+    public function test_backend_rejeita_segmento_fora_das_areas_canonicas(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?tipo_curso=tecnico&segmento=moda')
+            ->getJson('/api/candidatos?segmento[]=qualquer-coisa')
             ->assertStatus(422)
-            ->assertJsonPath('message', 'Segmento não pertence ao tipo de curso informado.');
+            ->assertJsonValidationErrors(['segmento']);
     }
 
-    public function test_tipo_segmento_ra_contratacao_disponibilidade_e_habilidade_tem_semantica_and(): void
+    public function test_segmento_ra_contratacao_disponibilidade_e_habilidade_tem_semantica_and(): void
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         $esperado = $this->criarCandidatoParaBusca(
             'Aluno Todos Filtros',
-            segmento: 'tecnologia-da-informacao',
-            tipoCurso: 'tecnico',
             disponibilidade: 'Manhã',
             habilidades: ['PHP'],
             areaAtuacao: 'Tecnologia da Informação',
@@ -421,8 +417,6 @@ class AuthorizationCriticalEndpointsTest extends TestCase
 
         $outraRa = $this->criarCandidatoParaBusca(
             'Aluno Outra RA',
-            segmento: 'tecnologia-da-informacao',
-            tipoCurso: 'tecnico',
             disponibilidade: 'Manhã',
             habilidades: ['PHP'],
             areaAtuacao: 'Tecnologia da Informação',
@@ -435,12 +429,10 @@ class AuthorizationCriticalEndpointsTest extends TestCase
 
         $habilidadeInativa = $this->criarCandidatoParaBusca(
             'Aluno Habilidade Inativa',
-            segmento: 'tecnologia-da-informacao',
-            tipoCurso: 'tecnico',
             disponibilidade: 'Manhã',
             habilidades: ['Excel'],
-            areaAtuacao: 'Gestão e Negócios',
-            habilidadesPorArea: ['Tecnologia da Informação' => ['PHP'], 'Gestão e Negócios' => ['Excel']],
+            areaAtuacao: 'Negócios, Finanças e Gestão',
+            habilidadesPorArea: ['Tecnologia da Informação' => ['PHP'], 'Negócios, Finanças e Gestão' => ['Excel']],
         );
         $habilidadeInativa->preferenciasDeTrabalho()->update(['regiao_administrativa' => 'Guará']);
         \App\Models\RegiaoPreferidaTrabalho::query()->create([
@@ -449,12 +441,65 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         ]);
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?tipo_curso=tecnico&segmento=tecnologia-da-informacao&tipo_contratacao=1&disponibilidade=Manh%C3%A3&regioes_administrativas[]=1&habilidades[]=PHP&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&tipo_contratacao=1&disponibilidade=Manh%C3%A3&regioes_administrativas[]=1&habilidades[]=PHP&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonFragment(['matricula' => $esperado->matricula])
             ->assertJsonMissing(['matricula' => $outraRa->matricula])
             ->assertJsonMissing(['matricula' => $habilidadeInativa->matricula]);
+    }
+
+    public function test_segmento_multisselecao_usa_or_e_todas_as_oito_areas(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        $candidatos = [];
+
+        foreach (AreasAtuacaoCatalogo::areas() as $area) {
+            $candidatos[$area] = $this->criarCandidatoParaBusca('Aluno ' . $area, areaAtuacao: $area);
+
+            $this->withToken($tokenEmpresa)
+                ->getJson('/api/candidatos?segmento[]=' . urlencode($area) . '&page=1&per_page=10')
+                ->assertOk()
+                ->assertJsonPath('total', 1)
+                ->assertJsonFragment(['matricula' => $candidatos[$area]->matricula]);
+        }
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&segmento[]=Comunica%C3%A7%C3%A3o%2C%20Arte%20e%20Design&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonFragment(['matricula' => $candidatos['Tecnologia da Informação']->matricula])
+            ->assertJsonFragment(['matricula' => $candidatos['Comunicação, Arte e Design']->matricula]);
+    }
+
+    public function test_segmento_usa_area_atual_e_nao_habilidades_de_area_antiga(): void
+    {
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        $candidato = $this->criarCandidatoParaBusca(
+            'Aluno Troca Area',
+            habilidades: ['Excel'],
+            areaAtuacao: 'Tecnologia da Informação',
+            habilidadesPorArea: ['Tecnologia da Informação' => ['PHP', 'Vue.js'], 'Negócios, Finanças e Gestão' => ['Excel']],
+        );
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonFragment(['matricula' => $candidato->matricula]);
+
+        $candidato->informacoesProfissionais()->update(['area_de_atuacao' => 'Negócios, Finanças e Gestão']);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 0)
+            ->assertJsonMissing(['matricula' => $candidato->matricula]);
+
+        $this->withToken($tokenEmpresa)
+            ->getJson('/api/candidatos?segmento[]=Neg%C3%B3cios%2C%20Finan%C3%A7as%20e%20Gest%C3%A3o&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonFragment(['matricula' => $candidato->matricula]);
     }
 
     public function test_empresa_lista_apenas_candidatos_liberados_mesmo_com_paginacao(): void

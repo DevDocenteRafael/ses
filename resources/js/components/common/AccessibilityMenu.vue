@@ -15,6 +15,7 @@
         <Transition name="ses-accessibility-panel">
             <section
                 v-if="aberto"
+                ref="panelRef"
                 id="ses-accessibility-panel"
                 class="ses-accessibility__panel"
                 aria-labelledby="ses-accessibility-title"
@@ -90,10 +91,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useThemeStore } from '../../store/theme';
 
-defineProps({
+const props = defineProps({
     variant: {
         type: String,
         default: 'header',
@@ -110,6 +111,7 @@ const theme = useThemeStore();
 const aberto = ref(false);
 const fonteAtual = ref(FONTE_PADRAO);
 const menuRef = ref(null);
+const panelRef = ref(null);
 
 const indiceFonteAtual = computed(() => NIVEIS_FONTE.indexOf(fonteAtual.value));
 const estaNoMinimo = computed(() => indiceFonteAtual.value <= 0);
@@ -155,6 +157,32 @@ function alternarMenu() {
     aberto.value = !aberto.value;
 }
 
+function limparEspacoMenuFlutuante() {
+    if (typeof document === 'undefined') return;
+
+    document.documentElement.style.removeProperty('--ses-accessibility-floating-mobile-space');
+}
+
+async function atualizarEspacoMenuFlutuante() {
+    if (typeof window === 'undefined' || props.variant !== 'floating' || !aberto.value) {
+        limparEspacoMenuFlutuante();
+        return;
+    }
+
+    if (!window.matchMedia('(max-width: 575.98px)').matches) {
+        limparEspacoMenuFlutuante();
+        return;
+    }
+
+    await nextTick();
+
+    const alturaPainel = panelRef.value?.offsetHeight || 0;
+
+    if (!alturaPainel) return;
+
+    document.documentElement.style.setProperty('--ses-accessibility-floating-mobile-space', `${alturaPainel + 28}px`);
+}
+
 function fecharAoClicarFora(event) {
     if (!aberto.value || menuRef.value?.contains(event.target)) return;
     aberto.value = false;
@@ -170,12 +198,17 @@ onMounted(() => {
     restaurarFontePersistida();
     document.addEventListener('click', fecharAoClicarFora);
     document.addEventListener('keydown', fecharComEsc);
+    window.addEventListener('resize', atualizarEspacoMenuFlutuante);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', fecharAoClicarFora);
     document.removeEventListener('keydown', fecharComEsc);
+    window.removeEventListener('resize', atualizarEspacoMenuFlutuante);
+    limparEspacoMenuFlutuante();
 });
+
+watch([aberto, fonteAtual], atualizarEspacoMenuFlutuante, { flush: 'post' });
 </script>
 
 <style scoped>
@@ -435,6 +468,23 @@ onBeforeUnmount(() => {
         position: static;
     }
 
+    .ses-accessibility--floating {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 18px);
+        right: 0;
+        left: 0;
+        z-index: 1080;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        transform: none;
+    }
+
+    .ses-accessibility--floating .ses-accessibility__trigger,
+    .ses-accessibility--floating .ses-accessibility__panel {
+        pointer-events: auto;
+    }
+
     .ses-accessibility__panel {
         position: fixed;
         top: calc(env(safe-area-inset-top, 0px) + 76px);
@@ -442,6 +492,7 @@ onBeforeUnmount(() => {
         left: 12px;
         width: auto;
         max-height: calc(100vh - 88px - env(safe-area-inset-top, 0px));
+        max-height: calc(100dvh - 88px - env(safe-area-inset-top, 0px));
         padding: 14px;
     }
 
@@ -469,15 +520,14 @@ onBeforeUnmount(() => {
         min-width: 40px;
     }
 
-    .ses-accessibility--floating {
-        right: 16px;
-    }
-
     .ses-accessibility--floating .ses-accessibility__panel {
-        top: auto;
-        bottom: 84px;
-        right: 12px;
-        left: 12px;
+        top: calc(env(safe-area-inset-top, 0px) + 84px);
+        bottom: auto;
+        right: max(16px, env(safe-area-inset-right, 0px));
+        left: max(16px, env(safe-area-inset-left, 0px));
+        width: auto;
+        max-width: 320px;
+        margin-inline: auto;
     }
 }
 

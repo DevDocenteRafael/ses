@@ -5,7 +5,7 @@ namespace App\Services\Candidatos;
 use App\Models\BuscaTalento;
 use App\Models\Candidato;
 use App\Models\Pessoa;
-use App\Support\CatalogoAcademicoSenacDf;
+use App\Support\AreasAtuacaoCatalogo;
 use App\Support\HabilidadesCatalogo;
 use App\Support\RegioesAdministrativasDf;
 use Illuminate\Database\Eloquent\Builder;
@@ -46,7 +46,6 @@ class CandidatoQueryService
 
         $filtros = array_filter([
             'segmento' => $request->input('segmento'),
-            'tipo_curso' => $request->input('tipo_curso'),
             'disponibilidade' => $request->input('disponibilidade'),
             'tipo_contratacao' => $request->input('tipo_contratacao'),
             'regioes_administrativas' => $request->input('regioes_administrativas'),
@@ -118,32 +117,21 @@ class CandidatoQueryService
                 ->with(['dadosAcademicos' => $filtrarDadosAcademicos]);
         }
 
-        $tipoCurso = $request->filled('tipo_curso') ? trim((string) $request->input('tipo_curso')) : null;
-        $segmento = $request->filled('segmento') ? trim((string) $request->input('segmento')) : null;
+        $segmentos = $this->segmentosInformados($request);
 
-        if ($tipoCurso !== null && ! CatalogoAcademicoSenacDf::tipoExiste($tipoCurso)) {
-            throw ValidationException::withMessages(['tipo_curso' => 'Tipo de curso inválido.']);
-        }
-
-        if ($segmento !== null) {
-            if (! CatalogoAcademicoSenacDf::segmentoExiste($segmento)) {
+        if ($segmentos !== []) {
+            if (! AreasAtuacaoCatalogo::validarTodas($segmentos)) {
                 throw ValidationException::withMessages(['segmento' => 'Segmento inválido.']);
             }
 
-            if ($tipoCurso === null || ! CatalogoAcademicoSenacDf::segmentoPertenceAoTipo($segmento, $tipoCurso)) {
-                throw ValidationException::withMessages(['segmento' => 'Segmento não pertence ao tipo de curso informado.']);
-            }
-        }
+            $valoresCompativeis = collect($segmentos)
+                ->flatMap(fn (string $area): array => AreasAtuacaoCatalogo::valoresCompativeis($area))
+                ->unique()
+                ->values()
+                ->all();
 
-        if ($tipoCurso !== null || $segmento !== null) {
-            $query->whereHas('dadosAcademicos', function ($q) use ($tipoCurso, $segmento) {
-                if ($tipoCurso !== null) {
-                    $q->whereIn('tipo_curso', CatalogoAcademicoSenacDf::valoresLegadosTipo($tipoCurso));
-                }
-
-                if ($segmento !== null) {
-                    $q->whereIn('segmento', CatalogoAcademicoSenacDf::valoresLegadosSegmento($segmento));
-                }
+            $query->whereHas('informacoesProfissionais', function ($q) use ($valoresCompativeis) {
+                $q->whereIn('area_de_atuacao', $valoresCompativeis);
             });
         }
 
@@ -192,6 +180,21 @@ class CandidatoQueryService
                 $this->aplicarFiltroHabilidadeNaAreaAtiva($query, $habilidade);
             }
         }
+    }
+
+    private function segmentosInformados(Request $request): array
+    {
+        if (! $request->filled('segmento')) {
+            return [];
+        }
+
+        $segmento = $request->input('segmento');
+        $segmentos = is_array($segmento) ? $segmento : [$segmento];
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($area): string => trim((string) $area),
+            $segmentos
+        ))));
     }
 
     private function aplicarFiltroHabilidadeNaAreaAtiva(Builder $query, string $habilidade): void
