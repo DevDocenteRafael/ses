@@ -1,16 +1,16 @@
 <template>
-    <div>
-        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2 sticky-top z-3">
-            <div class="d-flex align-items-center gap-2">
+    <div class="meu-perfil-page">
+        <header class="perfil-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2 sticky-top z-3">
+            <div class="perfil-header__brand d-flex align-items-center gap-2">
                 <span class="fw-bold fs-5">Senac</span>
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
-                <div>
+                <div class="perfil-header__title-wrap">
                     <h1 class="h5 fw-bold mb-0">Meu Perfil Profissional</h1>
                     <p class="small mb-0 opacity-75">Mantenha seus dados atualizados para atrair mais empresas.</p>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-2">
+            <div class="perfil-header__actions d-flex align-items-center gap-2">
                 <AccessibilityMenu />
                 <div class="dropdown">
                     <button
@@ -41,7 +41,7 @@
             </div>
         </header>
 
-        <div class="container-fluid p-4">
+        <div class="meu-perfil-container container-fluid p-4">
 
         <transition name="app-modal">
             <div
@@ -154,10 +154,10 @@
 
         <template v-else>
             <div class="row g-3">
-                <div class="col-lg-6">
+                <div class="col-lg-6 min-w-0">
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="card-section-header d-flex align-items-center justify-content-between mb-3">
                                 <h2 class="text-uppercase text-secondary small fw-bold mb-0">Cursos Externos</h2>
                                 <button type="button" class="btn btn-sm btn-primary" @click="mostrarFormCursoExterno = !mostrarFormCursoExterno">
                                     <i class="bi bi-plus-lg me-1"></i> Adicionar
@@ -170,8 +170,8 @@
                                 Nenhum curso externo cadastrado ainda.
                             </p>
 
-                            <div v-for="curso in cursosExternos" :key="curso.id" class="d-flex align-items-start justify-content-between mb-3">
-                                <div>
+                            <div v-for="curso in cursosExternos" :key="curso.id" class="perfil-list-item d-flex align-items-start justify-content-between mb-3">
+                                <div class="min-w-0">
                                     <p class="fw-semibold mb-0">{{ curso.nome_curso }}</p>
                                     <p class="text-secondary small mb-0 d-flex flex-wrap align-items-center gap-1">
                                         <span>{{ curso.instituicao }}</span>
@@ -263,7 +263,7 @@
                     </div>
                 </div>
 
-                <div class="col-lg-6">
+                <div class="col-lg-6 min-w-0">
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body">
                             <h2 class="text-uppercase text-secondary small fw-bold mb-3">Informações Profissionais</h2>
@@ -425,9 +425,9 @@
                                 <div class="col-12 position-relative" ref="regioesTrabalhoDropdownContainer">
                                     <label class="form-label">Região Administrativa (RA) <span class="text-danger">*</span></label>
                                     <p class="form-text mt-0 mb-2">Selecione uma ou mais regiões onde você tem preferência em trabalhar.</p>
-                                    <button
-                                        type="button"
-                                        class="form-select regioes-trabalho-select text-start d-flex align-items-center justify-content-between"
+                                <button
+                                    type="button"
+                                    class="form-select regioes-trabalho-select text-start d-flex align-items-center justify-content-between"
                                         :class="campoInvalido('regiao_administrativa') || campoInvalido('regioes_preferidas') || campoInvalido('regioes_preferidas.0')"
                                         :aria-expanded="mostrarDropdownRegioesTrabalho"
                                         aria-haspopup="listbox"
@@ -436,7 +436,7 @@
                                         @keydown.enter.prevent="alternarDropdownRegioesTrabalho"
                                         @keydown.space.prevent="alternarDropdownRegioesTrabalho"
                                     >
-                                        <span :class="rotuloRegioesTrabalhoSelecionadas === 'Selecione uma ou mais regiões...' ? 'text-secondary' : 'text-body'">
+                                        <span class="text-break" :class="rotuloRegioesTrabalhoSelecionadas === 'Selecione uma ou mais regiões...' ? 'text-secondary' : 'text-body'">
                                             {{ rotuloRegioesTrabalhoSelecionadas }}
                                         </span>
                                         <i class="bi bi-chevron-down ms-2"></i>
@@ -513,7 +513,7 @@
                 <div class="col-12">
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="card-section-header d-flex align-items-center justify-content-between mb-3">
                                 <h2 class="text-uppercase text-secondary small fw-bold mb-0">Experiências Profissionais</h2>
                                 <button type="button" class="btn btn-sm btn-primary" @click="mostrarFormExperiencia = !mostrarFormExperiencia">
                                     <i class="bi bi-plus-lg me-1"></i> Adicionar
@@ -524,8 +524,8 @@
                                 Nenhuma experiência profissional cadastrada ainda.
                             </p>
 
-                            <div v-for="exp in experiencias" :key="exp.id" class="d-flex align-items-start justify-content-between border-bottom pb-3 mb-3">
-                                <div>
+                            <div v-for="exp in experiencias" :key="exp.id" class="perfil-list-item d-flex align-items-start justify-content-between border-bottom pb-3 mb-3">
+                                <div class="min-w-0">
                                     <span class="badge text-bg-primary-subtle text-primary mb-1">{{ exp.tipo }}</span>
                                     <p class="fw-semibold mb-0">{{ exp.cargo }}</p>
                                     <p class="text-secondary small mb-1">{{ exp.empresa }}</p>
@@ -591,7 +591,7 @@
                                     <label class="form-label small mb-1">Descrição</label>
                                     <textarea v-model="novaExperiencia.descricao" class="form-control form-control-sm" rows="2" placeholder="Principais atividades e responsabilidades..."></textarea>
                                 </div>
-                                <div class="d-flex gap-2 justify-content-end">
+                                <div class="form-actions d-flex gap-2 justify-content-end">
                                     <button type="button" class="btn btn-sm btn-outline-secondary" @click="cancelarExperiencia">Cancelar</button>
                                     <button type="button" class="btn btn-sm btn-primary" @click="adicionarExperiencia">Salvar</button>
                                 </div>
@@ -602,7 +602,7 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end mt-3">
+            <div class="form-actions form-actions--final d-flex justify-content-end mt-3">
                 <button type="button" class="btn btn-primary" :disabled="salvando" @click="salvar">
                     <span v-if="salvando" class="spinner-border spinner-border-sm me-1"></span>
                     Salvar Alterações
@@ -1495,6 +1495,78 @@ onBeforeUnmount(() => {
     border-style: dashed !important;
 }
 
+.meu-perfil-page,
+.meu-perfil-page :deep(.card),
+.meu-perfil-page :deep(.card-body),
+.meu-perfil-page :deep(.row > *),
+.meu-perfil-page :deep(.input-group),
+.meu-perfil-page :deep(.form-control),
+.meu-perfil-page :deep(.form-select),
+.meu-perfil-page :deep(textarea),
+.meu-perfil-page :deep(.dropdown-menu),
+.meu-perfil-page :deep(.modal-content) {
+    min-width: 0;
+}
+
+.meu-perfil-page :deep(.input-group > .form-control),
+.meu-perfil-page :deep(.input-group > .form-select) {
+    min-width: 0;
+}
+
+.meu-perfil-page :deep(.form-control),
+.meu-perfil-page :deep(.form-select),
+.meu-perfil-page :deep(textarea) {
+    max-width: 100%;
+}
+
+.perfil-header__brand,
+.perfil-header__title-wrap,
+.perfil-header__actions,
+.card-section-header,
+.perfil-list-item {
+    min-width: 0;
+}
+
+.perfil-header__title-wrap h1,
+.perfil-header__title-wrap p,
+.perfil-list-item p,
+.perfil-list-item span,
+.habilidade-selecionada span,
+.habilidade-opcao .form-check-label,
+.regiao-trabalho-opcao .form-check-label {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.card-section-header,
+.form-actions {
+    flex-wrap: wrap;
+}
+
+.card-section-header {
+    gap: 0.75rem;
+}
+
+.card-section-header h2 {
+    min-width: 0;
+}
+
+.perfil-list-item {
+    gap: 0.75rem;
+}
+
+.perfil-list-item > .btn {
+    flex-shrink: 0;
+}
+
+.habilidades-select,
+.regioes-trabalho-select {
+    min-width: 0;
+    white-space: normal;
+    height: auto;
+    overflow: hidden;
+}
+
 .habilidades-select,
 .regioes-trabalho-select {
     min-height: 38px;
@@ -1561,5 +1633,125 @@ onBeforeUnmount(() => {
     outline: 2px solid rgba(255, 255, 255, 0.85);
     outline-offset: 4px;
     border-radius: 999px;
+}
+
+:global(html.ses-font-scale-175) .perfil-header,
+:global(html.ses-font-scale-200) .perfil-header {
+    align-items: flex-start !important;
+}
+
+:global(html.ses-font-scale-175) .perfil-header__actions,
+:global(html.ses-font-scale-200) .perfil-header__actions {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 767.98px) {
+    .meu-perfil-container {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .perfil-header {
+        align-items: flex-start !important;
+        padding: 0.75rem !important;
+    }
+
+    .perfil-header__brand {
+        align-items: flex-start !important;
+        width: 100%;
+    }
+
+    .perfil-header__brand > .fw-bold {
+        line-height: 1.2;
+    }
+
+    .perfil-header__title-wrap {
+        flex: 1 1 0;
+    }
+
+    .perfil-header__title-wrap h1 {
+        font-size: 1rem;
+        line-height: 1.25;
+    }
+
+    .perfil-header__title-wrap p {
+        line-height: 1.3;
+    }
+
+    .perfil-header__actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+    }
+
+    .perfil-header__actions .btn-outline-light {
+        margin-left: 0 !important;
+        padding-inline: 0.55rem;
+    }
+
+    .meu-perfil-container {
+        padding: 0.75rem !important;
+    }
+
+    .meu-perfil-page :deep(.card-body),
+    .meu-perfil-page :deep(.modal-body),
+    .meu-perfil-page :deep(.modal-footer),
+    .meu-perfil-page :deep(.modal-header) {
+        padding: 1rem;
+    }
+
+    .meu-perfil-page :deep(.modal-dialog) {
+        width: auto;
+        max-width: calc(100vw - 1.5rem);
+        margin: 0.75rem;
+    }
+
+    .meu-perfil-page :deep(.modal-content) {
+        max-height: calc(100vh - 1.5rem);
+    }
+
+    .meu-perfil-page :deep(.modal-body) {
+        overflow-y: auto;
+    }
+
+    .meu-perfil-page :deep(.modal-footer) {
+        gap: 0.5rem;
+    }
+
+    .meu-perfil-page :deep(.modal-footer .btn),
+    .form-actions .btn,
+    .form-actions--final .btn {
+        flex: 1 1 100%;
+    }
+
+    .card-section-header {
+        align-items: flex-start !important;
+    }
+
+    .habilidades-dropdown,
+    .regioes-trabalho-dropdown {
+        max-height: min(420px, 72vh);
+    }
+
+    .habilidades-dropdown-lista,
+    .regioes-trabalho-dropdown-lista {
+        max-height: 240px;
+    }
+}
+
+@media (max-width: 360px) {
+    .perfil-header__actions {
+        justify-content: flex-start;
+    }
+
+    .perfil-header__actions .btn-outline-light .bi {
+        margin-right: 0 !important;
+    }
+
+    .perfil-header__actions .btn-outline-light {
+        font-size: 0.875rem;
+    }
 }
 </style>

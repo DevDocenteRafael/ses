@@ -258,6 +258,15 @@ class CandidatosFicticiosSeeder extends Seeder
                 'nome'          => $nome,
                 'email'         => $email,
                 'telefone'      => $this->telefoneUnico(),
+                // Endereço fica null, mas as colunas precisam existir: o insert em lote
+                // exige que todas as linhas tenham exatamente as mesmas colunas.
+                'endereco_cep'         => null,
+                'endereco_logradouro'  => null,
+                'endereco_numero'      => null,
+                'endereco_complemento' => null,
+                'endereco_bairro'      => null,
+                'endereco_cidade'      => null,
+                'endereco_uf'          => null,
                 'senha'         => $senhaHash,
                 'data_cadastro' => $agora,
                 'created_at'    => $agora,

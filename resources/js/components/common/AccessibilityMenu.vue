@@ -248,6 +248,9 @@ onBeforeUnmount(() => {
     right: 0;
     z-index: 1030;
     width: min(280px, calc(100vw - 40px));
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 18px;
     border: 1px solid var(--ses-border, rgba(0, 0, 0, 0.08));
     border-radius: 18px;
@@ -316,13 +319,15 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 
 .ses-accessibility__scale {
     display: grid;
-    grid-template-columns: 48px minmax(84px, 1fr) 48px;
+    grid-template-columns: minmax(40px, 48px) minmax(0, 1fr) minmax(40px, 48px);
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 
 .ses-accessibility__scale-value {
@@ -426,13 +431,42 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 575.98px) {
+    .ses-accessibility {
+        position: static;
+    }
+
     .ses-accessibility__panel {
-        width: min(280px, calc(100vw - 24px));
-        right: -56px;
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 76px);
+        right: 12px;
+        left: 12px;
+        width: auto;
+        max-height: calc(100vh - 88px - env(safe-area-inset-top, 0px));
+        padding: 14px;
     }
 
     .ses-accessibility__panel::after {
-        right: 77px;
+        display: none;
+    }
+
+    .ses-accessibility__row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .ses-accessibility__actions {
+        flex-wrap: wrap;
+    }
+
+    .ses-accessibility__scale {
+        width: 100%;
+        gap: 8px;
+    }
+
+    .ses-accessibility__option,
+    .ses-accessibility__font-option {
+        min-width: 40px;
     }
 
     .ses-accessibility--floating {
@@ -440,11 +474,10 @@ onBeforeUnmount(() => {
     }
 
     .ses-accessibility--floating .ses-accessibility__panel {
-        right: 0;
-    }
-
-    .ses-accessibility--floating .ses-accessibility__panel::after {
-        right: 21px;
+        top: auto;
+        bottom: 84px;
+        right: 12px;
+        left: 12px;
     }
 }
 
