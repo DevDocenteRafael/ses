@@ -16,10 +16,11 @@ use Illuminate\Validation\ValidationException;
 
 class CandidatoQueryService
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function construir(Request $request, Pessoa $solicitante): Builder
     {
         $query = Candidato::query()
-            ->whereDoesntHave('contratacao')
             ->with([
                 'pessoa:id_pessoa,nome,email,telefone',
                 'linkExterno',
@@ -30,7 +31,7 @@ class CandidatoQueryService
             ]);
 
         if ($solicitante->tipo() === 'empresa') {
-            $query->where('status', true);
+            $this->statusService->aplicarEscopoDisponiveis($query);
         }
 
         $this->aplicarFiltros($query, $request);

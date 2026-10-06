@@ -11,6 +11,8 @@ use App\Models\CursoSenac;
 use App\Models\CursoExterno;
 use App\Models\ExperienciaProfissional;
 use App\Models\RegiaoPreferidaTrabalho;
+use App\Models\Candidato;
+use App\Services\Candidatos\CandidatoStatusService;
 use App\Support\AreasAtuacaoCatalogo;
 use App\Support\RegioesAdministrativasDf;
 use Illuminate\Http\Request;
@@ -20,6 +22,8 @@ use Illuminate\Validation\Rule;
 
 class PerfilCandidatoController extends Controller
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     // ── Links Externos ───────────────────────────────────────────
 
     public function storeLink(Request $request, string $matricula): JsonResponse
@@ -36,6 +40,8 @@ class PerfilCandidatoController extends Controller
             ['candidato_matricula' => $matricula],
             $validated
         );
+
+        $this->registrarAtividade($matricula);
 
         return response()->json($link, 201);
     }
@@ -70,6 +76,8 @@ class PerfilCandidatoController extends Controller
             ['candidato_matricula' => $matricula],
             $validated
         );
+
+        $this->registrarAtividade($matricula);
 
         return response()->json($info, 201);
     }
@@ -209,6 +217,8 @@ class PerfilCandidatoController extends Controller
             return $preferencia;
         });
 
+        $this->registrarAtividade($matricula);
+
         $regioesPreferidas = RegiaoPreferidaTrabalho::query()
             ->where('candidato_matricula', $matricula)
             ->orderBy('codigo_regiao')
@@ -256,6 +266,8 @@ class PerfilCandidatoController extends Controller
 
         $academico = DadosAcademicos::create($validated);
 
+        $this->registrarAtividade($matricula);
+
         return response()->json($academico, 201);
     }
 
@@ -266,6 +278,8 @@ class PerfilCandidatoController extends Controller
         $this->garantirCandidatoDono($request, (string) $dadoAcademico->candidato_matricula);
 
         $dadoAcademico->delete();
+
+        $this->registrarAtividade((string) $dadoAcademico->candidato_matricula);
 
         return response()->json(['message' => 'Dado acadêmico removido com sucesso.']);
     }
@@ -290,6 +304,8 @@ class PerfilCandidatoController extends Controller
 
         $curso = CursoSenac::create($validated);
 
+        $this->registrarAtividade($matricula);
+
         return response()->json($curso, 201);
     }
 
@@ -300,6 +316,8 @@ class PerfilCandidatoController extends Controller
         $this->garantirCandidatoDono($request, (string) $curso->candidato_matricula);
 
         $curso->delete();
+
+        $this->registrarAtividade((string) $curso->candidato_matricula);
 
         return response()->json(['message' => 'Curso removido com sucesso.']);
     }
@@ -321,6 +339,8 @@ class PerfilCandidatoController extends Controller
 
         $curso = CursoExterno::create($validated);
 
+        $this->registrarAtividade($matricula);
+
         return response()->json($curso, 201);
     }
 
@@ -329,6 +349,8 @@ class PerfilCandidatoController extends Controller
         $this->garantirCandidatoDono($request, $matricula);
 
         CursoExterno::where('candidato_matricula', $matricula)->findOrFail($id)->delete();
+
+        $this->registrarAtividade($matricula);
 
         return response()->json(['message' => 'Curso removido com sucesso.']);
     }
@@ -353,6 +375,8 @@ class PerfilCandidatoController extends Controller
 
         $experiencia = ExperienciaProfissional::create($validated);
 
+        $this->registrarAtividade($matricula);
+
         return response()->json($experiencia, 201);
     }
 
@@ -374,6 +398,8 @@ class PerfilCandidatoController extends Controller
 
         $experiencia->update($validated);
 
+        $this->registrarAtividade($matricula);
+
         return response()->json($experiencia);
     }
 
@@ -383,6 +409,13 @@ class PerfilCandidatoController extends Controller
 
         ExperienciaProfissional::where('candidato_matricula', $matricula)->findOrFail($id)->delete();
 
+        $this->registrarAtividade($matricula);
+
         return response()->json(['message' => 'Experiência removida com sucesso.']);
+    }
+
+    private function registrarAtividade(string $matricula): void
+    {
+        $this->statusService->registrarAtividade(Candidato::query()->findOrFail($matricula));
     }
 }

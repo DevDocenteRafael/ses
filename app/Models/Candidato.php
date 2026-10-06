@@ -15,13 +15,24 @@ class Candidato extends Model
         'matricula',
         'cpf',
         'status',
+        'ultima_atividade_em',
         'pessoa_id_pessoa',
     ];
 
     protected $casts = [
         'matricula' => 'string',
         'status' => 'boolean',
+        'ultima_atividade_em' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Candidato $candidato): void {
+            if ($candidato->ultima_atividade_em === null) {
+                $candidato->ultima_atividade_em = now();
+            }
+        });
+    }
 
     // Relacionamentos
     public function pessoa()

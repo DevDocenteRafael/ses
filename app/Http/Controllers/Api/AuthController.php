@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Candidato;
 use App\Models\Pessoa;
+use App\Services\Candidatos\CandidatoStatusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function login(Request $request): JsonResponse
     {
         if (! $request->filled('identificador') && $request->filled('email')) {
@@ -47,8 +50,17 @@ class AuthController extends Controller
 
         $tipo = $this->resolverTipo($pessoa);
 
-        if ($tipo === 'candidato' && ! $pessoa->candidato?->status) {
-            return response()->json(['message' => 'Conta bloqueada.'], 403);
+        if ($tipo === 'candidato' && $pessoa->candidato instanceof Candidato) {
+            $estado = $this->statusService->estadoEfetivo($pessoa->candidato);
+
+            if ($estado === CandidatoStatusService::BLOQUEADO_MANUALMENTE) {
+                return response()->json(['message' => 'Conta bloqueada.'], 403);
+            }
+
+            if ($estado !== CandidatoStatusService::CONTRATADO) {
+                $this->statusService->registrarAtividade($pessoa->candidato);
+                $pessoa->candidato->refresh()->load('contratacao');
+            }
         }
 
         if ($tipo === 'empresa' && ! $pessoa->empresaAssociada()?->status) {
@@ -169,14 +181,23 @@ class AuthController extends Controller
 
     private function restricoesParaResposta(Pessoa $pessoa, string $tipo): array
     {
-        $contratado = $tipo === 'candidato' && $pessoa->candidato instanceof Candidato
-            ? $pessoa->candidato->estaContratado()
-            : false;
+        $estado = $tipo === 'candidato' && $pessoa->candidato instanceof Candidato
+            ? $this->statusService->estadoEfetivo($pessoa->candidato)
+            : null;
+        $contratado = $estado === CandidatoStatusService::CONTRATADO;
+        $inativo = $estado === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE;
 
         return [
             'contratado' => $contratado,
-            'pode_editar_perfil' => ! $contratado,
-            'code' => $contratado ? 'CANDIDATO_CONTRATADO' : null,
+            'inativo' => $inativo,
+            'estado' => $estado,
+            'estado_rotulo' => $estado ? $this->statusService->rotulo($estado) : null,
+            'pode_editar_perfil' => $estado === null || $estado === CandidatoStatusService::ATIVO,
+            'code' => match ($estado) {
+                CandidatoStatusService::CONTRATADO => 'CANDIDATO_CONTRATADO',
+                CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE => CandidatoStatusService::INATIVIDADE_CODE,
+                default => null,
+            },
         ];
     }
 }

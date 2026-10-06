@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Candidato;
 use App\Models\VisualizacaoPerfil;
 use App\Services\Candidatos\CandidatoQueryService;
+use App\Services\Candidatos\CandidatoStatusService;
 use App\Services\Curriculo\CurriculoCandidatoBuilder;
 use App\Services\Curriculo\CurriculoLoteZipService;
 use App\Services\Curriculo\CurriculoPdfRenderer;
@@ -16,6 +17,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CurriculoCandidatoController extends Controller
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function show(
         Request $request,
         string $matricula,
@@ -49,8 +52,7 @@ class CurriculoCandidatoController extends Controller
 
         $candidato = Candidato::query()
             ->where('matricula', $matricula)
-            ->where('status', true)
-            ->whereDoesntHave('contratacao')
+            ->tap(fn ($query) => $this->statusService->aplicarEscopoDisponiveis($query))
             ->firstOrFail();
 
         $empresa = $pessoa->empresaAssociada();

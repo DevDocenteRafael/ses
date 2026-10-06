@@ -80,7 +80,7 @@ class RelatorioDashboardPdfRenderer
             $this->linhaTexto('Variação em relação ao período anterior: ' . $dados['variacaoPercentualVsMesAnterior'] . '%');
             $this->linhaTexto('Período comparado: Mês atual vs mês anterior', 10.5, 'F1', self::CINZA);
         } else {
-            $this->linhaTexto($dados['subtitulo'] ?? 'Candidatos com status ativo', 10.5, 'F1', self::CINZA);
+            $this->linhaTexto($dados['subtitulo'] ?? 'Candidatos disponíveis pelo estado efetivo', 10.5, 'F1', self::CINZA);
         }
     }
 

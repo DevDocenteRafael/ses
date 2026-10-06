@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Candidato;
 use App\Models\Contratacao;
+use App\Services\Candidatos\CandidatoStatusService;
 use App\Models\Empresa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,8 @@ use Illuminate\Validation\Rule;
 
 class ContratacaoController extends Controller
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function index(Request $request): JsonResponse
     {
         $this->garantirAdministrativo($request);
@@ -73,7 +76,7 @@ class ContratacaoController extends Controller
 
         $candidato = Candidato::query()->findOrFail($matricula);
 
-        if ($solicitante->tipo() === 'empresa' && ! $candidato->status) {
+        if ($solicitante->tipo() === 'empresa' && ! $this->statusService->estaDisponivel($candidato)) {
             abort(403, 'Não é possível registrar contratação para um candidato inativo.');
         }
 

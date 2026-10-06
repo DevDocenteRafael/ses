@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Pessoa;
+use App\Services\Candidatos\CandidatoStatusService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,6 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class AutenticaToken
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function handle(Request $request, Closure $next, string ...$tiposPermitidos): Response
     {
         $token = $request->bearerToken() ?? $request->input('token');
@@ -38,7 +41,7 @@ class AutenticaToken
             return response()->json(['message' => 'Nao autenticado.'], 401);
         }
 
-        if ($pessoa->candidato && !$pessoa->candidato->status) {
+        if ($pessoa->candidato && ! $pessoa->candidato->status) {
             return response()->json(['message' => 'Conta bloqueada.'], 403);
         }
 

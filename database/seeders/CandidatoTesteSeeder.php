@@ -49,6 +49,7 @@ class CandidatoTesteSeeder extends Seeder
             'matricula'        => $matricula,
             'cpf'              => '12345678900',
             'status'           => true,
+            'ultima_atividade_em' => now(),
             'pessoa_id_pessoa' => $pessoa->id_pessoa,
         ]);
 

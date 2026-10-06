@@ -12,12 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardIndicadoresService
 {
+    public function __construct(private readonly \App\Services\Candidatos\CandidatoStatusService $statusService) {}
+
     public function obter(): array
     {
         $agora = Carbon::now('America/Sao_Paulo');
         $inicioUltimos30Dias = $agora->copy()->subDays(30);
 
-        $totalCandidatos = Candidato::where('status', true)->count();
+        $totalCandidatos = $this->statusService->aplicarEscopoDisponiveis(Candidato::query())->count();
         $variacaoPerfis = null;
 
         $contratadosUltimos30Dias = Contratacao::query()
@@ -128,7 +130,7 @@ class DashboardIndicadoresService
                 'total' => $totalCandidatos,
                 'variacaoPercentualVsMesAnterior' => $variacaoPerfis,
                 'periodoComparado' => null,
-                'subtitulo' => 'Candidatos com status ativo',
+                'subtitulo' => 'Candidatos disponíveis pelo estado efetivo',
             ],
             'contratados' => [
                 'ultimos30Dias' => $contratadosUltimos30Dias,

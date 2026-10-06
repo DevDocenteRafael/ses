@@ -11,6 +11,7 @@ use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\VisualizacaoPerfil;
 use App\Services\Candidatos\CandidatoQueryService;
+use App\Services\Candidatos\CandidatoStatusService;
 use App\Support\AreasAtuacaoCatalogo;
 use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\HabilidadesCatalogo;
@@ -24,6 +25,8 @@ use Illuminate\Validation\Rule;
 
 class CandidatoController extends Controller
 {
+    public function __construct(private readonly CandidatoStatusService $statusService) {}
+
     public function store(Request $request): JsonResponse
     {
         $solicitante = $request->attributes->get('pessoa_autenticada');
@@ -99,6 +102,7 @@ class CandidatoController extends Controller
                 'matricula' => $validated['matricula'],
                 'cpf' => $cpf,
                 'status' => $status,
+                'ultima_atividade_em' => now(),
                 'pessoa_id_pessoa' => $pessoa->id_pessoa,
             ]);
 
@@ -194,7 +198,7 @@ class CandidatoController extends Controller
             ->whereNotNull('unidade')
             ->where('unidade', '<>', '')
             ->when($solicitante->tipo() === 'empresa', function ($query) {
-                $query->whereHas('candidato', fn ($candidato) => $candidato->where('status', true));
+                $query->whereHas('candidato', fn ($candidato) => $this->statusService->aplicarEscopoDisponiveis($candidato));
             })
             ->pluck('unidade');
 
@@ -202,7 +206,7 @@ class CandidatoController extends Controller
             ->whereNotNull('unidade')
             ->where('unidade', '<>', '')
             ->when($solicitante->tipo() === 'empresa', function ($query) {
-                $query->whereHas('candidato', fn ($candidato) => $candidato->where('status', true));
+                $query->whereHas('candidato', fn ($candidato) => $this->statusService->aplicarEscopoDisponiveis($candidato));
             })
             ->pluck('unidade');
 
@@ -232,7 +236,13 @@ class CandidatoController extends Controller
         $query = DadosAcademicos::query()
             ->whereNotNull('curso')
             ->where('curso', '<>', '')
-            ->whereHas('candidato', fn ($candidato) => $candidato->whereDoesntHave('contratacao'));
+            ->whereHas('candidato', function ($candidato) use ($solicitante) {
+                if ($solicitante->tipo() === 'empresa') {
+                    $this->statusService->aplicarEscopoDisponiveis($candidato);
+                } else {
+                    $candidato->whereDoesntHave('contratacao');
+                }
+            });
 
         if (! empty($validated['busca'])) {
             $query->where('curso', 'like', '%' . trim($validated['busca']) . '%');
@@ -261,9 +271,7 @@ class CandidatoController extends Controller
             ->select('habilidades', 'candidato_matricula');
 
         if ($solicitante->tipo() === 'empresa') {
-            $query->whereHas('candidato', function ($q) {
-                $q->where('status', true);
-            });
+            $query->whereHas('candidato', fn ($q) => $this->statusService->aplicarEscopoDisponiveis($q));
         }
 
         $habilidades = HabilidadesCatalogo::padrao();
@@ -310,7 +318,7 @@ class CandidatoController extends Controller
             $this->garantirCandidatoDono($request, $matricula);
         }
 
-        if ($solicitante->tipo() === 'empresa' && (! $candidato->status || $candidato->contratacao()->exists())) {
+        if ($solicitante->tipo() === 'empresa' && ! $this->statusService->estaDisponivel($candidato)) {
             abort(403, 'Voce nao tem permissao para visualizar este candidato.');
         }
 
@@ -407,6 +415,10 @@ class CandidatoController extends Controller
                 $candidato->pessoa->update($pessoaData);
             }
 
+            if ($solicitante->tipo() === 'candidato' && ! empty($pessoaData)) {
+                $this->statusService->registrarAtividade($candidato);
+            }
+
             DB::commit();
             return response()->json($candidato->load('pessoa'));
         } catch (\Exception $e) {
@@ -496,6 +508,10 @@ class CandidatoController extends Controller
 
     private function formatarCandidato(Candidato $candidato): Candidato
     {
+        $estado = $this->statusService->estadoEfetivo($candidato);
+        $candidato->setAttribute('estado_efetivo', $estado);
+        $candidato->setAttribute('estado_efetivo_rotulo', $this->statusService->rotulo($estado));
+
         $candidato->setRelation(
             'regioesPreferidasTrabalho',
             $candidato->regioesPreferidasTrabalho
@@ -512,6 +528,8 @@ class CandidatoController extends Controller
 
     private function formatarCandidatoParaResposta(Candidato $candidato, Pessoa $solicitante): array
     {
+        $estado = $this->statusService->estadoEfetivo($candidato);
+
         $regioesPreferidas = $candidato->regioesPreferidasTrabalho
             ->sortBy('codigo_regiao')
             ->values()
@@ -534,6 +552,9 @@ class CandidatoController extends Controller
             'matricula' => (string) $candidato->matricula,
             'cpf' => $solicitante->tipo() === 'empresa' ? null : $candidato->cpf,
             'status' => (bool) $candidato->status,
+            'estado_efetivo' => $estado,
+            'estado_efetivo_rotulo' => $this->statusService->rotulo($estado),
+            'ultima_atividade_em' => $candidato->ultima_atividade_em,
             'pessoa_id_pessoa' => $candidato->pessoa_id_pessoa,
             'created_at' => $candidato->created_at,
             'updated_at' => $candidato->updated_at,
@@ -549,9 +570,14 @@ class CandidatoController extends Controller
             'convites' => $solicitante->tipo() === 'empresa' ? [] : $candidato->convites,
             'empresas' => $solicitante->tipo() === 'empresa' ? [] : $candidato->empresas,
             'restricoes' => [
-                'contratado' => $solicitante->tipo() === 'candidato' ? $candidato->estaContratado() : false,
-                'pode_editar_perfil' => $solicitante->tipo() !== 'candidato' || ! $candidato->estaContratado(),
-                'code' => $solicitante->tipo() === 'candidato' && $candidato->estaContratado() ? 'CANDIDATO_CONTRATADO' : null,
+                'contratado' => $estado === CandidatoStatusService::CONTRATADO,
+                'inativo' => $estado === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE,
+                'pode_editar_perfil' => $solicitante->tipo() !== 'candidato' || $estado === CandidatoStatusService::ATIVO,
+                'code' => match ($estado) {
+                    CandidatoStatusService::CONTRATADO => 'CANDIDATO_CONTRATADO',
+                    CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE => CandidatoStatusService::INATIVIDADE_CODE,
+                    default => null,
+                },
             ],
         ];
     }

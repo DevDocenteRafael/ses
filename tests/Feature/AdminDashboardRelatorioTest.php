@@ -153,9 +153,9 @@ class AdminDashboardRelatorioTest extends TestCase
 
         $this->withToken($token)->getJson('/api/administrativo/dashboard')
             ->assertOk()
-            ->assertJsonPath('perfisAtivos.total', 2)
+            ->assertJsonPath('perfisAtivos.total', 1)
             ->assertJsonPath('perfisAtivos.variacaoPercentualVsMesAnterior', null)
-            ->assertJsonPath('perfisAtivos.subtitulo', 'Candidatos com status ativo')
+            ->assertJsonPath('perfisAtivos.subtitulo', 'Candidatos disponíveis pelo estado efetivo')
             ->assertJsonPath('contratados.ultimos30Dias', 1)
             ->assertJsonPath('acessosCandidatos.ultimos30Dias', 1)
             ->assertJsonPath('empresasAtivas.total', 1)
@@ -183,7 +183,25 @@ class AdminDashboardRelatorioTest extends TestCase
         $this->assertStringContainsString((string) $dashboard['contratados']['ultimos30Dias'], $texto);
         $this->assertStringContainsString((string) $dashboard['acessosCandidatos']['ultimos30Dias'], $texto);
         $this->assertStringContainsString((string) $dashboard['empresasAtivas']['total'], $texto);
-        $this->assertStringContainsString('Candidatos com status ativo', $texto);
+        $this->assertStringContainsString('Candidatos disponíveis pelo estado efetivo', $texto);
+    }
+
+    public function test_dashboard_nao_quebra_com_candidato_legado_sem_ultima_atividade(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+        $legado = $this->criarCandidato(status: true);
+        $legado->forceFill(['ultima_atividade_em' => null])->save();
+        $this->criarCandidato(status: true);
+
+        $this->withToken($token)->getJson('/api/administrativo/dashboard')
+            ->assertOk()
+            ->assertJsonPath('perfisAtivos.total', 1)
+            ->assertJsonStructure([
+                'perfisAtivos' => ['total', 'variacaoPercentualVsMesAnterior', 'periodoComparado', 'subtitulo'],
+                'contratados',
+                'acessosCandidatos',
+                'empresasAtivas',
+            ]);
     }
 
     private function criarAdminAutenticado(): array

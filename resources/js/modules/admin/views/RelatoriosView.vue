@@ -3,9 +3,14 @@
         <topbar titulo="Indicadores de Empregabilidade" subtitulo="Acompanhamento estratégico do Portal Senac (FR38)" />
 
         <div class="container-fluid p-4">
-            <loading v-if="admin.carregando && !dashboard" mensagem="Carregando indicadores..." />
+            <loading v-if="carregando && !dashboard" mensagem="Carregando indicadores..." />
 
-            <div v-else-if="admin.erro" class="alert alert-danger">{{ admin.erro }}</div>
+            <div v-else-if="erro" class="alert alert-danger d-flex align-items-center justify-content-between gap-3">
+                <span>{{ erro }}</span>
+                <button type="button" class="btn btn-outline-danger btn-sm" @click="carregarIndicadores">
+                    Tentar novamente
+                </button>
+            </div>
 
             <template v-else-if="dashboard">
                 <div class="row g-3 mb-4">
@@ -128,6 +133,8 @@ import { useAdminStore } from '../../../store/admin';
 
 const admin = useAdminStore();
 const dashboard = ref(null);
+const carregando = ref(false);
+const erro = ref(null);
 
 const donutRef = ref(null);
 const linhaRef = ref(null);
@@ -138,6 +145,68 @@ const CORES = ['#004587', '#f5a623', '#2e7d5b', '#1a9ab0', '#8c8c88'];
 
 function formatarNumero(valor) {
     return new Intl.NumberFormat('pt-BR').format(valor || 0);
+}
+
+function dashboardPadrao() {
+    return {
+        perfisAtivos: { total: 0, variacaoPercentualVsMesAnterior: null, subtitulo: 'Candidatos disponíveis pelo estado efetivo' },
+        contratados: { ultimos30Dias: 0, periodo: 'Últimos 30 dias' },
+        acessosCandidatos: { ultimos30Dias: 0, periodo: 'Últimos 30 dias' },
+        empresasAtivas: { total: 0, deUmTotalDe: 0, engajamentoPercentual: 0 },
+        acessosPorSegmento: [],
+        visualizacoesPorMes: [],
+        buscasPorMes: [],
+        filtrosMaisAcessados: [],
+        candidatosPorCurso: [],
+    };
+}
+
+function normalizarDashboard(dados) {
+    if (!dados || typeof dados !== 'object') {
+        return null;
+    }
+
+    const base = dashboardPadrao();
+
+    return {
+        ...base,
+        ...dados,
+        perfisAtivos: { ...base.perfisAtivos, ...(dados.perfisAtivos || {}) },
+        contratados: { ...base.contratados, ...(dados.contratados || {}) },
+        acessosCandidatos: { ...base.acessosCandidatos, ...(dados.acessosCandidatos || {}) },
+        empresasAtivas: { ...base.empresasAtivas, ...(dados.empresasAtivas || {}) },
+        acessosPorSegmento: Array.isArray(dados.acessosPorSegmento) ? dados.acessosPorSegmento : [],
+        visualizacoesPorMes: Array.isArray(dados.visualizacoesPorMes) ? dados.visualizacoesPorMes : [],
+        buscasPorMes: Array.isArray(dados.buscasPorMes) ? dados.buscasPorMes : [],
+        filtrosMaisAcessados: Array.isArray(dados.filtrosMaisAcessados) ? dados.filtrosMaisAcessados : [],
+        candidatosPorCurso: Array.isArray(dados.candidatosPorCurso) ? dados.candidatosPorCurso : [],
+    };
+}
+
+async function carregarIndicadores() {
+    carregando.value = true;
+    erro.value = null;
+
+    try {
+        await admin.carregarDashboard();
+
+        if (admin.erro) {
+            dashboard.value = null;
+            erro.value = admin.erro;
+            return;
+        }
+
+        dashboard.value = normalizarDashboard(admin.dashboard);
+
+        if (!dashboard.value) {
+            erro.value = 'Não foi possível carregar os indicadores.';
+        }
+    } catch (e) {
+        dashboard.value = null;
+        erro.value = e?.response?.data?.message || 'Não foi possível carregar os indicadores.';
+    } finally {
+        carregando.value = false;
+    }
 }
 
 function formatarMes(chave) {
@@ -222,8 +291,5 @@ function montarGraficos() {
 
 watch(dashboard, () => nextTick(montarGraficos));
 
-onMounted(async () => {
-    await admin.carregarDashboard();
-    dashboard.value = admin.dashboard;
-});
+onMounted(carregarIndicadores);
 </script>
