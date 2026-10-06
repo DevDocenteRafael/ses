@@ -14,26 +14,14 @@ class DashboardIndicadoresService
 {
     public function obter(): array
     {
-        $inicioDoMes = Carbon::now()->startOfMonth();
-        $inicioDoMesAnterior = (clone $inicioDoMes)->subMonth();
-        $inicioUltimos30Dias = today()->subDays(30);
+        $agora = Carbon::now('America/Sao_Paulo');
+        $inicioUltimos30Dias = $agora->copy()->subDays(30);
 
-        $totalCandidatos = Candidato::count();
-        $candidatosMesAtual = Candidato::whereHas(
-            'pessoa',
-            fn ($q) => $q->where('data_cadastro', '>=', $inicioDoMes)
-        )->count();
-        $candidatosMesAnterior = Candidato::whereHas(
-            'pessoa',
-            fn ($q) => $q->whereBetween('data_cadastro', [$inicioDoMesAnterior, $inicioDoMes])
-        )->count();
-
-        $variacaoPerfis = $candidatosMesAnterior > 0
-            ? round((($candidatosMesAtual - $candidatosMesAnterior) / $candidatosMesAnterior) * 100, 1)
-            : null;
+        $totalCandidatos = Candidato::where('status', true)->count();
+        $variacaoPerfis = null;
 
         $contratadosUltimos30Dias = Contratacao::query()
-            ->whereDate('contratado_em', '>=', $inicioUltimos30Dias)
+            ->where('contratado_em', '>=', $inicioUltimos30Dias->toDateString())
             ->count();
 
         $cursosMaisContratados = Contratacao::query()
@@ -41,7 +29,7 @@ class DashboardIndicadoresService
                 $join->on('dados_academicos.candidato_matricula', '=', 'contratacoes.candidato_matricula')
                     ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = contratacoes.candidato_matricula)');
             })
-            ->whereDate('contratacoes.contratado_em', '>=', $inicioUltimos30Dias)
+            ->where('contratacoes.contratado_em', '>=', $inicioUltimos30Dias->toDateString())
             ->selectRaw("COALESCE(NULLIF(dados_academicos.curso, ''), 'Não informado') as curso")
             ->selectRaw('COUNT(DISTINCT contratacoes.id) as total')
             ->groupBy('curso')
@@ -50,7 +38,7 @@ class DashboardIndicadoresService
             ->limit(10)
             ->get();
 
-        $acessosUltimos30Dias = VisualizacaoPerfil::where('visualizado_em', '>=', now()->subDays(30))->count();
+        $acessosUltimos30Dias = VisualizacaoPerfil::where('visualizado_em', '>=', $inicioUltimos30Dias)->count();
 
         $totalEmpresas = Empresa::count();
         $empresasAtivas = Empresa::where('status', true)->count();
@@ -139,7 +127,8 @@ class DashboardIndicadoresService
             'perfisAtivos' => [
                 'total' => $totalCandidatos,
                 'variacaoPercentualVsMesAnterior' => $variacaoPerfis,
-                'periodoComparado' => 'Mês atual vs mês anterior',
+                'periodoComparado' => null,
+                'subtitulo' => 'Candidatos com status ativo',
             ],
             'contratados' => [
                 'ultimos30Dias' => $contratadosUltimos30Dias,

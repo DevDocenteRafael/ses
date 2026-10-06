@@ -80,6 +80,15 @@ class Candidato extends Model
         return $this->hasOne(Contratacao::class, 'candidato_matricula', 'matricula');
     }
 
+    public function estaContratado(): bool
+    {
+        if ($this->relationLoaded('contratacao')) {
+            return $this->contratacao !== null;
+        }
+
+        return $this->contratacao()->exists();
+    }
+
     public function visualizacoes()
     {
         return $this->hasMany(VisualizacaoPerfil::class, 'candidato_matricula', 'matricula');

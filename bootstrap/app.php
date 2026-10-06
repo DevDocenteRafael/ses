@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'auth.token' => \App\Http\Middleware\AutenticaToken::class,
+            'candidato.nao_contratado' => \App\Http\Middleware\BloqueiaCandidatoContratado::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

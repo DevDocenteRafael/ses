@@ -303,6 +303,7 @@ class CandidatoController extends Controller
             'experienciasProfissionais',
             'convites.vaga',
             'empresas',
+            'contratacao',
         ])->findOrFail($matricula);
 
         if ($solicitante->tipo() === 'candidato') {
@@ -547,6 +548,11 @@ class CandidatoController extends Controller
             'experiencias_profissionais' => $candidato->experienciasProfissionais,
             'convites' => $solicitante->tipo() === 'empresa' ? [] : $candidato->convites,
             'empresas' => $solicitante->tipo() === 'empresa' ? [] : $candidato->empresas,
+            'restricoes' => [
+                'contratado' => $solicitante->tipo() === 'candidato' ? $candidato->estaContratado() : false,
+                'pode_editar_perfil' => $solicitante->tipo() !== 'candidato' || ! $candidato->estaContratado(),
+                'code' => $solicitante->tipo() === 'candidato' && $candidato->estaContratado() ? 'CANDIDATO_CONTRATADO' : null,
+            ],
         ];
     }
 

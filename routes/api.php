@@ -43,12 +43,16 @@ Route::middleware('auth.token')->group(function () {
     Route::post('candidatos/curriculos/zip', [CurriculoCandidatoController::class, 'zipEmpresa']);
     Route::get('candidatos/{matricula}/curriculo', [CurriculoCandidatoController::class, 'showEmpresa']);
     Route::apiResource('candidatos', CandidatoController::class)
-        ->except(['store'])
+        ->except(['store', 'update'])
         ->parameters(['candidatos' => 'matricula']);
+    Route::put('candidatos/{matricula}', [CandidatoController::class, 'update'])
+        ->middleware('candidato.nao_contratado');
+    Route::patch('candidatos/{matricula}', [CandidatoController::class, 'update'])
+        ->middleware('candidato.nao_contratado');
     Route::get('candidatos/{matricula}/dashboard', [CandidatoController::class, 'dashboard']);
 
     // Perfil do candidato
-    Route::prefix('candidatos/{matricula}/perfil')->group(function () {
+    Route::prefix('candidatos/{matricula}/perfil')->middleware('candidato.nao_contratado')->group(function () {
         Route::post('links',        [PerfilCandidatoController::class, 'storeLink']);
         Route::post('profissional', [PerfilCandidatoController::class, 'storeInfoProfissional']);
         Route::post('preferencias', [PerfilCandidatoController::class, 'storePreferencias']);
@@ -63,8 +67,8 @@ Route::middleware('auth.token')->group(function () {
         Route::put('experiencias/{id}',  [PerfilCandidatoController::class, 'updateExperiencia']);
         Route::delete('experiencias/{id}', [PerfilCandidatoController::class, 'destroyExperiencia']);
     });
-    Route::delete('academico/{id}',    [PerfilCandidatoController::class, 'destroyDadosAcademicos']);
-    Route::delete('cursos-senac/{id}', [PerfilCandidatoController::class, 'destroyCursoSenac']);
+    Route::delete('academico/{id}',    [PerfilCandidatoController::class, 'destroyDadosAcademicos'])->middleware('candidato.nao_contratado');
+    Route::delete('cursos-senac/{id}', [PerfilCandidatoController::class, 'destroyCursoSenac'])->middleware('candidato.nao_contratado');
 
     // Empresas
     Route::get('empresas/favoritos', [EmpresaController::class, 'favoritos']);
@@ -79,7 +83,12 @@ Route::middleware('auth.token')->group(function () {
     Route::apiResource('vagas', VagaController::class);
 
     // Convites
-    Route::apiResource('convites', ConviteController::class);
+    Route::apiResource('convites', ConviteController::class)
+        ->except(['update']);
+    Route::put('convites/{convite}', [ConviteController::class, 'update'])
+        ->middleware('candidato.nao_contratado');
+    Route::patch('convites/{convite}', [ConviteController::class, 'update'])
+        ->middleware('candidato.nao_contratado');
 
     Route::get('contratacoes', [ContratacaoController::class, 'index']);
     Route::post('candidatos/{matricula}/contratacao', [ContratacaoController::class, 'store']);

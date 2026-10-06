@@ -19,6 +19,7 @@
                                     <i class="bi" :class="dashboard.perfisAtivos.variacaoPercentualVsMesAnterior >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'"></i>
                                     {{ Math.abs(dashboard.perfisAtivos.variacaoPercentualVsMesAnterior) }}% vs mês anterior
                                 </p>
+                                <p v-else class="small text-secondary mb-0">{{ dashboard.perfisAtivos.subtitulo || 'Candidatos com status ativo' }}</p>
                             </div>
                         </div>
                     </div>

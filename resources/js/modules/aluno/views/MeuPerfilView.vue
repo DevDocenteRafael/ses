@@ -1,5 +1,6 @@
 <template>
-    <div class="meu-perfil-page">
+    <CandidatoContratadoModal v-if="auth.candidatoContratado" @sair="sair" />
+    <div v-else class="meu-perfil-page">
         <header class="perfil-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2 sticky-top z-3">
             <div class="perfil-header__brand d-flex align-items-center gap-2">
                 <span class="fw-bold fs-5">Senac</span>
@@ -628,6 +629,7 @@ import { useAuthStore } from '../../../store/auth';
 import alunosService from '../../../services/alunosServices';
 import cepService, { formatarCep } from '../../../services/cepService';
 import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
+import CandidatoContratadoModal from '../../../components/aluno/CandidatoContratadoModal.vue';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';

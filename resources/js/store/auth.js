@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', {
         pessoa: JSON.parse(localStorage.getItem('ses_pessoa')) || null,
         token: localStorage.getItem('ses_token') || null,
         tipo: localStorage.getItem('ses_tipo') || null, // administrativo | empresa | candidato
+        restricoes: JSON.parse(localStorage.getItem('ses_restricoes')) || {},
     }),
 
     getters: {
@@ -19,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
         isAdmin: (state) => state.tipo === 'administrativo',
         isEmpresa: (state) => state.tipo === 'empresa',
         isAluno: (state) => state.tipo === 'candidato',
+        candidatoContratado: (state) => state.tipo === 'candidato' && state.restricoes?.contratado === true,
     },
 
     actions: {
@@ -28,10 +30,12 @@ export const useAuthStore = defineStore('auth', {
             this.token = data.token;
             this.pessoa = data.pessoa;
             this.tipo = data.tipo;
+            this.restricoes = data.restricoes || {};
 
             localStorage.setItem('ses_token', data.token);
             localStorage.setItem('ses_pessoa', JSON.stringify(data.pessoa));
             localStorage.setItem('ses_tipo', data.tipo);
+            localStorage.setItem('ses_restricoes', JSON.stringify(this.restricoes));
 
             return data;
         },
@@ -55,8 +59,10 @@ export const useAuthStore = defineStore('auth', {
                 const { data } = await authService.me();
                 this.pessoa = data.pessoa;
                 this.tipo = data.tipo;
+                this.restricoes = data.restricoes || {};
                 localStorage.setItem('ses_pessoa', JSON.stringify(data.pessoa));
                 localStorage.setItem('ses_tipo', data.tipo);
+                localStorage.setItem('ses_restricoes', JSON.stringify(this.restricoes));
             } catch {
                 this.limparSessao();
             }
@@ -66,9 +72,11 @@ export const useAuthStore = defineStore('auth', {
             this.pessoa = null;
             this.token = null;
             this.tipo = null;
+            this.restricoes = {};
             localStorage.removeItem('ses_token');
             localStorage.removeItem('ses_pessoa');
             localStorage.removeItem('ses_tipo');
+            localStorage.removeItem('ses_restricoes');
         },
     },
 });

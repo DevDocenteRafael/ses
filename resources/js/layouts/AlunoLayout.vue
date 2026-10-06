@@ -1,10 +1,12 @@
 <template>
     <div class="d-flex vh-100 overflow-hidden">
-        <SlideBar v-if="!rotaPerfil" :items="menu" @sair="sair" />
+        <SlideBar v-if="!rotaPerfil && !auth.candidatoContratado" :items="menu" @sair="sair" />
 
         <main class="flex-grow-1 bg-body-tertiary overflow-y-auto">
-            <router-view />
+            <router-view v-if="!auth.candidatoContratado" />
         </main>
+
+        <CandidatoContratadoModal v-if="auth.candidatoContratado" @sair="sair" />
     </div>
 </template>
 
@@ -13,6 +15,7 @@ import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
 import SlideBar from '../components/common/slideBar.vue';
+import CandidatoContratadoModal from '../components/aluno/CandidatoContratadoModal.vue';
 
 const router = useRouter();
 const route = useRoute();

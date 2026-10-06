@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Candidato;
 use App\Models\Pessoa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +63,7 @@ class AuthController extends Controller
             'token' => $token,
             'tipo' => $tipo,
             'pessoa' => $this->pessoaParaResposta($pessoa, $tipo),
+            'restricoes' => $this->restricoesParaResposta($pessoa, $tipo),
         ]);
     }
 
@@ -81,6 +83,7 @@ class AuthController extends Controller
             'token' => $this->tokenFromRequest($request),
             'tipo' => $tipo,
             'pessoa' => $this->pessoaParaResposta($pessoa, $tipo),
+            'restricoes' => $this->restricoesParaResposta($pessoa, $tipo),
         ]);
     }
 
@@ -103,7 +106,7 @@ class AuthController extends Controller
         $identificadorEmail = mb_strtolower($identificador);
         $cpf = preg_replace('/\D+/', '', $identificador);
 
-        return Pessoa::with(['administrativo', 'empresa', 'candidato', 'responsavelContratual.empresas'])
+        return Pessoa::with(['administrativo', 'empresa', 'candidato.contratacao', 'responsavelContratual.empresas'])
             ->where(function ($query) use ($identificadorEmail, $cpf) {
                 $query->whereRaw('LOWER(email) = ?', [$identificadorEmail]);
 
@@ -162,5 +165,18 @@ class AuthController extends Controller
         }
 
         return $resposta;
+    }
+
+    private function restricoesParaResposta(Pessoa $pessoa, string $tipo): array
+    {
+        $contratado = $tipo === 'candidato' && $pessoa->candidato instanceof Candidato
+            ? $pessoa->candidato->estaContratado()
+            : false;
+
+        return [
+            'contratado' => $contratado,
+            'pode_editar_perfil' => ! $contratado,
+            'code' => $contratado ? 'CANDIDATO_CONTRATADO' : null,
+        ];
     }
 }

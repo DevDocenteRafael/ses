@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Administrativo;
 use App\Models\Candidato;
+use App\Models\Contratacao;
 use App\Models\Empresa;
 use App\Models\Pessoa;
 use App\Models\ResponsavelContratual;
+use App\Models\Vaga;
+use App\Models\VisualizacaoPerfil;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -111,6 +114,78 @@ class AdminDashboardRelatorioTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_dashboard_calcula_indicadores_reais_e_periodo_de_30_dias(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+        $candidatoAtivo = $this->criarCandidato(status: true);
+        $this->criarCandidato(status: true);
+        $this->criarCandidato(status: false);
+        [$empresaAtiva] = $this->criarEmpresaAutenticada(status: true);
+        $this->criarEmpresaAutenticada(status: false);
+
+        Contratacao::query()->create([
+            'candidato_matricula' => $candidatoAtivo->matricula,
+            'empresa_cnpj' => $empresaAtiva->cnpj,
+            'registrado_por_pessoa_id' => $empresaAtiva->pessoa_id_pessoa,
+            'origem' => 'empresa',
+            'contratado_em' => now('America/Sao_Paulo')->subDays(29)->toDateString(),
+        ]);
+
+        VisualizacaoPerfil::query()->create([
+            'candidato_matricula' => $candidatoAtivo->matricula,
+            'empresa_cnpj' => $empresaAtiva->cnpj,
+            'visualizado_em' => now('America/Sao_Paulo')->subDays(29),
+        ]);
+        VisualizacaoPerfil::query()->create([
+            'candidato_matricula' => $candidatoAtivo->matricula,
+            'empresa_cnpj' => $empresaAtiva->cnpj,
+            'visualizado_em' => now('America/Sao_Paulo')->subDays(31),
+        ]);
+
+        Vaga::query()->create([
+            'titulo' => 'Vaga Teste',
+            'tipo' => 1,
+            'area' => 'Tecnologia',
+            'status' => true,
+            'data_publicacao' => now('America/Sao_Paulo')->toDateString(),
+            'empresa_cnpj' => $empresaAtiva->cnpj,
+        ]);
+
+        $this->withToken($token)->getJson('/api/administrativo/dashboard')
+            ->assertOk()
+            ->assertJsonPath('perfisAtivos.total', 2)
+            ->assertJsonPath('perfisAtivos.variacaoPercentualVsMesAnterior', null)
+            ->assertJsonPath('perfisAtivos.subtitulo', 'Candidatos com status ativo')
+            ->assertJsonPath('contratados.ultimos30Dias', 1)
+            ->assertJsonPath('acessosCandidatos.ultimos30Dias', 1)
+            ->assertJsonPath('empresasAtivas.total', 1)
+            ->assertJsonPath('empresasAtivas.deUmTotalDe', 2)
+            ->assertJsonPath('empresasAtivas.engajamentoPercentual', 100);
+    }
+
+    public function test_dashboard_e_pdf_usam_mesma_fonte_dos_indicadores(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+        $this->criarCandidato(status: true);
+        $this->criarCandidato(status: false);
+        $this->criarEmpresaAutenticada(status: true);
+
+        $dashboard = $this->withToken($token)->getJson('/api/administrativo/dashboard')
+            ->assertOk()
+            ->json();
+
+        $pdf = $this->withToken($token)->post('/api/administrativo/relatorios/dashboard', [
+            'modo' => 'todos',
+        ])->assertOk();
+
+        $texto = $this->normalizarPdfParaTeste($pdf->getContent());
+        $this->assertStringContainsString((string) $dashboard['perfisAtivos']['total'], $texto);
+        $this->assertStringContainsString((string) $dashboard['contratados']['ultimos30Dias'], $texto);
+        $this->assertStringContainsString((string) $dashboard['acessosCandidatos']['ultimos30Dias'], $texto);
+        $this->assertStringContainsString((string) $dashboard['empresasAtivas']['total'], $texto);
+        $this->assertStringContainsString('Candidatos com status ativo', $texto);
+    }
+
     private function criarAdminAutenticado(): array
     {
         $pessoa = $this->criarPessoa('admin');
@@ -119,7 +194,7 @@ class AdminDashboardRelatorioTest extends TestCase
         return [$admin, $this->token($pessoa)];
     }
 
-    private function criarEmpresaAutenticada(): array
+    private function criarEmpresaAutenticada(bool $status = true): array
     {
         $pessoa = $this->criarPessoa('empresa');
         $responsavelPessoa = $this->criarPessoa('responsavel');
@@ -128,7 +203,7 @@ class AdminDashboardRelatorioTest extends TestCase
             'cnpj' => (string) random_int(10000000000000, 99999999999999),
             'razao_social' => 'Empresa Teste',
             'atividade_economica' => 'Tecnologia',
-            'status' => true,
+            'status' => $status,
             'pessoa_id_pessoa' => $pessoa->id_pessoa,
             'responsavel_contratual_id_responsavel_contratual' => $responsavel->id_responsavel_contratual,
         ]);
@@ -136,14 +211,14 @@ class AdminDashboardRelatorioTest extends TestCase
         return [$empresa, $this->token($pessoa)];
     }
 
-    private function criarCandidato(): Candidato
+    private function criarCandidato(bool $status = true): Candidato
     {
         $pessoa = $this->criarPessoa('candidato');
 
         return Candidato::query()->create([
             'matricula' => str_pad((string) random_int(1, 999999999), 15, '0', STR_PAD_LEFT),
             'cpf' => (string) random_int(10000000000, 99999999999),
-            'status' => true,
+            'status' => $status,
             'pessoa_id_pessoa' => $pessoa->id_pessoa,
         ]);
     }

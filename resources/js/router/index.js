@@ -68,7 +68,7 @@ const router = createRouter({
  * 3. Rota protegida com 'role' específico + usuário logado com outro papel
  *    → redireciona para o painel correto dele (evita aluno acessar /admin).
  */
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
     const auth = useAuthStore();
 
     const painelPorTipo = {
@@ -83,6 +83,10 @@ router.beforeEach((to, from, next) => {
 
     if (to.meta.requiresAuth && !auth.estaAutenticado) {
         return next('/login');
+    }
+
+    if (to.meta.requiresAuth && auth.estaAutenticado) {
+        await auth.restaurarSessao();
     }
 
     if (to.meta.role && auth.tipo !== to.meta.role) {

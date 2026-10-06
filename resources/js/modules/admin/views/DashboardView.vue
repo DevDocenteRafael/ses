@@ -484,7 +484,7 @@ async function gerarRelatorio() {
 // ── Card "Perfis Ativos" ────────────────────────────────────────
 const variacaoPerfisLabel = computed(() => {
     const v = dash.value?.perfisAtivos?.variacaoPercentualVsMesAnterior;
-    if (v === null || v === undefined) return 'Sem dados do mês anterior';
+    if (v === null || v === undefined) return dash.value?.perfisAtivos?.subtitulo || 'Candidatos com status ativo';
     const seta = v >= 0 ? '↑' : '↓';
     return `${seta} ${Math.abs(v)}% vs mês anterior`;
 });
