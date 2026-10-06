@@ -213,7 +213,7 @@
                         <button type="button" class="btn btn-outline-secondary text-nowrap" :disabled="carregando || gerandoPdf || !paginacao.total" @click="baixarListaFiltrada">
                             <span v-if="gerandoPdf" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                             <i v-else class="bi bi-file-earmark-pdf me-1"></i>
-                            {{ gerandoPdf ? 'Preparando PDF...' : 'Baixar' }}
+                            {{ gerandoPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}
                         </button>
                         <button type="button" class="btn btn-outline-primary text-nowrap" :disabled="carregando || baixandoCurriculos || !candidatos.length" @click="abrirModalCurriculos">
                             <i class="bi bi-download me-1"></i>

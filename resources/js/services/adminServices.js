@@ -9,6 +9,12 @@ export default {
         return api.get('/administrativo/dashboard');
     },
 
+    gerarRelatorioDashboard(payload) {
+        return api.post('/administrativo/relatorios/dashboard', payload, {
+            responseType: 'blob',
+        });
+    },
+
     // Gestão de alunos (candidatos)
     listarAlunos(params = {}) {
         return api.get('/candidatos', { params });

@@ -9,6 +9,22 @@
             <loading v-if="admin.carregando && !carregouUmaVez" mensagem="Carregando indicadores..." />
 
             <template v-else-if="dash">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <h1 class="h5 fw-bold mb-1">Resumo dos indicadores</h1>
+                        <p class="text-secondary small mb-0">Gere um relatório PDF com os dados agregados do dashboard.</p>
+                    </div>
+                    <button
+                        ref="botaoRelatorioRef"
+                        type="button"
+                        class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-relatorio"
+                        @click="abrirModalRelatorio"
+                    >
+                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        <span>Relatório Geral</span>
+                    </button>
+                </div>
+
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-lg-3">
                         <cardIndicador
@@ -173,6 +189,58 @@
                 </p>
             </template>
         </div>
+
+        <modal :show="modalRelatorioAberto" titulo="Gerar Relatório" @fechar="fecharModalRelatorio">
+            <p class="text-secondary mb-4" id="descricao-relatorio-geral">
+                Selecione quais informações deseja incluir no relatório.
+            </p>
+
+            <div class="vstack gap-3" role="radiogroup" aria-describedby="descricao-relatorio-geral">
+                <label class="ses-opcao-relatorio">
+                    <input v-model="modoRelatorio" class="form-check-input" type="radio" value="todos">
+                    <span>
+                        <strong>Todos os dados</strong>
+                        <small>Inclui Perfis Ativos, Contratados, Acessos de Candidatos e Empresas Ativas.</small>
+                    </span>
+                </label>
+
+                <label class="ses-opcao-relatorio">
+                    <input v-model="modoRelatorio" class="form-check-input" type="radio" value="especificos">
+                    <span>
+                        <strong>Selecionar dados específicos</strong>
+                        <small>Escolha uma ou mais seções para compor o PDF.</small>
+                    </span>
+                </label>
+            </div>
+
+            <hr class="my-4">
+
+            <fieldset :disabled="modoRelatorio !== 'especificos'" class="ses-fieldset-relatorio">
+                <legend class="h6 fw-bold mb-3">Informações do relatório</legend>
+                <div class="row g-2">
+                    <div v-for="opcao in opcoesRelatorio" :key="opcao.valor" class="col-12 col-sm-6">
+                        <label class="ses-checkbox-relatorio" :class="{ 'is-disabled': modoRelatorio !== 'especificos' }">
+                            <input v-model="secoesRelatorio" class="form-check-input" type="checkbox" :value="opcao.valor">
+                            <span>{{ opcao.label }}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+
+            <p v-if="erroSelecaoRelatorio" class="text-danger small mt-3 mb-0" role="alert">
+                {{ erroSelecaoRelatorio }}
+            </p>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
+                <button type="button" class="btn btn-outline-secondary" :disabled="gerandoRelatorio" @click="fecharModalRelatorio">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" :disabled="!podeGerarRelatorio" @click="gerarRelatorio">
+                    <span v-if="gerandoRelatorio" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    {{ gerandoRelatorio ? 'Gerando relatório...' : 'Gerar PDF' }}
+                </button>
+            </div>
+        </modal>
     </div>
 </template>
 
@@ -182,14 +250,30 @@ import Chart from 'chart.js/auto';
 import topbar from '../../../components/common/header.vue';
 import cardIndicador from '../../../components/common/cardIndicador.vue';
 import loading from '../../../components/common/loading.vue';
+import modal from '../../../components/common/modal.vue';
 import { useAdminStore } from '../../../store/admin';
+import adminService from '../../../services/adminServices';
+import { useToast } from '../../../composables/useToast';
 
 const admin = useAdminStore();
+const toast = useToast();
 const carregouUmaVez = ref(false);
 const graficoCursosRef = ref(null);
 const graficoCandidatosCursoRef = ref(null);
+const botaoRelatorioRef = ref(null);
+const modalRelatorioAberto = ref(false);
+const modoRelatorio = ref('todos');
+const secoesRelatorio = ref([]);
+const gerandoRelatorio = ref(false);
 let graficoCursos = null;
 let graficoCandidatosCurso = null;
+
+const opcoesRelatorio = [
+    { valor: 'perfis_ativos', label: 'Perfis Ativos' },
+    { valor: 'contratados', label: 'Contratados' },
+    { valor: 'acessos_candidatos', label: 'Acessos de Candidatos' },
+    { valor: 'empresas_ativas', label: 'Empresas Ativas' },
+];
 
 onMounted(async () => {
     await admin.carregarDashboard();
@@ -344,6 +428,58 @@ function resumirRotuloCurso(valor) {
 }
 
 const dash = computed(() => admin.dashboard);
+const erroSelecaoRelatorio = computed(() => (
+    modoRelatorio.value === 'especificos' && secoesRelatorio.value.length === 0
+        ? 'Selecione pelo menos uma informação para gerar o relatório.'
+        : ''
+));
+const podeGerarRelatorio = computed(() => !gerandoRelatorio.value && !erroSelecaoRelatorio.value);
+
+function abrirModalRelatorio() {
+    modalRelatorioAberto.value = true;
+    modoRelatorio.value = 'todos';
+    secoesRelatorio.value = [];
+}
+
+function fecharModalRelatorio() {
+    if (gerandoRelatorio.value) return;
+    modalRelatorioAberto.value = false;
+    nextTick(() => botaoRelatorioRef.value?.focus());
+}
+
+function nomeArquivoRelatorio(headers) {
+    const disposition = headers?.['content-disposition'] || headers?.get?.('content-disposition') || '';
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    return match?.[1] || 'Relatorio_Geral.pdf';
+}
+
+async function gerarRelatorio() {
+    if (!podeGerarRelatorio.value) return;
+
+    gerandoRelatorio.value = true;
+    try {
+        const payload = modoRelatorio.value === 'todos'
+            ? { modo: 'todos' }
+            : { modo: 'especificos', secoes: secoesRelatorio.value };
+        const response = await adminService.gerarRelatorioDashboard(payload);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nomeArquivoRelatorio(response.headers);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        modalRelatorioAberto.value = false;
+        toast.success('Relatório gerado com sucesso.');
+        nextTick(() => botaoRelatorioRef.value?.focus());
+    } catch (error) {
+        toast.error('Não foi possível gerar o relatório. Tente novamente.');
+    } finally {
+        gerandoRelatorio.value = false;
+    }
+}
 
 // ── Card "Perfis Ativos" ────────────────────────────────────────
 const variacaoPerfisLabel = computed(() => {
@@ -422,5 +558,54 @@ const pontosLinha = computed(() => pontosCirculo.value.map((p) => `${p.x},${p.y}
     font-size: 22px;
     font-weight: 700;
     fill: var(--ses-primary);
+}
+
+.ses-btn-relatorio {
+    min-height: 42px;
+}
+
+.ses-opcao-relatorio,
+.ses-checkbox-relatorio {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    width: 100%;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .75rem;
+    padding: .85rem 1rem;
+    cursor: pointer;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+.ses-opcao-relatorio:hover,
+.ses-checkbox-relatorio:hover {
+    border-color: var(--ses-primary);
+}
+
+.ses-opcao-relatorio small {
+    display: block;
+    color: var(--bs-secondary-color);
+}
+
+.ses-checkbox-relatorio {
+    align-items: center;
+    min-height: 48px;
+}
+
+.ses-checkbox-relatorio.is-disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.ses-fieldset-relatorio:disabled .ses-checkbox-relatorio {
+    pointer-events: none;
+}
+
+@media (max-width: 430px) {
+    .ses-opcao-relatorio,
+    .ses-checkbox-relatorio {
+        padding: .75rem;
+    }
 }
 </style>

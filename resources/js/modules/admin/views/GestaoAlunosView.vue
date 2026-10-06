@@ -22,16 +22,16 @@
                         <h2 class="h6 fw-bold text-primary mb-0">Candidatos Cadastrados</h2>
                         <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end">
                             <div class="input-group flex-grow-1 position-relative" style="min-width: 240px;">
-                                <input
-                                    v-model="busca"
-                                    type="text"
-                                    class="form-control"
-                                    placeholder="Filtrar por nome ou CPF"
-                                    autocomplete="off"
-                                    @focus="buscaDropdownAberto = Boolean(busca)"
-                                    @input="buscaDropdownAberto = true"
-                                    @blur="fecharSugestaoBusca"
-                                >
+                                 <input
+                                     v-model="busca"
+                                     type="text"
+                                     class="form-control"
+                                     placeholder="Filtrar por nome ou CPF"
+                                     autocomplete="off"
+                                     @focus="buscaDropdownAberto = Boolean(busca)"
+                                     @input="onBuscaCpfInput"
+                                     @blur="fecharSugestaoBusca"
+                                 >
                                 <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
                                 <div v-if="buscaDropdownAberto && busca && candidatosBuscaSugeridos.length" class="list-group position-absolute w-100 shadow" style="z-index: 1060; top: 100%; max-height: 220px; overflow-y: auto;">
                                     <button
@@ -454,6 +454,13 @@ import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import {
+    formatarCpf as formatarCpfDocumento,
+    formatarCnpj as formatarCnpjDocumento,
+    mascararBuscaCpf,
+    normalizarBuscaDocumentoOuTexto,
+    somenteDigitos,
+} from '../../../utils/documentos';
+import {
     LIMITE_PAGINAS_CURRICULOS_ZIP,
     baixarBlobZipCurriculos,
     obterMensagemErroDownloadCurriculos,
@@ -571,10 +578,12 @@ watch(buscaEmpresaContratante, (termo) => {
 });
 
 function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
+    const buscaNormalizada = normalizarBuscaDocumentoOuTexto(busca.value);
+
     return {
         page: pagina,
         per_page: 10,
-        ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
+        ...(buscaNormalizada ? { busca: buscaNormalizada } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
         ...(unidadeFiltro.value !== '' ? { unidade: unidadeFiltro.value } : {}),
         ...(cursoFiltro.value.trim() ? { curso: cursoFiltro.value.trim() } : {}),
@@ -686,8 +695,7 @@ function limparEmpresaContratante() {
 }
 
 function formatarCnpj(cnpj) {
-    const digitos = String(cnpj ?? '').replace(/\D/g, '').padStart(14, '0');
-    return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    return formatarCnpjDocumento(String(cnpj ?? '').padStart(14, '0'));
 }
 
 function abrirModalContratacao(aluno) {
@@ -787,21 +795,15 @@ function validarIntervaloCurriculos(inicio, fim) {
 }
 
 function removerMascara(valor) {
-    return String(valor ?? '').replace(/\D/g, '');
+    return somenteDigitos(valor);
 }
 
 function limitarDigitos(valor, limite = 11) {
-    return somenteNumeros(valor).slice(0, limite);
+    return somenteDigitos(valor).slice(0, limite);
 }
 
 function formatarCpf(valor) {
-    const digitos = limitarDigitos(valor, 11);
-
-    if (digitos.length <= 3) return digitos;
-    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
-    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
-
-    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
+    return formatarCpfDocumento(valor);
 }
 
 function formatarTelefoneListagem(valor) {
@@ -826,6 +828,13 @@ function onCpfInput(evento) {
     const valorFormatado = formatarCpf(evento.target.value);
     formulario.cpf = valorFormatado;
     evento.target.value = valorFormatado;
+}
+
+function onBuscaCpfInput(evento) {
+    const valorFormatado = mascararBuscaCpf(evento.target.value);
+    busca.value = valorFormatado;
+    evento.target.value = valorFormatado;
+    buscaDropdownAberto.value = true;
 }
 
 function onTelefoneInput(evento) {

@@ -87,6 +87,7 @@ Route::middleware('auth.token')->group(function () {
     // Administrativo
     Route::prefix('administrativo')->group(function () {
         Route::get('dashboard',                  [AdministrativoController::class, 'dashboard']);
+        Route::post('relatorios/dashboard',      [AdministrativoController::class, 'relatorioDashboard']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
         Route::post('candidatos/curriculos/zip', [CurriculoCandidatoController::class, 'zip']);

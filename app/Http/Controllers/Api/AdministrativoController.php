@@ -5,14 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Administrativo;
 use App\Models\AlunoMigrado;
-use App\Models\BuscaTalento;
-use App\Models\Candidato;
-use App\Models\Empresa;
 use App\Models\EngajamentoPorUnidadeSenac;
-use App\Models\Contratacao;
-use App\Models\VisualizacaoPerfil;
+use App\Services\Admin\DashboardIndicadoresService;
+use App\Services\Admin\RelatorioDashboardPdfRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 
 class AdministrativoController extends Controller
@@ -47,157 +45,38 @@ class AdministrativoController extends Controller
      * tabela de log para isso, então esses dois pontos não são
      * retornados aqui (ver observação no card do frontend).
      */
-    public function dashboard(Request $request): JsonResponse
+    public function dashboard(Request $request, DashboardIndicadoresService $indicadores): JsonResponse
     {
         $this->garantirAdministrativo($request);
 
-        $inicioDoMes = Carbon::now()->startOfMonth();
-        $inicioDoMesAnterior = (clone $inicioDoMes)->subMonth();
+        return response()->json($indicadores->obter());
+    }
 
-        $totalCandidatos = Candidato::count();
-        $candidatosMesAtual = Candidato::whereHas(
-            'pessoa',
-            fn ($q) => $q->where('data_cadastro', '>=', $inicioDoMes)
-        )->count();
-        $candidatosMesAnterior = Candidato::whereHas(
-            'pessoa',
-            fn ($q) => $q->whereBetween('data_cadastro', [$inicioDoMesAnterior, $inicioDoMes])
-        )->count();
+    public function relatorioDashboard(
+        Request $request,
+        DashboardIndicadoresService $indicadores,
+        RelatorioDashboardPdfRenderer $renderer
+    ): Response {
+        $this->garantirAdministrativo($request);
 
-        $variacaoPerfis = $candidatosMesAnterior > 0
-            ? round((($candidatosMesAtual - $candidatosMesAnterior) / $candidatosMesAnterior) * 100, 1)
-            : null;
+        $validated = $request->validate([
+            'modo' => 'required|in:todos,especificos',
+            'secoes' => 'required_if:modo,especificos|array|min:1',
+            'secoes.*' => 'in:perfis_ativos,contratados,acessos_candidatos,empresas_ativas',
+        ]);
 
-        $inicioUltimos30Dias = today()->subDays(30);
-        $contratadosUltimos30Dias = Contratacao::query()
-            ->whereDate('contratado_em', '>=', $inicioUltimos30Dias)
-            ->count();
+        $secoes = ($validated['modo'] ?? null) === 'todos'
+            ? ['perfis_ativos', 'contratados', 'acessos_candidatos', 'empresas_ativas']
+            : array_values(array_unique($validated['secoes'] ?? []));
 
-        $cursosMaisContratados = Contratacao::query()
-            ->leftJoin('dados_academicos', function ($join) {
-                $join->on('dados_academicos.candidato_matricula', '=', 'contratacoes.candidato_matricula')
-                    ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = contratacoes.candidato_matricula)');
-            })
-            ->whereDate('contratacoes.contratado_em', '>=', $inicioUltimos30Dias)
-            ->selectRaw("COALESCE(NULLIF(dados_academicos.curso, ''), 'Não informado') as curso")
-            ->selectRaw('COUNT(DISTINCT contratacoes.id) as total')
-            ->groupBy('curso')
-            ->orderByDesc('total')
-            ->orderBy('curso')
-            ->limit(10)
-            ->get();
+        $agora = Carbon::now('America/Sao_Paulo');
+        $pdf = $renderer->render($indicadores->obter(), $secoes, $agora);
+        $arquivo = 'Relatorio_Geral_' . $agora->format('d-m-Y') . '.pdf';
 
-        $acessosUltimos30Dias = VisualizacaoPerfil::where('visualizado_em', '>=', now()->subDays(30))->count();
-
-        $totalEmpresas = Empresa::count();
-        $empresasAtivas = Empresa::where('status', true)->count();
-        $empresasComVagaAtiva = Empresa::where('status', true)
-            ->whereHas('vagas', fn ($q) => $q->where('status', true))
-            ->count();
-        $engajamentoEmpresas = $empresasAtivas > 0
-            ? round(($empresasComVagaAtiva / $empresasAtivas) * 100)
-            : 0;
-
-        // Donut "Acessos por Área de Interesse": visualizações de perfil
-        // agrupadas pelo segmento acadêmico do candidato visualizado.
-        $acessosPorSegmento = VisualizacaoPerfil::query()
-            ->join('candidato', 'visualizacoes_perfil.candidato_matricula', '=', 'candidato.matricula')
-            ->join('dados_academicos', 'dados_academicos.candidato_matricula', '=', 'candidato.matricula')
-            ->selectRaw('dados_academicos.segmento as segmento, count(*) as total')
-            ->groupBy('dados_academicos.segmento')
-            ->orderByDesc('total')
-            ->get();
-
-        $candidatosPorCurso = Candidato::query()
-            ->join('dados_academicos', 'dados_academicos.candidato_matricula', '=', 'candidato.matricula')
-            ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = candidato.matricula)')
-            ->whereNotNull('dados_academicos.curso')
-            ->where('dados_academicos.curso', '<>', '')
-            ->select('dados_academicos.curso')
-            ->selectRaw('COUNT(DISTINCT candidato.matricula) as total')
-            ->groupBy('dados_academicos.curso')
-            ->orderByDesc('total')
-            ->orderBy('dados_academicos.curso')
-            ->limit(10)
-            ->get();
-
-        // Linha "Visualizações de Perfil" nos últimos 6 meses.
-        $visualizacoesPorMes = VisualizacaoPerfil::query()
-            ->selectRaw("DATE_FORMAT(visualizado_em, '%Y-%m') as mes, count(*) as total")
-            ->where('visualizado_em', '>=', now()->subMonths(6)->startOfMonth())
-            ->groupBy('mes')
-            ->orderBy('mes')
-            ->get();
-
-        // Linha "Buscas Realizadas" nos últimos 6 meses (mesmo eixo do gráfico acima).
-        $buscasPorMes = BuscaTalento::query()
-            ->selectRaw("DATE_FORMAT(buscado_em, '%Y-%m') as mes, count(*) as total")
-            ->where('buscado_em', '>=', now()->subMonths(6)->startOfMonth())
-            ->groupBy('mes')
-            ->orderBy('mes')
-            ->get();
-
-        // Tabela "Filtros Mais Acessados pelas Empresas": cada busca loga um
-        // JSON de filtros (ex.: {"segmento":"...","tipo_curso":"..."}); aqui
-        // desmembramos e contamos por par filtro/valor.
-        $rotulosFiltro = [
-            'segmento'         => 'Segmento',
-            'tipo_curso'       => 'Tipo de Curso',
-            'disponibilidade'  => 'Disponibilidade',
-            'tipo_contratacao' => 'Contratação',
-            'habilidades'      => 'Habilidade',
-        ];
-        $contagem = [];
-        foreach (BuscaTalento::orderByDesc('buscado_em')->limit(500)->get() as $busca) {
-            foreach ((array) $busca->filtros as $filtro => $valor) {
-                foreach ((array) $valor as $valorUnico) {
-                    if ($valorUnico === null || $valorUnico === '') {
-                        continue;
-                    }
-                    $chave = $filtro . '|' . $valorUnico;
-                    $contagem[$chave] ??= [
-                        'filtro'        => $rotulosFiltro[$filtro] ?? $filtro,
-                        'valor'         => (string) $valorUnico,
-                        'totalBuscas'   => 0,
-                        'ultimaPesquisa' => $busca->buscado_em,
-                    ];
-                    $contagem[$chave]['totalBuscas']++;
-                }
-            }
-        }
-        $filtrosMaisAcessados = collect($contagem)
-            ->sortByDesc('totalBuscas')
-            ->take(10)
-            ->values()
-            ->map(fn ($item) => [
-                'filtro'         => $item['filtro'],
-                'valor'          => $item['valor'],
-                'totalBuscas'    => $item['totalBuscas'],
-                'ultimaPesquisa' => $item['ultimaPesquisa']->diffForHumans(),
-            ]);
-
-        return response()->json([
-            'perfisAtivos' => [
-                'total' => $totalCandidatos,
-                'variacaoPercentualVsMesAnterior' => $variacaoPerfis,
-            ],
-            'contratados' => [
-                'ultimos30Dias' => $contratadosUltimos30Dias,
-            ],
-            'cursosMaisContratados' => $cursosMaisContratados,
-            'acessosCandidatos' => [
-                'ultimos30Dias' => $acessosUltimos30Dias,
-            ],
-            'empresasAtivas' => [
-                'total' => $empresasAtivas,
-                'deUmTotalDe' => $totalEmpresas,
-                'engajamentoPercentual' => $engajamentoEmpresas,
-            ],
-            'acessosPorSegmento' => $acessosPorSegmento,
-            'visualizacoesPorMes' => $visualizacoesPorMes,
-            'buscasPorMes' => $buscasPorMes,
-            'filtrosMaisAcessados' => $filtrosMaisAcessados,
-            'candidatosPorCurso' => $candidatosPorCurso,
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $arquivo . '"; filename*=UTF-8\'\'' . rawurlencode($arquivo),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
         ]);
     }
 

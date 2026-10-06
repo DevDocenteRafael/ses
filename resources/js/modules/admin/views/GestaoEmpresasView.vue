@@ -18,12 +18,14 @@
                         <h2 class="h6 fw-bold text-primary mb-0">Histórico de Empresas</h2>
                         <div class="d-flex align-items-stretch flex-wrap gap-2 w-100 justify-content-md-end" style="max-width: 740px;">
                             <div class="input-group flex-grow-1" style="min-width: 240px;">
-                                <input
-                                    v-model="busca"
-                                    type="text"
-                                    class="form-control"
-                                    placeholder="Buscar por Nome ou CNPJ"
-                                >
+                                 <input
+                                     v-model="busca"
+                                     type="text"
+                                     class="form-control"
+                                     placeholder="Buscar por Nome ou CNPJ"
+                                     autocomplete="off"
+                                     @input="onBuscaCnpjInput"
+                                 >
                                 <span class="input-group-text bg-primary text-white"><i class="bi bi-search"></i></span>
                             </div>
                             <select v-model="statusFiltro" class="form-select" aria-label="Filtrar empresas por status" style="max-width: 180px;">
@@ -299,6 +301,12 @@ import BasePagination from '../../../components/common/BasePagination.vue';
 import { useAdminStore } from '../../../store/admin';
 import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
+import {
+    formatarCnpj as formatarCnpjDocumento,
+    mascararBuscaCnpj,
+    normalizarBuscaDocumentoOuTexto,
+    somenteDigitos,
+} from '../../../utils/documentos';
 
 const admin = useAdminStore();
 const toast = useToast();
@@ -339,10 +347,12 @@ watch([busca, statusFiltro], () => {
 });
 
 function parametrosFiltro(pagina = admin.empresasPaginacao.current_page || 1) {
+    const buscaNormalizada = normalizarBuscaDocumentoOuTexto(busca.value);
+
     return {
         page: pagina,
         per_page: 10,
-        ...(busca.value.trim() ? { busca: busca.value.trim() } : {}),
+        ...(buscaNormalizada ? { busca: buscaNormalizada } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
     };
 }
@@ -413,23 +423,22 @@ function obterMensagemErro(error) {
 }
 
 function removerMascara(valor) {
-    return String(valor ?? '').replace(/\D/g, '');
+    return somenteDigitos(valor);
 }
 
 function formatarCnpjInput(valor) {
-    const digitos = removerMascara(valor).slice(0, 14);
-
-    if (digitos.length <= 2) return digitos;
-    if (digitos.length <= 5) return `${digitos.slice(0, 2)}.${digitos.slice(2)}`;
-    if (digitos.length <= 8) return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5)}`;
-    if (digitos.length <= 12) return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8)}`;
-
-    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
+    return formatarCnpjDocumento(valor);
 }
 
 function onCnpjInput(evento) {
     const valorFormatado = formatarCnpjInput(evento.target.value);
     formulario.cnpj = valorFormatado;
+    evento.target.value = valorFormatado;
+}
+
+function onBuscaCnpjInput(evento) {
+    const valorFormatado = mascararBuscaCnpj(evento.target.value);
+    busca.value = valorFormatado;
     evento.target.value = valorFormatado;
 }
 
@@ -493,8 +502,7 @@ async function alternarStatus(empresa) {
 }
 
 function formatarCnpj(cnpj) {
-    const digitos = String(cnpj).padStart(14, '0');
-    return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    return formatarCnpjDocumento(String(cnpj ?? '').padStart(14, '0'));
 }
 
 </script>

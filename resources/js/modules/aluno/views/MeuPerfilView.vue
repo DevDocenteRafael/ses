@@ -396,31 +396,37 @@
 
                             <div class="row g-3">
                                 <div class="col-sm-6">
-                                    <label class="form-label d-block">Tipo de Contratação</label>
+                                    <label class="form-label d-block">Tipo de Contratação <span class="text-danger">*</span></label>
                                     <div class="form-check form-check-inline">
-                                        <input v-model="preferencias.clt" class="form-check-input" type="checkbox" id="tipoClt">
+                                        <input v-model="preferencias.clt" class="form-check-input" :class="campoInvalido('tipo_de_contratacao')" type="checkbox" id="tipoClt" aria-describedby="erro-tipo-contratacao" @change="limparErroCampoSeValido('tipo_de_contratacao')">
                                         <label class="form-check-label" for="tipoClt">CLT</label>
                                     </div>
                                     <div class="form-check form-check-inline">
-                                        <input v-model="preferencias.estagio" class="form-check-input" type="checkbox" id="tipoEstagio">
+                                        <input v-model="preferencias.estagio" class="form-check-input" :class="campoInvalido('tipo_de_contratacao')" type="checkbox" id="tipoEstagio" aria-describedby="erro-tipo-contratacao" @change="limparErroCampoSeValido('tipo_de_contratacao')">
                                         <label class="form-check-label" for="tipoEstagio">Estágio</label>
+                                    </div>
+                                    <div v-if="erroDeCampo('tipo_de_contratacao')" id="erro-tipo-contratacao" class="invalid-feedback d-block">
+                                        {{ erroDeCampo('tipo_de_contratacao') }}
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="form-label d-block">Disponibilidade de Horário</label>
+                                    <label class="form-label d-block">Disponibilidade de Horário <span class="text-danger">*</span></label>
                                     <div class="d-flex flex-wrap gap-3">
                                         <div v-for="opcao in opcoesDisponibilidadeHorario" :key="opcao" class="form-check form-check-inline mb-0">
                                             <input
                                                 v-model="preferencias.disponibilidade_de_horario"
                                                 class="form-check-input"
+                                                :class="campoInvalido('disponibilidade_de_horario')"
                                                 type="checkbox"
                                                 :id="`disponibilidade-${opcao}`"
                                                 :value="opcao"
+                                                aria-describedby="erro-disponibilidade-horario"
+                                                @change="limparErroCampoSeValido('disponibilidade_de_horario')"
                                             >
                                             <label class="form-check-label" :for="`disponibilidade-${opcao}`">{{ opcao }}</label>
                                         </div>
                                     </div>
-                                    <div v-if="erroDeCampo('disponibilidade_de_horario') || erroDeCampo('disponibilidade_de_horario.0')" class="invalid-feedback d-block">
+                                    <div v-if="erroDeCampo('disponibilidade_de_horario') || erroDeCampo('disponibilidade_de_horario.0')" id="erro-disponibilidade-horario" class="invalid-feedback d-block">
                                         {{ erroDeCampo('disponibilidade_de_horario') || erroDeCampo('disponibilidade_de_horario.0') }}
                                     </div>
                                 </div>
@@ -769,7 +775,7 @@ const rotuloRegioesTrabalhoSelecionadas = computed(() => {
 const preferencias = reactive({
     clt: false,
     estagio: false,
-    disponibilidade_de_horario: ['Manhã'],
+    disponibilidade_de_horario: [],
     regiao_administrativa: '',
     aceita_todas_regioes: false,
     regioes_preferidas: [],
@@ -1207,8 +1213,42 @@ function campoInvalido(campo) {
     return erroDeCampo(campo) ? 'is-invalid' : '';
 }
 
+function limparErroCampo(campo) {
+    if (!erroDeCampo(campo)) {
+        return;
+    }
+
+    const { [campo]: _removido, ...demaisErros } = errosFormulario.value;
+    errosFormulario.value = demaisErros;
+}
+
 function tipoContratacaoBitmask() {
     return (preferencias.clt ? 1 : 0) + (preferencias.estagio ? 2 : 0);
+}
+
+function limparErroCampoSeValido(campo) {
+    if (campo === 'tipo_de_contratacao' && tipoContratacaoBitmask() > 0) {
+        limparErroCampo(campo);
+    }
+
+    if (campo === 'disponibilidade_de_horario' && preferencias.disponibilidade_de_horario.length > 0) {
+        limparErroCampo(campo);
+        limparErroCampo('disponibilidade_de_horario.0');
+    }
+}
+
+function validarPreferenciasObrigatorias() {
+    const erros = {};
+
+    if (!tipoContratacaoBitmask()) {
+        erros.tipo_de_contratacao = ['Selecione pelo menos um tipo de contratação.'];
+    }
+
+    if (!preferencias.disponibilidade_de_horario.length) {
+        erros.disponibilidade_de_horario = ['Selecione pelo menos uma disponibilidade de horário.'];
+    }
+
+    return erros;
 }
 
 async function carregar() {
@@ -1240,7 +1280,7 @@ async function carregar() {
         if (data.preferencias_de_trabalho) {
             aplicarTipoContratacao(data.preferencias_de_trabalho.tipo_de_contratacao);
             const disponibilidadeRecebida = normalizarDisponibilidadesHorario(data.preferencias_de_trabalho.disponibilidade_de_horario);
-            preferencias.disponibilidade_de_horario = disponibilidadeRecebida.length ? disponibilidadeRecebida : preferencias.disponibilidade_de_horario;
+            preferencias.disponibilidade_de_horario = disponibilidadeRecebida;
             preferencias.regiao_administrativa = data.preferencias_de_trabalho.regiao_administrativa || '';
             preferencias.aceita_todas_regioes = Boolean(data.preferencias_de_trabalho.aceita_todas_regioes);
             preferencias.regioes_preferidas = preferencias.aceita_todas_regioes
@@ -1449,8 +1489,14 @@ async function salvar() {
     salvando.value = true;
     limparErrosFormulario();
     try {
+        const errosObrigatorios = validarPreferenciasObrigatorias();
+
         if (!preferencias.aceita_todas_regioes && !preferencias.regioes_preferidas.length) {
-            definirErrosFormulario({ regiao_administrativa: ['Selecione uma Região Administrativa válida.'] });
+            errosObrigatorios.regiao_administrativa = ['Selecione uma Região Administrativa válida.'];
+        }
+
+        if (Object.keys(errosObrigatorios).length) {
+            definirErrosFormulario(errosObrigatorios);
             mostrarMensagem('erro', 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
             return;
         }

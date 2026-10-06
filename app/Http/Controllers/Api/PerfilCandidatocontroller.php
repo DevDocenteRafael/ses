@@ -139,8 +139,8 @@ class PerfilCandidatoController extends Controller
         }
 
         $validated = $request->validate([
-            'tipo_de_contratacao'        => ['nullable', 'integer', Rule::in([0, 1, 2, 3])],
-            'disponibilidade_de_horario' => ['nullable', 'array'],
+            'tipo_de_contratacao'        => ['required', 'integer', Rule::in([1, 2, 3])],
+            'disponibilidade_de_horario' => ['required', 'array', 'min:1'],
             'disponibilidade_de_horario.*' => ['string', Rule::in(['Manhã', 'Tarde', 'Noite', 'Integral'])],
             'regiao_administrativa'      => ['nullable', 'string', 'max:100', Rule::in([...RegioesAdministrativasDf::nomes(), 'Todas as regiões'])],
             'aceita_todas_regioes'       => ['nullable', 'boolean'],
@@ -148,7 +148,12 @@ class PerfilCandidatoController extends Controller
             'regioes_preferidas.*'       => ['integer', Rule::in(RegioesAdministrativasDf::codigos())],
             'pretensao_salarial'         => 'nullable|numeric|min:0',
         ], [
+            'tipo_de_contratacao.required' => 'Selecione pelo menos um tipo de contratação.',
             'tipo_de_contratacao.in' => 'O tipo de contratação informado não é permitido. Jovem Aprendiz não é mais uma opção válida.',
+            'disponibilidade_de_horario.required' => 'Selecione pelo menos uma disponibilidade de horário.',
+            'disponibilidade_de_horario.array' => 'Selecione pelo menos uma disponibilidade de horário.',
+            'disponibilidade_de_horario.min' => 'Selecione pelo menos uma disponibilidade de horário.',
+            'disponibilidade_de_horario.*.in' => 'A disponibilidade de horário informada não é permitida.',
         ]);
         $validated['disponibilidade_de_horario'] = $this->normalizarDisponibilidadesHorario(
             $validated['disponibilidade_de_horario'] ?? []
