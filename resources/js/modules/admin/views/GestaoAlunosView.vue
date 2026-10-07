@@ -314,42 +314,50 @@
                     </p>
 
                     <template v-else>
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="table-responsive admin-candidates-table-wrapper">
+                            <table class="table align-middle mb-0 admin-candidates-table">
+                                <colgroup>
+                                    <col class="admin-candidates-col-candidate">
+                                    <col class="admin-candidates-col-cpf">
+                                    <col class="admin-candidates-col-phone">
+                                    <col class="admin-candidates-col-course">
+                                    <col class="admin-candidates-col-status">
+                                    <col class="admin-candidates-col-actions">
+                                </colgroup>
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
-                                        <th>Candidato</th>
-                                        <th>CPF</th>
-                                        <th>Telefone</th>
-                                        <th>Curso / Unidade</th>
-                                        <th>Status</th>
-                                        <th class="text-end admin-candidates-actions-header">Ações</th>
+                                        <th class="admin-candidates-cell-candidate">Candidato</th>
+                                        <th class="admin-candidates-cell-cpf">CPF</th>
+                                        <th class="admin-candidates-cell-phone">Telefone</th>
+                                        <th class="admin-candidates-cell-course">Curso / Unidade</th>
+                                        <th class="admin-candidates-cell-status">Status</th>
+                                        <th class="admin-candidates-cell-actions admin-candidates-actions-header">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template v-for="aluno in admin.alunos" :key="aluno.matricula">
                                         <tr>
-                                            <td>
+                                            <td class="admin-candidates-cell-candidate">
                                                 <p class="fw-semibold mb-0">{{ aluno.pessoa?.nome }}</p>
                                                 <p class="text-secondary small mb-0">E-mail: {{ aluno.pessoa?.email || '—' }}</p>
                                             </td>
-                                            <td>{{ formatarCpf(aluno.cpf) }}</td>
-                                            <td>
+                                            <td class="admin-candidates-cell-cpf">{{ formatarCpf(aluno.cpf) }}</td>
+                                            <td class="admin-candidates-cell-phone">
                                                 {{ formatarTelefoneListagem(aluno.pessoa?.telefone) }}
                                             </td>
-                                            <td>
+                                            <td class="admin-candidates-cell-course">
                                                 <p class="mb-0">{{ aluno.dados_academicos?.[0]?.curso || '—' }}</p>
                                                 <p class="text-secondary small mb-0">{{ aluno.dados_academicos?.[0]?.unidade || '—' }}</p>
                                             </td>
-                                            <td>
+                                            <td class="admin-candidates-cell-status">
                                                 <span
-                                                    class="badge"
+                                                    class="badge admin-candidates-status-badge"
                                                     :class="classeEstadoAluno(aluno)"
                                                 >
                                                     {{ rotuloEstadoAluno(aluno) }}
                                                 </span>
                                             </td>
-                                            <td class="text-end admin-candidates-actions-cell">
+                                            <td class="admin-candidates-cell-actions admin-candidates-actions-cell">
                                                 <div class="admin-candidates-actions">
                                                 <button
                                                     class="btn btn-sm btn-outline-primary admin-candidates-action-button admin-candidates-action-button--details"
@@ -1111,18 +1119,88 @@ function formatarDisponibilidade(valor) {
 </script>
 
 <style scoped>
+.admin-candidates-table-wrapper {
+    width: 100%;
+}
+
+.admin-candidates-table {
+    table-layout: fixed;
+    min-width: 1480px;
+}
+
+.admin-candidates-table th,
+.admin-candidates-table td {
+    vertical-align: middle;
+}
+
+.admin-candidates-col-candidate {
+    width: 18%;
+}
+
+.admin-candidates-col-cpf {
+    width: 10.5rem;
+}
+
+.admin-candidates-col-phone {
+    width: 12rem;
+}
+
+.admin-candidates-col-course {
+    width: 19%;
+}
+
+.admin-candidates-col-status {
+    width: 13rem;
+}
+
+.admin-candidates-col-actions {
+    width: 31rem;
+}
+
+.admin-candidates-cell-candidate,
+.admin-candidates-cell-course {
+    text-align: left;
+}
+
+.admin-candidates-cell-cpf,
+.admin-candidates-cell-phone,
+.admin-candidates-cell-status,
+.admin-candidates-cell-actions {
+    text-align: center;
+}
+
+.admin-candidates-cell-cpf,
+.admin-candidates-cell-phone,
+.admin-candidates-cell-status {
+    white-space: nowrap;
+}
+
+.admin-candidates-cell-cpf,
+.admin-candidates-cell-phone {
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-candidates-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
 .admin-candidates-actions-header,
 .admin-candidates-actions-cell {
-    min-width: 480px;
+    min-width: 31rem;
     white-space: nowrap;
 }
 
 .admin-candidates-actions {
-    display: inline-flex;
+    display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 0.5rem;
+    width: 100%;
     white-space: nowrap;
 }
 
@@ -1157,9 +1235,13 @@ function formatarDisponibilidade(valor) {
 }
 
 @media (max-width: 1024px) {
+    .admin-candidates-table {
+        min-width: 1440px;
+    }
+
     .admin-candidates-actions-header,
     .admin-candidates-actions-cell {
-        min-width: 460px;
+        min-width: 30rem;
     }
 }
 </style>
