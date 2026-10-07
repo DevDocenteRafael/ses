@@ -107,7 +107,7 @@
                                 >
                                     <span v-if="gerandoRelatorioPdf" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                     <i v-else class="bi bi-file-earmark-pdf me-1"></i>
-                                    {{ gerandoRelatorioPdf ? 'Preparando PDF...' : 'Baixar' }}
+                                    {{ gerandoRelatorioPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}
                                 </button>
                                 <button
                                     class="btn btn-outline-primary text-nowrap flex-shrink-0"

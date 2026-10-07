@@ -33,6 +33,7 @@ Route::middleware('auth.token')->group(function () {
     Route::get('cep/{cep}', [CepController::class, 'show'])->where('cep', '[0-9\-]+');
     Route::post('candidatos', [CandidatoController::class, 'store']);
     Route::post('empresas', [EmpresaController::class, 'store']);
+    Route::get('me/curriculo', [CurriculoCandidatoController::class, 'showAluno']);
 
     // Candidatos
     Route::get('candidatos/habilidades', [CandidatoController::class, 'habilidades']);

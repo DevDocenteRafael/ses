@@ -77,6 +77,29 @@ class CurriculoCandidatoController extends Controller
         ]);
     }
 
+    public function showAluno(
+        Request $request,
+        CurriculoCandidatoBuilder $builder,
+        CurriculoPdfRenderer $renderer
+    ): Response {
+        $pessoa = $this->pessoaAutenticada($request);
+        $candidato = $pessoa?->candidato;
+
+        if (! $pessoa || ! $candidato) {
+            abort(403, 'Apenas candidatos podem baixar o próprio currículo.');
+        }
+
+        $curriculo = $builder->montar((string) $candidato->matricula);
+        $pdf = $renderer->render($curriculo);
+        $arquivo = $builder->nomeArquivo($curriculo);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $arquivo . '"; filename*=UTF-8\'\'' . rawurlencode($arquivo),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    }
+
     public function zip(Request $request, CurriculoLoteZipService $service): BinaryFileResponse
     {
         $admin = $this->garantirAdministrativo($request);

@@ -86,6 +86,73 @@ class AdminCurriculoCandidatoTest extends TestCase
             ->assertHeader('content-type', 'application/pdf');
     }
 
+    public function test_aluno_autenticado_baixa_proprio_curriculo_em_pdf(): void
+    {
+        $candidato = $this->criarCandidatoCompleto();
+        $token = $this->token($candidato->pessoa);
+
+        $response = $this->withToken($token)->get('/api/me/curriculo');
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="Curriculo_Joao_da_Silva.pdf"', $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $this->assertStringContainsString('João da Silva', $this->normalizarPdfParaTeste($response->getContent()));
+    }
+
+    public function test_curriculo_do_aluno_exige_autenticacao(): void
+    {
+        $this->getJson('/api/me/curriculo')->assertUnauthorized();
+    }
+
+    public function test_aluno_nao_baixa_curriculo_de_outro_candidato_por_endpoint_com_matricula(): void
+    {
+        $candidatoA = $this->criarCandidatoBasico('Aluno A');
+        $candidatoB = $this->criarCandidatoBasico('Aluno B');
+        $token = $this->token($candidatoA->pessoa);
+
+        $this->withToken($token)
+            ->getJson("/api/candidatos/{$candidatoB->matricula}/curriculo")
+            ->assertForbidden();
+    }
+
+    public function test_curriculo_do_aluno_usa_dados_persistidos_e_nao_atualiza_ultima_atividade(): void
+    {
+        $candidato = $this->criarCandidatoCompleto();
+        $token = $this->token($candidato->pessoa);
+        $ultimaAtividade = now()->subDays(10)->startOfSecond();
+        $candidato->forceFill(['ultima_atividade_em' => $ultimaAtividade])->save();
+        $candidato->informacoesProfissionais->update(['sobre_mim' => 'Resumo persistido atualizado com Gestão e Brasília.']);
+
+        $response = $this->withToken($token)->get('/api/me/curriculo');
+
+        $response->assertOk();
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringContainsString('Resumo persistido atualizado com Gestão e Brasília.', $conteudo);
+        $this->assertSame($ultimaAtividade->toDateTimeString(), $candidato->fresh()->ultima_atividade_em?->toDateTimeString());
+    }
+
+    public function test_curriculo_do_aluno_com_perfil_incompleto_gera_pdf_valido(): void
+    {
+        $candidato = $this->criarCandidatoBasico('João Gonçalves');
+        DadosAcademicos::query()->create([
+            'instituicao' => 'Senac DF',
+            'curso' => 'Administração',
+            'unidade' => 'Brasília',
+            'ano_de_conclusao' => '2026-12-01',
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        $response = $this->withToken($this->token($candidato->pessoa))->get('/api/me/curriculo');
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringContainsString('João Gonçalves', $conteudo);
+        $this->assertStringContainsString('Administração', $conteudo);
+    }
+
     public function test_builder_inclui_somente_habilidades_da_area_atual(): void
     {
         $candidato = $this->criarCandidatoCompleto();

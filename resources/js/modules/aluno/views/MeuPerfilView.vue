@@ -1001,6 +1001,34 @@ function mostrarMensagem(tipo, texto) {
     toast.showToast(tipo, texto);
 }
 
+function mensagemErroApi(erro, mensagemPadrao) {
+    const dados = erro?.response?.data;
+    const primeiroErro = dados?.errors && Object.values(dados.errors).flat().find(Boolean);
+
+    return primeiroErro || dados?.message || mensagemPadrao;
+}
+
+async function tratarErroApiPerfil(erro, mensagemPadrao) {
+    const dados = erro?.response?.data;
+
+    if (erro?.response?.status === 403 && dados?.code === 'CANDIDATO_INATIVO') {
+        mostrarMensagem('erro', dados.message || 'Seu perfil foi bloqueado por inatividade. Faça login novamente para reativá-lo.');
+        await auth.logout();
+        router.push({ name: 'login' });
+        return true;
+    }
+
+    if (erro?.response?.status === 403 && dados?.code === 'CANDIDATO_CONTRATADO') {
+        auth.restricoes = { ...(auth.restricoes || {}), contratado: true, pode_editar_perfil: false, code: dados.code };
+        localStorage.setItem('ses_restricoes', JSON.stringify(auth.restricoes));
+        mostrarMensagem('erro', dados.message || 'Seu perfil está indisponível porque você já foi contratado.');
+        return true;
+    }
+
+    mostrarMensagem('erro', mensagemErroApi(erro, mensagemPadrao));
+    return true;
+}
+
 function enderecoVazio() {
     return {
         cep: '',
@@ -1195,7 +1223,7 @@ async function salvarInformacoesPessoais() {
         mostrarMensagem('sucesso', 'Informações pessoais atualizadas com sucesso.');
     } catch (e) {
         definirErrosFormulario(e?.response?.data?.errors || {});
-        mostrarMensagem('erro', 'Não foi possível atualizar as informações pessoais.');
+        await tratarErroApiPerfil(e, 'Não foi possível atualizar as informações pessoais.');
     } finally {
         salvandoInformacoesPessoais.value = false;
     }
@@ -1430,13 +1458,7 @@ async function adicionarCursoExterno() {
         await carregar();
     } catch (e) {
         definirErrosFormulario(e?.response?.data?.errors || {});
-        const erroApi = e?.response?.data?.errors?.concluido_em?.[0]
-            || e?.response?.data?.errors?.nome_curso?.[0]
-            || e?.response?.data?.errors?.instituicao?.[0]
-            || e?.response?.data?.errors?.carga_horaria?.[0]
-            || e?.response?.data?.message;
-
-        mostrarMensagem('erro', erroApi || 'Não foi possível adicionar o curso. Verifique os campos informados.');
+        await tratarErroApiPerfil(e, 'Não foi possível adicionar o curso. Verifique os campos informados.');
     }
 }
 
@@ -1445,7 +1467,7 @@ async function removerCursoExterno(id) {
         await alunosService.removerCursoExterno(matricula.value, id);
         await carregar();
     } catch (e) {
-        mostrarMensagem('erro', 'Não foi possível remover o curso externo.');
+        await tratarErroApiPerfil(e, 'Não foi possível remover o curso externo.');
     }
 }
 
@@ -1474,7 +1496,7 @@ async function adicionarExperiencia() {
         await carregar();
     } catch (e) {
         definirErrosFormulario(e?.response?.data?.errors || {});
-        mostrarMensagem('erro', 'Não foi possível adicionar a experiência profissional.');
+        await tratarErroApiPerfil(e, 'Não foi possível adicionar a experiência profissional.');
     }
 }
 
@@ -1483,7 +1505,7 @@ async function removerExperiencia(id) {
         await alunosService.removerExperiencia(matricula.value, id);
         await carregar();
     } catch (e) {
-        mostrarMensagem('erro', 'Não foi possível remover a experiência profissional.');
+        await tratarErroApiPerfil(e, 'Não foi possível remover a experiência profissional.');
     }
 }
 
@@ -1523,7 +1545,7 @@ async function salvar() {
         mostrarMensagem('sucesso', 'Perfil atualizado com sucesso.');
     } catch (e) {
         definirErrosFormulario(e?.response?.data?.errors || {});
-        mostrarMensagem('erro', 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
+        await tratarErroApiPerfil(e, 'Não foi possível salvar o perfil. Revise os campos obrigatórios destacados e tente novamente.');
     } finally {
         salvando.value = false;
     }
@@ -1785,6 +1807,10 @@ onBeforeUnmount(() => {
     .form-actions .btn,
     .form-actions--final .btn {
         flex: 1 1 100%;
+    }
+
+    .form-actions--final {
+        align-items: stretch !important;
     }
 
     .card-section-header {

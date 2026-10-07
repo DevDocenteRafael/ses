@@ -22,6 +22,10 @@ export default {
         return api.put(`/candidatos/${matricula}`, dados);
     },
 
+    baixarMeuCurriculo() {
+        return api.get('/me/curriculo', { responseType: 'blob' });
+    },
+
     // Currículo (links, info profissional, preferências, dados acadêmicos)
     salvarLinks(matricula, dados) {
         return api.post(`/candidatos/${matricula}/perfil/links`, dados);
