@@ -151,13 +151,14 @@
                                             <div class="position-relative">
                                                 <input
                                                     id="empresa-contratante"
-                                                    v-model="buscaEmpresaContratante"
+                                                    :value="empresaContratanteDisplay"
                                                     class="form-control"
                                                     type="search"
                                                     placeholder="Pesquisar empresa cadastrada"
                                                     autocomplete="off"
                                                     role="combobox"
                                                     :aria-expanded="!empresaContratanteSelecionada && empresasEncontradas.length > 0"
+                                                    @input="onBuscaEmpresaContratanteInput"
                                                 >
                                                 <div v-if="!empresaContratanteSelecionada && empresasEncontradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
                                                     <button
@@ -173,10 +174,10 @@
                                                 </div>
                                             </div>
                                             <div v-if="empresaContratanteSelecionada" class="d-flex align-items-center justify-content-between border rounded p-2 mt-2">
-                                                <span class="small">{{ buscaEmpresaContratante }}</span>
+                                                <span class="small">{{ empresaContratanteDisplay }}</span>
                                                 <button type="button" class="btn btn-sm btn-link" @click="limparEmpresaContratante">Trocar</button>
                                             </div>
-                                            <small v-else-if="!carregandoEmpresas && !empresasEncontradas.length && buscaEmpresaContratante" class="text-secondary d-block mt-2">
+                                            <small v-else-if="!carregandoEmpresas && !empresasEncontradas.length && empresaContratanteDisplay" class="text-secondary d-block mt-2">
                                                 Nenhuma empresa encontrada. Confira o cadastro em Gestão de Empresas.
                                             </small>
                                             <small v-if="carregandoEmpresas" class="text-secondary d-block mt-2">Buscando empresas...</small>
@@ -463,8 +464,9 @@ import {
     formatarCpf as formatarCpfDocumento,
     formatarCnpj as formatarCnpjDocumento,
     mascararBuscaCpf,
+    mascararBuscaCnpj,
     normalizarBuscaDocumentoOuTexto,
-    somenteDigitos,
+    ehEntradaDocumento,
 } from '../../../utils/documentos';
 import {
     LIMITE_PAGINAS_CURRICULOS_ZIP,
@@ -492,7 +494,8 @@ const alunoExpandido = ref(null);
 const modalContratacaoAberto = ref(false);
 const candidatoParaContratar = ref(null);
 const empresasEncontradas = ref([]);
-const buscaEmpresaContratante = ref('');
+const empresaContratanteDisplay = ref('');
+const empresaContratanteSearch = ref('');
 const empresaContratanteSelecionada = ref('');
 const carregandoEmpresas = ref(false);
 const salvandoContratacao = ref(false);
@@ -577,13 +580,6 @@ watch(cursoFiltro, (termo) => {
 });
 
 let temporizadorBuscaEmpresa = null;
-watch(buscaEmpresaContratante, (termo) => {
-    clearTimeout(temporizadorBuscaEmpresa);
-    const empresaSelecionada = empresasEncontradas.value.find((empresa) => empresa.cnpj === empresaContratanteSelecionada.value);
-    if (empresaSelecionada?.razao_social === termo) return;
-    empresaContratanteSelecionada.value = '';
-    temporizadorBuscaEmpresa = setTimeout(() => carregarEmpresasParaContratacao(termo), 250);
-});
 
 function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
     const buscaNormalizada = normalizarBuscaDocumentoOuTexto(busca.value);
@@ -682,7 +678,7 @@ async function carregarSugestoesCurso(termo = '') {
 async function carregarEmpresasParaContratacao(termo = '') {
     carregandoEmpresas.value = true;
     try {
-        const { data } = await adminService.listarEmpresas({ busca: termo.trim(), per_page: 10 });
+        const { data } = await adminService.listarEmpresas({ busca: termo, per_page: 10 });
         empresasEncontradas.value = data.data || [];
     } catch (error) {
         empresasEncontradas.value = [];
@@ -692,14 +688,33 @@ async function carregarEmpresasParaContratacao(termo = '') {
     }
 }
 
+function onBuscaEmpresaContratanteInput(event) {
+    const valorDigitado = String(event.target.value ?? '');
+    const valorVisual = ehEntradaDocumento(valorDigitado)
+        ? mascararBuscaCnpj(valorDigitado)
+        : valorDigitado;
+    const valorBusca = normalizarBuscaDocumentoOuTexto(valorVisual);
+
+    empresaContratanteDisplay.value = valorVisual;
+    empresaContratanteSearch.value = valorBusca;
+    empresaContratanteSelecionada.value = '';
+    event.target.value = valorVisual;
+
+    clearTimeout(temporizadorBuscaEmpresa);
+    temporizadorBuscaEmpresa = setTimeout(() => carregarEmpresasParaContratacao(valorBusca), 250);
+}
+
 function selecionarEmpresaContratante(empresa) {
     empresaContratanteSelecionada.value = empresa.cnpj;
-    buscaEmpresaContratante.value = empresa.razao_social;
+    empresaContratanteDisplay.value = empresa.razao_social;
+    empresaContratanteSearch.value = String(empresa.cnpj ?? '');
 }
 
 function limparEmpresaContratante() {
     empresaContratanteSelecionada.value = '';
-    buscaEmpresaContratante.value = '';
+    empresaContratanteDisplay.value = '';
+    empresaContratanteSearch.value = '';
+    empresasEncontradas.value = [];
 }
 
 function formatarCnpj(cnpj) {
@@ -709,7 +724,8 @@ function formatarCnpj(cnpj) {
 function abrirModalContratacao(aluno) {
     candidatoParaContratar.value = aluno;
     empresaContratanteSelecionada.value = '';
-    buscaEmpresaContratante.value = '';
+    empresaContratanteDisplay.value = '';
+    empresaContratanteSearch.value = '';
     erroContratacao.value = '';
     modalContratacaoAberto.value = true;
     carregarEmpresasParaContratacao();

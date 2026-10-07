@@ -147,17 +147,16 @@ class EmpresaController extends Controller
         if ($request->filled('busca')) {
             $termo = trim((string) $request->query('busca'));
             $termoNumerico = preg_replace('/\D+/', '', $termo) ?? '';
+            $termoMinusculo = mb_strtolower($termo);
 
-            $query->where(function ($q) use ($termo, $termoNumerico) {
-                $q->where('razao_social', 'like', '%' . $termo . '%')
-                    ->orWhereHas('responsavelContratual.pessoa', function ($pessoa) use ($termo) {
-                        $pessoa->where('nome', 'like', '%' . $termo . '%');
+            $query->where(function ($q) use ($termoNumerico, $termoMinusculo) {
+                $q->whereRaw('LOWER(razao_social) like ?', ['%' . $termoMinusculo . '%'])
+                    ->orWhereHas('responsavelContratual.pessoa', function ($pessoa) use ($termoMinusculo) {
+                        $pessoa->whereRaw('LOWER(nome) like ?', ['%' . $termoMinusculo . '%']);
                     });
 
                 if ($termoNumerico !== '') {
                     $q->orWhere('cnpj', 'like', '%' . $termoNumerico . '%');
-                } else {
-                    $q->orWhere('cnpj', 'like', '%' . $termo . '%');
                 }
             });
         }
