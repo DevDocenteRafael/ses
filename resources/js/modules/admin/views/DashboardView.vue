@@ -227,6 +227,41 @@
                 </div>
             </fieldset>
 
+            <hr class="my-4">
+
+            <fieldset class="ses-fieldset-relatorio">
+                <legend class="h6 fw-bold mb-3">Período do relatório</legend>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label" for="relatorio-data-inicial">Data inicial</label>
+                        <input
+                            id="relatorio-data-inicial"
+                            v-model="dataInicialRelatorio"
+                            type="date"
+                            class="form-control"
+                            :class="{ 'is-invalid': erroPeriodoRelatorio }"
+                        >
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label" for="relatorio-data-final">Data final</label>
+                        <input
+                            id="relatorio-data-final"
+                            v-model="dataFinalRelatorio"
+                            type="date"
+                            class="form-control"
+                            :class="{ 'is-invalid': erroPeriodoRelatorio }"
+                        >
+                    </div>
+                </div>
+                <p class="text-secondary small mt-2 mb-0">
+                    Se o período não for preenchido por completo, será considerado o mês atual.
+                </p>
+            </fieldset>
+
+            <p v-if="erroPeriodoRelatorio" class="text-danger small mt-3 mb-0" role="alert">
+                {{ erroPeriodoRelatorio }}
+            </p>
+
             <p v-if="erroSelecaoRelatorio" class="text-danger small mt-3 mb-0" role="alert">
                 {{ erroSelecaoRelatorio }}
             </p>
@@ -265,6 +300,8 @@ const modalRelatorioAberto = ref(false);
 const modoRelatorio = ref('todos');
 const secoesRelatorio = ref([]);
 const gerandoRelatorio = ref(false);
+const dataInicialRelatorio = ref('');
+const dataFinalRelatorio = ref('');
 let graficoCursos = null;
 let graficoCandidatosCurso = null;
 
@@ -433,12 +470,19 @@ const erroSelecaoRelatorio = computed(() => (
         ? 'Selecione pelo menos uma informação para gerar o relatório.'
         : ''
 ));
-const podeGerarRelatorio = computed(() => !gerandoRelatorio.value && !erroSelecaoRelatorio.value);
+const erroPeriodoRelatorio = computed(() => (
+    dataInicialRelatorio.value && dataFinalRelatorio.value && dataInicialRelatorio.value > dataFinalRelatorio.value
+        ? 'A data inicial não pode ser posterior à data final.'
+        : ''
+));
+const podeGerarRelatorio = computed(() => !gerandoRelatorio.value && !erroSelecaoRelatorio.value && !erroPeriodoRelatorio.value);
 
 function abrirModalRelatorio() {
     modalRelatorioAberto.value = true;
     modoRelatorio.value = 'todos';
     secoesRelatorio.value = [];
+    dataInicialRelatorio.value = '';
+    dataFinalRelatorio.value = '';
 }
 
 function fecharModalRelatorio() {
@@ -461,6 +505,8 @@ async function gerarRelatorio() {
         const payload = modoRelatorio.value === 'todos'
             ? { modo: 'todos' }
             : { modo: 'especificos', secoes: secoesRelatorio.value };
+        payload.data_inicial = dataInicialRelatorio.value || null;
+        payload.data_final = dataFinalRelatorio.value || null;
         const response = await adminService.gerarRelatorioDashboard(payload);
         const blob = new Blob([response.data], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);

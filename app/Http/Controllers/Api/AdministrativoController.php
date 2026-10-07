@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class AdministrativoController extends Controller
 {
@@ -63,15 +64,25 @@ class AdministrativoController extends Controller
             'modo' => 'required|in:todos,especificos',
             'secoes' => 'required_if:modo,especificos|array|min:1',
             'secoes.*' => 'in:perfis_ativos,contratados,acessos_candidatos,empresas_ativas',
+            'data_inicial' => 'nullable|date_format:Y-m-d',
+            'data_final' => 'nullable|date_format:Y-m-d',
         ]);
+
+        if (! empty($validated['data_inicial']) && ! empty($validated['data_final']) && $validated['data_inicial'] > $validated['data_final']) {
+            throw ValidationException::withMessages([
+                'data_inicial' => 'A data inicial não pode ser posterior à data final.',
+                'data_final' => 'A data inicial não pode ser posterior à data final.',
+            ]);
+        }
 
         $secoes = ($validated['modo'] ?? null) === 'todos'
             ? ['perfis_ativos', 'contratados', 'acessos_candidatos', 'empresas_ativas']
             : array_values(array_unique($validated['secoes'] ?? []));
 
-        $agora = Carbon::now('America/Sao_Paulo');
-        $pdf = $renderer->render($indicadores->obter(), $secoes, $agora);
-        $arquivo = 'Relatorio_Geral_' . $agora->format('d-m-Y') . '.pdf';
+        $periodo = $indicadores->resolverPeriodoRelatorio($validated['data_inicial'] ?? null, $validated['data_final'] ?? null);
+        $agora = Carbon::now(DashboardIndicadoresService::TIMEZONE);
+        $pdf = $renderer->render($indicadores->obterParaRelatorio($periodo), $secoes, $agora, $periodo);
+        $arquivo = 'Relatorio_Geral_' . $periodo['nome_arquivo'] . '.pdf';
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',

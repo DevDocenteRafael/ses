@@ -17,13 +17,13 @@ class RelatorioDashboardPdfRenderer
     private string $conteudoAtual = '';
     private float $y = 0;
 
-    public function render(array $dashboard, array $secoes, Carbon $geradoEm): string
+    public function render(array $dashboard, array $secoes, Carbon $geradoEm, ?array $periodo = null): string
     {
         $this->objetos = [];
         $this->paginas = [];
         $this->novaPagina();
 
-        $this->cabecalho($geradoEm);
+        $this->cabecalho($geradoEm, $periodo);
         $this->resumo($dashboard, $secoes);
 
         foreach ($secoes as $secao) {
@@ -42,12 +42,12 @@ class RelatorioDashboardPdfRenderer
         return $this->montarPdf();
     }
 
-    private function cabecalho(Carbon $geradoEm): void
+    private function cabecalho(Carbon $geradoEm, ?array $periodo): void
     {
         $this->texto('SENAC', 54, 782, 18, 'F2', self::AZUL);
         $this->texto('Relatório Geral — Portal de Oportunidades', 54, 758, 16, 'F2', self::TEXTO);
         $this->texto('Gerado em: ' . $geradoEm->format('d/m/Y') . ' às ' . $geradoEm->format('H:i'), 54, 736, 10.5, 'F1', self::CINZA);
-        $this->texto('Período dos dados: conforme regra de cada indicador abaixo.', 54, 720, 10.5, 'F1', self::CINZA);
+        $this->texto('Período: ' . ($periodo['rotulo'] ?? 'conforme regra de cada indicador abaixo.'), 54, 720, 10.5, 'F1', self::CINZA);
         $this->linhaHorizontal(704);
         $this->y = 678;
     }
@@ -75,7 +75,7 @@ class RelatorioDashboardPdfRenderer
     private function perfisAtivos(array $dados): void
     {
         $this->tituloSecao('PERFIS ATIVOS');
-        $this->linhaTexto('Total atual: ' . $this->numero((int) ($dados['total'] ?? 0)));
+        $this->linhaTexto('Total: ' . $this->numero((int) ($dados['total'] ?? 0)));
         if (($dados['variacaoPercentualVsMesAnterior'] ?? null) !== null) {
             $this->linhaTexto('Variação em relação ao período anterior: ' . $dados['variacaoPercentualVsMesAnterior'] . '%');
             $this->linhaTexto('Período comparado: Mês atual vs mês anterior', 10.5, 'F1', self::CINZA);
@@ -87,23 +87,26 @@ class RelatorioDashboardPdfRenderer
     private function contratados(array $dados): void
     {
         $this->tituloSecao('CONTRATADOS');
-        $this->linhaTexto('Total: ' . $this->numero((int) ($dados['ultimos30Dias'] ?? 0)));
-        $this->linhaTexto('Período: Últimos 30 dias', 10.5, 'F1', self::CINZA);
+        $this->linhaTexto('Total: ' . $this->numero((int) ($dados['total'] ?? $dados['ultimos30Dias'] ?? 0)));
+        $this->linhaTexto('Período: ' . ($dados['periodo'] ?? 'Período do relatório'), 10.5, 'F1', self::CINZA);
+        $this->linhaTexto('Coluna temporal: contratado_em', 10.5, 'F1', self::CINZA);
     }
 
     private function acessosCandidatos(array $dados): void
     {
         $this->tituloSecao('ACESSOS DE CANDIDATOS');
-        $this->linhaTexto('Total: ' . $this->numero((int) ($dados['ultimos30Dias'] ?? 0)));
-        $this->linhaTexto('Período: Últimos 30 dias', 10.5, 'F1', self::CINZA);
+        $this->linhaTexto('Total: ' . $this->numero((int) ($dados['total'] ?? $dados['ultimos30Dias'] ?? 0)));
+        $this->linhaTexto('Período: ' . ($dados['periodo'] ?? 'Período do relatório'), 10.5, 'F1', self::CINZA);
+        $this->linhaTexto('Coluna temporal: visualizado_em', 10.5, 'F1', self::CINZA);
     }
 
     private function empresasAtivas(array $dados): void
     {
         $this->tituloSecao('EMPRESAS ATIVAS');
         $this->linhaTexto('Total: ' . $this->numero((int) ($dados['total'] ?? 0)));
-        $this->linhaTexto('Total de empresas cadastradas: ' . $this->numero((int) ($dados['deUmTotalDe'] ?? 0)), 10.5, 'F1', self::CINZA);
+        $this->linhaTexto('Total de empresas cadastradas no período: ' . $this->numero((int) ($dados['deUmTotalDe'] ?? 0)), 10.5, 'F1', self::CINZA);
         $this->linhaTexto('Engajamento: ' . (int) ($dados['engajamentoPercentual'] ?? 0) . '%', 10.5, 'F1', self::CINZA);
+        $this->linhaTexto($dados['subtitulo'] ?? 'Empresas cadastradas no período que estão ativas atualmente.', 10.5, 'F1', self::CINZA);
     }
 
     private function tituloSecao(string $titulo): void

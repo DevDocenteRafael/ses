@@ -12,11 +12,36 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardIndicadoresService
 {
+    public const TIMEZONE = 'America/Sao_Paulo';
+
     public function __construct(private readonly \App\Services\Candidatos\CandidatoStatusService $statusService) {}
+
+    public function resolverPeriodoRelatorio(?string $dataInicial, ?string $dataFinal): array
+    {
+        $agora = Carbon::now(self::TIMEZONE);
+
+        if ($dataInicial && $dataFinal) {
+            $inicio = Carbon::createFromFormat('Y-m-d', $dataInicial, self::TIMEZONE)->startOfDay();
+            $fim = Carbon::createFromFormat('Y-m-d', $dataFinal, self::TIMEZONE)->endOfDay();
+        } else {
+            $inicio = $agora->copy()->startOfMonth()->startOfDay();
+            $fim = $agora->copy()->endOfMonth()->endOfDay();
+        }
+
+        return [
+            'inicio' => $inicio,
+            'fim' => $fim,
+            'inicio_data' => $inicio->toDateString(),
+            'fim_data' => $fim->toDateString(),
+            'rotulo' => $inicio->format('d/m/Y') . ' a ' . $fim->format('d/m/Y'),
+            'nome_arquivo' => $inicio->format('d-m-Y') . '_a_' . $fim->format('d-m-Y'),
+            'timezone' => self::TIMEZONE,
+        ];
+    }
 
     public function obter(): array
     {
-        $agora = Carbon::now('America/Sao_Paulo');
+        $agora = Carbon::now(self::TIMEZONE);
         $inicioUltimos30Dias = $agora->copy()->subDays(30);
 
         $totalCandidatos = $this->statusService->aplicarEscopoDisponiveis(Candidato::query())->count();
@@ -151,6 +176,71 @@ class DashboardIndicadoresService
             'buscasPorMes' => $buscasPorMes,
             'filtrosMaisAcessados' => $filtrosMaisAcessados,
             'candidatosPorCurso' => $candidatosPorCurso,
+        ];
+    }
+
+    public function obterParaRelatorio(array $periodo): array
+    {
+        /**
+         * Auditoria temporal das métricas do PDF:
+         * - Contratados: data de negócio da contratação (`contratado_em`).
+         * - Acessos de Candidatos: timestamp real da visualização (`visualizado_em`).
+         * - Perfis Ativos: não há histórico de status; portanto a métrica verdadeira é
+         *   "candidatos cadastrados no período que estão ativos atualmente" (`created_at` + estado efetivo atual).
+         * - Empresas Ativas: não há histórico de status; portanto a métrica verdadeira é
+         *   "empresas cadastradas no período que estão ativas atualmente" (`created_at` + `status = true`).
+         */
+        $inicio = $periodo['inicio'];
+        $fim = $periodo['fim'];
+
+        $perfisAtivos = $this->statusService
+            ->aplicarEscopoDisponiveis(Candidato::query())
+            ->whereBetween('created_at', [$inicio, $fim])
+            ->count();
+
+        $contratados = Contratacao::query()
+            ->whereBetween('contratado_em', [$periodo['inicio_data'], $periodo['fim_data']])
+            ->count();
+
+        $acessos = VisualizacaoPerfil::query()
+            ->whereBetween('visualizado_em', [$inicio, $fim])
+            ->count();
+
+        $totalEmpresasPeriodo = Empresa::query()
+            ->whereBetween('created_at', [$inicio, $fim])
+            ->count();
+
+        $empresasAtivasPeriodo = Empresa::query()
+            ->where('status', true)
+            ->whereBetween('created_at', [$inicio, $fim])
+            ->count();
+
+        return [
+            'periodoRelatorio' => $periodo,
+            'perfisAtivos' => [
+                'total' => $perfisAtivos,
+                'variacaoPercentualVsMesAnterior' => null,
+                'periodoComparado' => null,
+                'subtitulo' => 'Candidatos cadastrados no período que estão ativos atualmente; não reconstrói histórico de status.',
+            ],
+            'contratados' => [
+                'ultimos30Dias' => $contratados,
+                'total' => $contratados,
+                'periodo' => $periodo['rotulo'],
+                'colunaTemporal' => 'contratado_em',
+            ],
+            'acessosCandidatos' => [
+                'ultimos30Dias' => $acessos,
+                'total' => $acessos,
+                'periodo' => $periodo['rotulo'],
+                'colunaTemporal' => 'visualizado_em',
+            ],
+            'empresasAtivas' => [
+                'total' => $empresasAtivasPeriodo,
+                'deUmTotalDe' => $totalEmpresasPeriodo,
+                'engajamentoPercentual' => $totalEmpresasPeriodo > 0 ? round(($empresasAtivasPeriodo / $totalEmpresasPeriodo) * 100) : 0,
+                'subtitulo' => 'Empresas cadastradas no período que estão ativas atualmente; não reconstrói histórico de status.',
+            ],
         ];
     }
 
