@@ -100,6 +100,20 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertStringContainsString('João da Silva', $this->normalizarPdfParaTeste($response->getContent()));
     }
 
+    public function test_empresa_continua_baixando_curriculo_individual_em_pdf(): void
+    {
+        [, $token] = $this->criarEmpresaAutenticada();
+        $candidato = $this->criarCandidatoCompleto();
+
+        $response = $this->withToken($token)->get("/api/candidatos/{$candidato->matricula}/curriculo");
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertStringContainsString('attachment; filename="Curriculo_Joao_da_Silva.pdf"', $response->headers->get('content-disposition'));
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $this->assertStringContainsString('João da Silva', $this->normalizarPdfParaTeste($response->getContent()));
+    }
+
     public function test_curriculo_do_aluno_exige_autenticacao(): void
     {
         $this->getJson('/api/me/curriculo')->assertUnauthorized();
@@ -114,6 +128,35 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->withToken($token)
             ->getJson("/api/candidatos/{$candidatoB->matricula}/curriculo")
             ->assertForbidden();
+    }
+
+    public function test_endpoint_do_proprio_curriculo_ignora_matricula_manipulada_e_usa_usuario_autenticado(): void
+    {
+        $candidatoA = $this->criarCandidatoBasico('Aluno Próprio');
+        $candidatoB = $this->criarCandidatoBasico('Aluno Invadido');
+        InformacoesProfissionais::query()->create([
+            'sobre_mim' => 'Resumo exclusivo do candidato autenticado.',
+            'area_de_atuacao' => 'Administração',
+            'habilidades' => ['Gestão'],
+            'habilidades_por_area' => ['Administração' => ['Gestão']],
+            'candidato_matricula' => $candidatoA->matricula,
+        ]);
+        InformacoesProfissionais::query()->create([
+            'sobre_mim' => 'Resumo sigiloso de outro candidato.',
+            'area_de_atuacao' => 'Tecnologia da Informação',
+            'habilidades' => ['PHP'],
+            'habilidades_por_area' => ['Tecnologia da Informação' => ['PHP']],
+            'candidato_matricula' => $candidatoB->matricula,
+        ]);
+
+        $response = $this->withToken($this->token($candidatoA->pessoa))->getJson('/api/me/curriculo?matricula=' . $candidatoB->matricula);
+
+        $response->assertOk();
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringContainsString('Aluno Próprio', $conteudo);
+        $this->assertStringContainsString('Resumo exclusivo do candidato autenticado.', $conteudo);
+        $this->assertStringNotContainsString('Aluno Invadido', $conteudo);
+        $this->assertStringNotContainsString('Resumo sigiloso de outro candidato.', $conteudo);
     }
 
     public function test_curriculo_do_aluno_usa_dados_persistidos_e_nao_atualiza_ultima_atividade(): void

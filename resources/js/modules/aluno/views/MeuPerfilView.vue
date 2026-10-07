@@ -611,7 +611,18 @@
                 </div>
             </div>
 
-            <div class="form-actions form-actions--final d-flex justify-content-end mt-3">
+            <div class="form-actions form-actions--final d-flex justify-content-between align-items-center mt-3">
+                <button
+                    type="button"
+                    class="btn btn-outline-primary"
+                    :disabled="baixandoCurriculo"
+                    aria-live="polite"
+                    @click="baixarMeuCurriculo"
+                >
+                    <span v-if="baixandoCurriculo" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <i v-else class="bi bi-file-earmark-arrow-down me-1" aria-hidden="true"></i>
+                    {{ baixandoCurriculo ? 'Gerando currículo...' : 'Baixar meu currículo' }}
+                </button>
                 <button type="button" class="btn btn-primary" :disabled="salvando" @click="salvar">
                     <span v-if="salvando" class="spinner-border spinner-border-sm me-1"></span>
                     Salvar Alterações
@@ -669,6 +680,7 @@ const matricula = computed(() => auth.pessoa?.candidato?.matricula || auth.pesso
 
 const carregando = ref(true);
 const salvando = ref(false);
+const baixandoCurriculo = ref(false);
 const errosFormulario = ref({});
 
 const dadosAcademicos = ref(null);
@@ -1006,6 +1018,44 @@ function mensagemErroApi(erro, mensagemPadrao) {
     const primeiroErro = dados?.errors && Object.values(dados.errors).flat().find(Boolean);
 
     return primeiroErro || dados?.message || mensagemPadrao;
+}
+
+function nomeArquivoCurriculo(response) {
+    const disposicao = response.headers?.['content-disposition'] || '';
+    const nomeUtf8 = disposicao.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+
+    if (nomeUtf8) {
+        return decodeURIComponent(nomeUtf8);
+    }
+
+    const nomeAscii = disposicao.match(/filename="?([^";]+)"?/i)?.[1];
+
+    return nomeAscii || 'Curriculo.pdf';
+}
+
+async function baixarMeuCurriculo() {
+    if (baixandoCurriculo.value) {
+        return;
+    }
+
+    baixandoCurriculo.value = true;
+
+    try {
+        const response = await alunosService.baixarMeuCurriculo();
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nomeArquivoCurriculo(response);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (erro) {
+        mostrarMensagem('erro', mensagemErroApi(erro, 'Não foi possível gerar seu currículo. Tente novamente.'));
+    } finally {
+        baixandoCurriculo.value = false;
+    }
 }
 
 async function tratarErroApiPerfil(erro, mensagemPadrao) {
