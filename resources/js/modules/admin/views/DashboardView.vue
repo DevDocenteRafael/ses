@@ -229,33 +229,60 @@
 
             <hr class="my-4">
 
-            <fieldset class="ses-fieldset-relatorio">
-                <legend class="h6 fw-bold mb-3">Período do relatório</legend>
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6">
-                        <label class="form-label" for="relatorio-data-inicial">Data inicial</label>
-                        <input
-                            id="relatorio-data-inicial"
-                            v-model="dataInicialRelatorio"
-                            type="date"
-                            class="form-control"
-                            :class="{ 'is-invalid': erroPeriodoRelatorio }"
-                        >
+            <fieldset class="ses-fieldset-relatorio ses-periodo-relatorio">
+                <legend class="visually-hidden">Período do relatório</legend>
+                <button
+                    id="relatorio-periodo-toggle"
+                    type="button"
+                    class="ses-periodo-toggle"
+                    :aria-expanded="periodoRelatorioAberto ? 'true' : 'false'"
+                    aria-controls="relatorio-periodo-conteudo"
+                    @click="periodoRelatorioAberto = !periodoRelatorioAberto"
+                >
+                    <span class="ses-periodo-toggle-texto">
+                        <span class="h6 fw-bold mb-0">Período do relatório</span>
+                        <span v-if="periodoRelatorioSelecionadoLabel" class="ses-periodo-resumo">
+                            {{ periodoRelatorioSelecionadoLabel }}
+                        </span>
+                    </span>
+                    <i :class="['bi', periodoRelatorioAberto ? 'bi-chevron-up' : 'bi-chevron-down']" aria-hidden="true"></i>
+                </button>
+
+                <Transition name="ses-periodo-collapse">
+                    <div
+                        v-show="periodoRelatorioAberto"
+                        id="relatorio-periodo-conteudo"
+                        class="ses-periodo-conteudo"
+                        role="region"
+                        aria-labelledby="relatorio-periodo-toggle"
+                    >
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="relatorio-data-inicial">Data inicial</label>
+                                <input
+                                    id="relatorio-data-inicial"
+                                    v-model="dataInicialRelatorio"
+                                    type="date"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': erroPeriodoRelatorio }"
+                                >
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="relatorio-data-final">Data final</label>
+                                <input
+                                    id="relatorio-data-final"
+                                    v-model="dataFinalRelatorio"
+                                    type="date"
+                                    class="form-control"
+                                    :class="{ 'is-invalid': erroPeriodoRelatorio }"
+                                >
+                            </div>
+                        </div>
+                        <p class="text-secondary small mt-2 mb-0">
+                            Se o período não for preenchido por completo, será considerado o mês atual.
+                        </p>
                     </div>
-                    <div class="col-12 col-sm-6">
-                        <label class="form-label" for="relatorio-data-final">Data final</label>
-                        <input
-                            id="relatorio-data-final"
-                            v-model="dataFinalRelatorio"
-                            type="date"
-                            class="form-control"
-                            :class="{ 'is-invalid': erroPeriodoRelatorio }"
-                        >
-                    </div>
-                </div>
-                <p class="text-secondary small mt-2 mb-0">
-                    Se o período não for preenchido por completo, será considerado o mês atual.
-                </p>
+                </Transition>
             </fieldset>
 
             <p v-if="erroPeriodoRelatorio" class="text-danger small mt-3 mb-0" role="alert">
@@ -270,7 +297,7 @@
                 <button type="button" class="btn btn-outline-secondary" :disabled="gerandoRelatorio" @click="fecharModalRelatorio">
                     Cancelar
                 </button>
-                <button type="button" class="btn btn-primary" :disabled="!podeGerarRelatorio" @click="gerarRelatorio">
+                <button type="button" class="btn btn-primary" :disabled="gerandoRelatorio || Boolean(erroSelecaoRelatorio)" @click="gerarRelatorio">
                     <span v-if="gerandoRelatorio" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                     {{ gerandoRelatorio ? 'Gerando relatório...' : 'Gerar PDF' }}
                 </button>
@@ -302,6 +329,7 @@ const secoesRelatorio = ref([]);
 const gerandoRelatorio = ref(false);
 const dataInicialRelatorio = ref('');
 const dataFinalRelatorio = ref('');
+const periodoRelatorioAberto = ref(false);
 let graficoCursos = null;
 let graficoCandidatosCurso = null;
 
@@ -476,6 +504,10 @@ const erroPeriodoRelatorio = computed(() => (
         : ''
 ));
 const podeGerarRelatorio = computed(() => !gerandoRelatorio.value && !erroSelecaoRelatorio.value && !erroPeriodoRelatorio.value);
+const periodoRelatorioSelecionadoLabel = computed(() => {
+    if (!dataInicialRelatorio.value || !dataFinalRelatorio.value) return '';
+    return `${formatarDataRelatorio(dataInicialRelatorio.value)} a ${formatarDataRelatorio(dataFinalRelatorio.value)}`;
+});
 
 function abrirModalRelatorio() {
     modalRelatorioAberto.value = true;
@@ -483,6 +515,7 @@ function abrirModalRelatorio() {
     secoesRelatorio.value = [];
     dataInicialRelatorio.value = '';
     dataFinalRelatorio.value = '';
+    periodoRelatorioAberto.value = false;
 }
 
 function fecharModalRelatorio() {
@@ -497,8 +530,18 @@ function nomeArquivoRelatorio(headers) {
     return match?.[1] || 'Relatorio_Geral.pdf';
 }
 
+function formatarDataRelatorio(valor) {
+    const [ano, mes, dia] = String(valor || '').split('-');
+    return ano && mes && dia ? `${dia}/${mes}/${ano}` : '';
+}
+
 async function gerarRelatorio() {
-    if (!podeGerarRelatorio.value) return;
+    if (!podeGerarRelatorio.value) {
+        if (erroPeriodoRelatorio.value) {
+            periodoRelatorioAberto.value = true;
+        }
+        return;
+    }
 
     gerandoRelatorio.value = true;
     try {
@@ -648,10 +691,76 @@ const pontosLinha = computed(() => pontosCirculo.value.map((p) => `${p.x},${p.y}
     pointer-events: none;
 }
 
+.ses-periodo-relatorio {
+    border-top: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: .25rem 0;
+}
+
+.ses-periodo-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    padding: .75rem 0;
+    background: transparent;
+    color: var(--bs-body-color);
+    text-align: left;
+    cursor: pointer;
+}
+
+.ses-periodo-toggle:focus-visible {
+    outline: 3px solid rgba(var(--bs-primary-rgb), .35);
+    outline-offset: 2px;
+    border-radius: .5rem;
+}
+
+.ses-periodo-toggle-texto {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    min-width: 0;
+}
+
+.ses-periodo-resumo {
+    color: var(--bs-secondary-color);
+    font-size: .875rem;
+    line-height: 1.25;
+}
+
+.ses-periodo-conteudo {
+    padding: .5rem 0 1rem;
+}
+
+.ses-periodo-collapse-enter-active,
+.ses-periodo-collapse-leave-active {
+    overflow: hidden;
+    transition: max-height .2s ease, opacity .2s ease;
+}
+
+.ses-periodo-collapse-enter-from,
+.ses-periodo-collapse-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
+
+.ses-periodo-collapse-enter-to,
+.ses-periodo-collapse-leave-from {
+    max-height: 14rem;
+    opacity: 1;
+}
+
 @media (max-width: 430px) {
     .ses-opcao-relatorio,
     .ses-checkbox-relatorio {
         padding: .75rem;
+    }
+
+    .ses-periodo-toggle {
+        gap: .75rem;
     }
 }
 </style>
