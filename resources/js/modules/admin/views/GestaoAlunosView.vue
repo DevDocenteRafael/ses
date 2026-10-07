@@ -323,7 +323,7 @@
                                         <th>Telefone</th>
                                         <th>Curso / Unidade</th>
                                         <th>Status</th>
-                                        <th class="text-end">Ações</th>
+                                        <th class="text-end admin-candidates-actions-header">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -349,19 +349,19 @@
                                                     {{ rotuloEstadoAluno(aluno) }}
                                                 </span>
                                             </td>
-                                            <td class="text-end" style="min-width: 430px;">
-                                                <div class="d-flex flex-nowrap justify-content-end gap-2">
+                                            <td class="text-end admin-candidates-actions-cell">
+                                                <div class="admin-candidates-actions">
                                                 <button
-                                                    class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                                    class="btn btn-sm btn-outline-primary admin-candidates-action-button admin-candidates-action-button--details"
                                                     @click="alternarDetalhes(aluno.matricula)"
                                                 >
                                                     {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-success flex-shrink-0" :disabled="salvandoContratacao || alunoContratado(aluno)" @click="abrirModalContratacao(aluno)">
-                                                    <i class="bi bi-person-check me-1"></i>{{ alunoContratado(aluno) ? 'Contratado' : 'Contratado(a)' }}
+                                                <button class="btn btn-sm btn-outline-success admin-candidates-action-button admin-candidates-action-button--hiring" :disabled="salvandoContratacao || alunoContratado(aluno)" @click="abrirModalContratacao(aluno)">
+                                                    <i class="bi bi-person-check me-1"></i>Contratado(a)
                                                 </button>
                                                 <button
-                                                    class="btn btn-sm flex-shrink-0"
+                                                    class="btn btn-sm admin-candidates-action-button admin-candidates-action-button--access"
                                                     :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
                                                     :disabled="alterando === aluno.matricula"
                                                     @click="alternarStatus(aluno)"
@@ -1109,3 +1109,57 @@ function formatarDisponibilidade(valor) {
 }
 
 </script>
+
+<style scoped>
+.admin-candidates-actions-header,
+.admin-candidates-actions-cell {
+    min-width: 480px;
+    white-space: nowrap;
+}
+
+.admin-candidates-actions {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.admin-candidates-action-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    height: 2rem;
+    padding-top: 0;
+    padding-bottom: 0;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.admin-candidates-action-button :deep(.bi),
+.admin-candidates-action-button.bi {
+    line-height: 1;
+}
+
+.admin-candidates-action-button--details {
+    width: 8.75rem;
+}
+
+.admin-candidates-action-button--hiring {
+    width: 9.25rem;
+}
+
+.admin-candidates-action-button--access {
+    width: 10.25rem;
+}
+
+@media (max-width: 1024px) {
+    .admin-candidates-actions-header,
+    .admin-candidates-actions-cell {
+        min-width: 460px;
+    }
+}
+</style>
