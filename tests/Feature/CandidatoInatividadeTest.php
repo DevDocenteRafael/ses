@@ -148,6 +148,76 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonPath('perfisAtivos.total', 1);
     }
 
+    public function test_admin_filtra_contratados_no_backend_antes_da_paginacao_e_busca(): void
+    {
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->criarCandidato(ultimaAtividade: now());
+        }
+
+        for ($i = 0; $i < 2; $i++) {
+            $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+        }
+
+        $contratados = [];
+        for ($i = 0; $i < 12; $i++) {
+            [$pessoa, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subYear());
+            $pessoa->update(['nome' => $i === 0 ? 'Arlinson Contratado' : 'Contratado ' . $i]);
+            $this->registrarContratacao($candidato);
+            $contratados[] = $candidato;
+        }
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonPath('per_page', 10)
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&page=2&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 12)
+            ->assertJsonCount(2, 'data');
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?busca=Arlinson&status=contratado&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $contratados[0]->matricula)
+            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+    }
+
+    public function test_admin_filtros_estado_efetivo_respeitam_prioridade_contratado(): void
+    {
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        $ativo = $this->criarCandidato(ultimaAtividade: now())[1];
+        $manual = $this->criarCandidato(status: false, ultimaAtividade: now())[1];
+        $inativo = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31))[1];
+        $contratadoInativo = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31))[1];
+        $this->registrarContratacao($contratadoInativo);
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $ativo->matricula);
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=0&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $manual->matricula);
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $inativo->matricula);
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $contratadoInativo->matricula)
+            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+    }
+
     private function criarCandidato(bool $status = true, ?Carbon $ultimaAtividade = null): array
     {
         $pessoa = Pessoa::query()->create([

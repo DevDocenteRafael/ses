@@ -344,11 +344,9 @@
                                             <td>
                                                 <span
                                                     class="badge"
-                                                    :class="aluno.status
-                                                        ? 'text-bg-success-subtle text-success-emphasis'
-                                                        : 'text-bg-danger-subtle text-danger-emphasis'"
+                                                    :class="classeEstadoAluno(aluno)"
                                                 >
-                                                    {{ aluno.status ? 'Liberado' : 'Bloqueado' }}
+                                                    {{ rotuloEstadoAluno(aluno) }}
                                                 </span>
                                             </td>
                                             <td class="text-end" style="min-width: 430px;">
@@ -359,8 +357,8 @@
                                                 >
                                                     {{ alunoExpandido === aluno.matricula ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-success flex-shrink-0" :disabled="salvandoContratacao" @click="abrirModalContratacao(aluno)">
-                                                    <i class="bi bi-person-check me-1"></i>Contratado(a)
+                                                <button class="btn btn-sm btn-outline-success flex-shrink-0" :disabled="salvandoContratacao || alunoContratado(aluno)" @click="abrirModalContratacao(aluno)">
+                                                    <i class="bi bi-person-check me-1"></i>{{ alunoContratado(aluno) ? 'Contratado' : 'Contratado(a)' }}
                                                 </button>
                                                 <button
                                                     class="btn btn-sm flex-shrink-0"
@@ -520,6 +518,8 @@ const statusOpcoes = [
     { value: '', label: 'Todos os status' },
     { value: '1', label: 'Liberado' },
     { value: '0', label: 'Bloqueado' },
+    { value: 'inativo', label: 'Bloqueado por inatividade' },
+    { value: 'contratado', label: 'Contratado' },
 ];
 const statusOpcoesFiltradas = computed(() => {
     const termo = statusBusca.value.trim().toLocaleLowerCase('pt-BR');
@@ -814,6 +814,40 @@ function formatarTelefoneListagem(valor) {
     return formatarTelefone(valor) || 'Não informado';
 }
 
+function alunoContratado(aluno) {
+    return aluno?.estado_efetivo === 'CONTRATADO';
+}
+
+function rotuloEstadoAluno(aluno) {
+    if (aluno?.estado_efetivo_rotulo) {
+        return aluno.estado_efetivo_rotulo;
+    }
+
+    return aluno?.status ? 'Liberado' : 'Bloqueado';
+}
+
+function classeEstadoAluno(aluno) {
+    switch (aluno?.estado_efetivo) {
+        case 'CONTRATADO':
+            return 'text-bg-primary-subtle text-primary-emphasis';
+        case 'BLOQUEADO_MANUALMENTE':
+            return 'text-bg-danger-subtle text-danger-emphasis';
+        case 'BLOQUEADO_POR_INATIVIDADE':
+            return 'text-bg-warning-subtle text-warning-emphasis';
+        case 'ATIVO':
+            return 'text-bg-success-subtle text-success-emphasis';
+        default:
+            return aluno?.status
+                ? 'text-bg-success-subtle text-success-emphasis'
+                : 'text-bg-danger-subtle text-danger-emphasis';
+    }
+}
+
+function rotuloFiltroStatusExportacao(status) {
+    const opcao = statusOpcoes.find((item) => item.value === status);
+    return opcao?.value ? `Status: ${opcao.label}` : null;
+}
+
 function censurarCpf(valor) {
     const digitos = limitarDigitos(valor, 11);
 
@@ -950,7 +984,7 @@ async function baixarCandidatosFiltradosPdf() {
 
         const resumoFiltros = [
             filtrosExportacao.busca ? `Busca: ${filtrosExportacao.busca}` : null,
-            filtrosExportacao.status === '1' ? 'Status: Liberado' : filtrosExportacao.status === '0' ? 'Status: Bloqueado' : null,
+            rotuloFiltroStatusExportacao(filtrosExportacao.status),
             filtrosExportacao.unidade ? `Unidade: ${filtrosExportacao.unidade}` : null,
             filtrosExportacao.curso ? `Curso: ${filtrosExportacao.curso}` : null,
         ].filter(Boolean).join(' | ') || 'Sem filtros adicionais';

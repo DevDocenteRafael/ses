@@ -23,6 +23,7 @@ class CandidatoQueryService
         $query = Candidato::query()
             ->with([
                 'pessoa:id_pessoa,nome,email,telefone',
+                'contratacao',
                 'linkExterno',
                 'informacoesProfissionais',
                 'preferenciasDeTrabalho',
@@ -87,8 +88,11 @@ class CandidatoQueryService
         }
 
         if ($request->filled('status')) {
-            Validator::make($request->input(), ['status' => ['boolean']])->validate();
-            $query->where('status', $request->boolean('status'));
+            Validator::make($request->input(), [
+                'status' => [Rule::in([true, false, 1, 0, '1', '0', 'ativo', 'liberado', 'bloqueado', 'contratado', 'inativo', CandidatoStatusService::ATIVO, CandidatoStatusService::BLOQUEADO_MANUALMENTE, CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, CandidatoStatusService::CONTRATADO])],
+            ])->validate();
+
+            $this->aplicarFiltroEstadoEfetivo($query, (string) $request->input('status'));
         }
 
         $unidade = null;
@@ -215,7 +219,31 @@ class CandidatoQueryService
                                 });
                             }
                         });
-                });
+            });
         });
+    }
+
+    private function aplicarFiltroEstadoEfetivo(Builder $query, string $status): void
+    {
+        $normalizado = mb_strtolower(trim($status));
+
+        match ($normalizado) {
+            'contratado', mb_strtolower(CandidatoStatusService::CONTRATADO) => $query->whereHas('contratacao'),
+            'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $query
+                ->where('status', true)
+                ->whereDoesntHave('contratacao')
+                ->where(function (Builder $inativo) {
+                    $inativo->whereNull('ultima_atividade_em')
+                        ->orWhere('ultima_atividade_em', '<=', $this->statusService->limiteAtividade());
+                }),
+            '0', 'bloqueado', mb_strtolower(CandidatoStatusService::BLOQUEADO_MANUALMENTE) => $query
+                ->where('status', false)
+                ->whereDoesntHave('contratacao'),
+            default => $query
+                ->where('status', true)
+                ->whereDoesntHave('contratacao')
+                ->whereNotNull('ultima_atividade_em')
+                ->where('ultima_atividade_em', '>', $this->statusService->limiteAtividade()),
+        };
     }
 }
