@@ -9,7 +9,9 @@ use App\Services\Candidatos\CandidatoStatusService;
 use App\Models\Empresa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 
 class ContratacaoController extends Controller
@@ -28,11 +30,19 @@ class ContratacaoController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:10'],
         ]);
 
-        $query = Contratacao::query()->with([
+        $query = Contratacao::query()->vigentes()->with([
             'empresa.pessoa:id_pessoa,nome,email,telefone',
             'candidato.pessoa:id_pessoa,nome,email,telefone,endereco_cep,endereco_logradouro,endereco_numero,endereco_complemento,endereco_bairro,endereco_cidade,endereco_uf',
+            'candidato.linkExterno',
+            'candidato.informacoesProfissionais',
+            'candidato.preferenciasDeTrabalho',
+            'candidato.regioesPreferidasTrabalho',
             'candidato.dadosAcademicos',
+            'candidato.cursosSenac',
+            'candidato.cursosExternos',
+            'candidato.experienciasProfissionais',
             'registradoPor:id_pessoa,nome',
+            'canceladoPor:id_pessoa,nome',
         ]);
 
         if (! empty($validated['empresa'])) {
@@ -80,21 +90,32 @@ class ContratacaoController extends Controller
             abort(403, 'Não é possível registrar contratação para um candidato inativo.');
         }
 
-        $contratacao = DB::transaction(function () use ($matricula, $candidato, $empresa, $solicitante, $validated) {
-            $candidatoBloqueado = Candidato::query()->lockForUpdate()->findOrFail($matricula);
+        try {
+            $contratacao = DB::transaction(function () use ($matricula, $candidato, $empresa, $solicitante, $validated) {
+                $candidatoBloqueado = Candidato::query()->lockForUpdate()->findOrFail($matricula);
 
-            if ($candidatoBloqueado->contratacao()->exists()) {
-                abort(409, 'Este candidato já possui uma contratação registrada.');
-            }
+                if ($candidatoBloqueado->contratacao()->exists()) {
+                    abort(409, 'Este candidato já possui uma contratação ativa.');
+                }
 
-            return Contratacao::query()->create([
-                'candidato_matricula' => $candidato->matricula,
-                'empresa_cnpj' => $empresa->cnpj,
-                'registrado_por_pessoa_id' => $solicitante->id_pessoa,
-                'origem' => $solicitante->tipo(),
-                'contratado_em' => $validated['contratado_em'] ?? today(),
-            ]);
-        });
+                return Contratacao::query()->create([
+                    'candidato_matricula' => $candidato->matricula,
+                    'empresa_cnpj' => $empresa->cnpj,
+                    'registrado_por_pessoa_id' => $solicitante->id_pessoa,
+                    'origem' => $solicitante->tipo(),
+                    'contratado_em' => $validated['contratado_em'] ?? today(),
+                    'status' => Contratacao::STATUS_VIGENTE,
+                    'historico_alteracoes' => [[
+                        'acao' => 'registrada',
+                        'em' => now()->toIso8601String(),
+                        'por_pessoa_id' => $solicitante->id_pessoa,
+                        'origem' => $solicitante->tipo(),
+                    ]],
+                ]);
+            });
+        } catch (UniqueConstraintViolationException) {
+            abort(409, 'Este candidato já possui uma contratação ativa.');
+        }
 
         return response()->json($contratacao->load([
             'empresa.pessoa:id_pessoa,nome,email,telefone',
@@ -102,5 +123,74 @@ class ContratacaoController extends Controller
             'candidato.dadosAcademicos',
             'registradoPor:id_pessoa,nome',
         ]), 201);
+    }
+
+    public function cancelar(Request $request, Contratacao $contratacao): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas administradores podem cancelar contratações.');
+        }
+
+        $motivos = [
+            'Contratação registrada por engano',
+            'Empresa selecionada incorretamente',
+            'Candidato selecionado incorretamente',
+            'Outro motivo',
+        ];
+
+        $validated = $request->validate([
+            'motivo_cancelamento' => ['required', 'string', Rule::in($motivos)],
+            'observacao_cancelamento' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($validated['motivo_cancelamento'] === 'Outro motivo' && trim((string) ($validated['observacao_cancelamento'] ?? '')) === '') {
+            throw ValidationException::withMessages([
+                'observacao_cancelamento' => 'Informe uma justificativa para outro motivo.',
+            ]);
+        }
+
+        $contratacaoCancelada = DB::transaction(function () use ($contratacao, $solicitante, $validated) {
+            $bloqueada = Contratacao::query()
+                ->whereKey($contratacao->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($bloqueada->status === Contratacao::STATUS_CANCELADA) {
+                return $bloqueada;
+            }
+
+            $historico = $bloqueada->historico_alteracoes ?? [];
+            $historico[] = [
+                'acao' => 'cancelada',
+                'em' => now()->toIso8601String(),
+                'por_pessoa_id' => $solicitante->id_pessoa,
+                'motivo' => $validated['motivo_cancelamento'],
+                'observacao' => $validated['observacao_cancelamento'] ?? null,
+            ];
+
+            $bloqueada->forceFill([
+                'status' => Contratacao::STATUS_CANCELADA,
+                'cancelado_em' => now(),
+                'cancelado_por_pessoa_id' => $solicitante->id_pessoa,
+                'motivo_cancelamento' => $validated['motivo_cancelamento'],
+                'observacao_cancelamento' => $validated['observacao_cancelamento'] ?? null,
+                'historico_alteracoes' => $historico,
+            ])->save();
+
+            return $bloqueada;
+        });
+
+        return response()->json([
+            'message' => $contratacaoCancelada->wasChanged('status') ? 'Contratação cancelada com sucesso.' : 'Esta contratação já estava cancelada.',
+            'contratacao' => $contratacaoCancelada->load([
+                'empresa.pessoa:id_pessoa,nome,email,telefone',
+                'candidato.pessoa:id_pessoa,nome,email,telefone',
+                'registradoPor:id_pessoa,nome',
+                'canceladoPor:id_pessoa,nome',
+            ]),
+            'candidato_contratado' => $contratacaoCancelada->candidato?->contratacao()->exists() ?? false,
+        ]);
     }
 }

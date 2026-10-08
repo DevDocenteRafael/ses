@@ -64,7 +64,6 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" :disabled="loading" @click="$emit('fechar')">Cancelar</button>
                             <button type="submit" class="btn btn-primary" :disabled="loading">
                                 <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 {{ loading ? 'Gerando currículos...' : 'Gerar ZIP' }}

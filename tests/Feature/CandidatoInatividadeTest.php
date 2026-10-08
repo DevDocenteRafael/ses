@@ -123,7 +123,7 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonCount(10, 'data');
     }
 
-    public function test_admin_visualiza_motivo_e_dashboard_usa_estado_efetivo(): void
+    public function test_admin_gestao_candidatos_exclui_contratados_e_dashboard_usa_estado_efetivo(): void
     {
         [, $tokenAdmin] = $this->criarAdminAutenticado();
         $ativo = $this->criarCandidato(ultimaAtividade: now()->subSeconds(10))[1];
@@ -134,21 +134,21 @@ class CandidatoInatividadeTest extends TestCase
 
         $lista = $this->withToken($tokenAdmin)->getJson('/api/candidatos?per_page=10')
             ->assertOk()
-            ->assertJsonPath('total', 4)
+            ->assertJsonPath('total', 3)
             ->json('data');
 
         $estados = collect($lista)->pluck('estado_efetivo', 'matricula');
         $this->assertSame('ATIVO', $estados[(string) $ativo->matricula]);
         $this->assertSame('BLOQUEADO_POR_INATIVIDADE', $estados[(string) $inativo->matricula]);
         $this->assertSame('BLOQUEADO_MANUALMENTE', $estados[(string) $manual->matricula]);
-        $this->assertSame('CONTRATADO', $estados[(string) $contratado->matricula]);
+        $this->assertArrayNotHasKey((string) $contratado->matricula, $estados->all());
 
         $this->withToken($tokenAdmin)->getJson('/api/administrativo/dashboard')
             ->assertOk()
             ->assertJsonPath('perfisAtivos.total', 1);
     }
 
-    public function test_admin_filtra_contratados_no_backend_antes_da_paginacao_e_busca(): void
+    public function test_admin_gestao_candidatos_remove_contratados_no_backend_antes_da_paginacao_e_busca(): void
     {
         [, $tokenAdmin] = $this->criarAdminAutenticado();
 
@@ -168,23 +168,26 @@ class CandidatoInatividadeTest extends TestCase
             $contratados[] = $candidato;
         }
 
-        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&page=1&per_page=10')
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?page=1&per_page=10')
             ->assertOk()
-            ->assertJsonPath('total', 12)
+            ->assertJsonPath('total', 7)
             ->assertJsonPath('per_page', 10)
-            ->assertJsonCount(10, 'data')
-            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+            ->assertJsonCount(7, 'data');
 
-        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&page=2&per_page=10')
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?page=2&per_page=10')
             ->assertOk()
-            ->assertJsonPath('total', 12)
-            ->assertJsonCount(2, 'data');
+            ->assertJsonPath('total', 7)
+            ->assertJsonCount(0, 'data');
 
-        $this->withToken($tokenAdmin)->getJson('/api/candidatos?busca=Arlinson&status=contratado&page=1&per_page=10')
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?busca=Arlinson&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $this->withToken($tokenAdmin)->getJson('/api/contratacoes?nome=Arlinson&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.matricula', (string) $contratados[0]->matricula)
-            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+            ->assertJsonPath('data.0.candidato.matricula', (string) $contratados[0]->matricula)
+            ->assertJsonPath('data.0.empresa.cnpj', $contratados[0]->contratacao->empresa_cnpj);
     }
 
     public function test_admin_filtros_estado_efetivo_respeitam_prioridade_contratado(): void
@@ -213,9 +216,12 @@ class CandidatoInatividadeTest extends TestCase
 
         $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=contratado&per_page=10')
             ->assertOk()
+            ->assertJsonPath('total', 0);
+
+        $this->withToken($tokenAdmin)->getJson('/api/contratacoes?per_page=10')
+            ->assertOk()
             ->assertJsonPath('total', 1)
-            ->assertJsonPath('data.0.matricula', (string) $contratadoInativo->matricula)
-            ->assertJsonPath('data.0.estado_efetivo', 'CONTRATADO');
+            ->assertJsonPath('data.0.candidato.matricula', (string) $contratadoInativo->matricula);
     }
 
     private function criarCandidato(bool $status = true, ?Carbon $ultimaAtividade = null): array

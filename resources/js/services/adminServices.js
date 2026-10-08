@@ -44,6 +44,10 @@ export default {
         return api.get('/contratacoes', { params });
     },
 
+    cancelarContratacao(id, dados) {
+        return api.patch(`/contratacoes/${encodeURIComponent(id)}/cancelar`, dados);
+    },
+
     cadastrarAluno(dados) {
         return api.post('/candidatos', dados);
     },

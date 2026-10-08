@@ -294,9 +294,6 @@
             </p>
 
             <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-4">
-                <button type="button" class="btn btn-outline-secondary" :disabled="gerandoRelatorio" @click="fecharModalRelatorio">
-                    Cancelar
-                </button>
                 <button type="button" class="btn btn-primary" :disabled="gerandoRelatorio || Boolean(erroSelecaoRelatorio)" @click="gerarRelatorio">
                     <span v-if="gerandoRelatorio" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                     {{ gerandoRelatorio ? 'Gerando relatório...' : 'Gerar PDF' }}

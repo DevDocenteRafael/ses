@@ -44,7 +44,7 @@
                                 <button class="btn btn-outline-secondary" type="button" :disabled="carregando || baixandoPdf || !paginacao.total" @click="baixarContratacoesPdf">
                                     <span v-if="baixandoPdf" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                     <i v-else class="bi bi-file-earmark-pdf me-1"></i>
-                                    {{ baixandoPdf ? 'Preparando PDF...' : 'Baixar' }}
+                                    {{ baixandoPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}
                                 </button>
                             </div>
                         </div>
@@ -71,30 +71,76 @@
                         <p v-if="!contratacoes.length" class="text-secondary small mb-0">
                             Nenhuma contratação encontrada.
                         </p>
-                        <div v-else class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div v-else class="table-responsive hired-candidates-table-wrapper">
+                            <table class="table align-middle mb-0 hired-candidates-table">
+                                <colgroup>
+                                    <col class="hired-candidates-table__col-candidate">
+                                    <col class="hired-candidates-table__col-cpf">
+                                    <col class="hired-candidates-table__col-company">
+                                    <col class="hired-candidates-table__col-phone">
+                                    <col class="hired-candidates-table__col-date">
+                                    <col class="hired-candidates-table__col-actions">
+                                </colgroup>
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
-                                        <th>Candidato</th>
-                                        <th>CPF</th>
-                                        <th>Empresa</th>
-                                        <th>Curso</th>
-                                        <th>Contratado em</th>
-                                        <th>Registrado por</th>
+                                        <th class="text-start">Candidato</th>
+                                        <th class="text-center">CPF</th>
+                                        <th class="text-center">Empresa</th>
+                                        <th class="text-center">Telefone</th>
+                                        <th class="text-center">Contratado em</th>
+                                        <th class="text-center">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="registro in contratacoes" :key="registro.id">
-                                        <td>
-                                            <p class="fw-semibold mb-0">{{ registro.candidato?.pessoa?.nome || '—' }}</p>
-                                            <p class="text-secondary small mb-0">{{ registro.candidato?.pessoa?.email || '—' }}</p>
-                                        </td>
-                                        <td>{{ formatarCpf(registro.candidato?.cpf) }}</td>
-                                        <td>{{ registro.empresa?.razao_social || '—' }}</td>
-                                        <td>{{ registro.candidato?.dados_academicos?.[0]?.curso || '—' }}</td>
-                                        <td>{{ formatarData(registro.contratado_em) }}</td>
-                                        <td>{{ registro.registrado_por?.nome || (registro.origem === 'empresa' ? 'Empresa' : 'Administração') }}</td>
-                                    </tr>
+                                    <template v-for="registro in contratacoes" :key="registro.id">
+                                        <tr class="hired-candidates-table__row">
+                                            <td class="hired-candidates-table__candidate text-start">
+                                                <p class="fw-semibold mb-0 hired-candidates-table__candidate-name">{{ registro.candidato?.pessoa?.nome || '—' }}</p>
+                                                <p class="text-secondary small mb-0 hired-candidates-table__candidate-email">{{ registro.candidato?.pessoa?.email || '—' }}</p>
+                                            </td>
+                                            <td class="text-center hired-candidates-table__nowrap">{{ formatarCpf(registro.candidato?.cpf) }}</td>
+                                            <td class="text-center hired-candidates-table__company">{{ registro.empresa?.razao_social || '—' }}</td>
+                                            <td class="text-center hired-candidates-table__nowrap">{{ formatarTelefone(registro.candidato?.pessoa?.telefone) }}</td>
+                                            <td class="text-center hired-candidates-table__nowrap">{{ formatarData(registro.contratado_em) }}</td>
+                                            <td class="text-center hired-candidates-table__actions-cell">
+                                                <div class="action-buttons">
+                                                    <button class="btn btn-sm btn-outline-primary hired-candidates-action-button" type="button" @click="alternarDetalhes(registro.id)">
+                                                        {{ registroExpandido === registro.id ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger hired-candidates-action-button" type="button" @click="abrirModalCancelamento(registro)">
+                                                        Cancelar contratação
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="registroExpandido === registro.id" :key="`detalhes-${registro.id}`">
+                                            <td colspan="6" class="bg-light-subtle">
+                                                <div class="p-3 hired-candidate-details">
+                                                    <div class="row g-3">
+                                                        <div class="col-12"><small class="text-secondary d-block">Sobre mim</small><span>{{ registro.candidato?.informacoes_profissionais?.sobre_mim || 'Não informado' }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">CPF</small><span>{{ formatarCpf(registro.candidato?.cpf) }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">Cargo de interesse</small><span>{{ registro.candidato?.informacoes_profissionais?.cargo_de_interesse || 'Não informado' }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">Disponibilidade de horário</small><span>{{ formatarLista(registro.candidato?.preferencias_de_trabalho?.disponibilidade_de_horario) }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">Empresa contratante</small><span>{{ registro.empresa?.razao_social || 'Não informado' }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">Contratado em</small><span>{{ formatarData(registro.contratado_em) }}</span></div>
+                                                        <div class="col-md-6 col-lg-4"><small class="text-secondary d-block">Situação da contratação</small><span>Contratado</span></div>
+                                                        <div class="col-md-6 col-lg-4 d-flex align-items-end justify-content-lg-start">
+                                                            <button
+                                                                class="btn btn-sm btn-outline-primary"
+                                                                type="button"
+                                                                :disabled="curriculoGerando === registro.candidato?.matricula"
+                                                                @click="baixarCurriculo(registro)"
+                                                            >
+                                                                <span v-if="curriculoGerando === registro.candidato?.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                                                <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
+                                                                {{ curriculoGerando === registro.candidato?.matricula ? 'Gerando...' : 'Baixar currículo' }}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
@@ -117,6 +163,43 @@
                 </div>
             </div>
         </div>
+
+        <div v-if="modalCancelamentoAberto" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="cancelar-contratacao-titulo">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="cancelar-contratacao-titulo" class="modal-title h5">Cancelar contratação</h3>
+                        <button type="button" class="btn-close" aria-label="Fechar" :disabled="cancelandoContratacao" @click="fecharModalCancelamento"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            Deseja cancelar a contratação de <strong>{{ contratacaoParaCancelar?.candidato?.pessoa?.nome || 'candidato' }}</strong>
+                            pela empresa <strong>{{ contratacaoParaCancelar?.empresa?.razao_social || 'empresa' }}</strong>?
+                        </p>
+                        <p class="text-secondary small">Essa ação removerá o candidato da lista de contratados e registrará o cancelamento no histórico.</p>
+                        <div class="mb-3">
+                            <label for="motivo-cancelamento" class="form-label">Motivo do cancelamento *</label>
+                            <select id="motivo-cancelamento" v-model="formCancelamento.motivo_cancelamento" class="form-select" :class="{ 'is-invalid': erroCampoCancelamento }" :disabled="cancelandoContratacao" required>
+                                <option value="">Selecione</option>
+                                <option v-for="motivo in motivosCancelamento" :key="motivo" :value="motivo">{{ motivo }}</option>
+                            </select>
+                            <div v-if="erroCampoCancelamento" class="invalid-feedback d-block">{{ erroCampoCancelamento }}</div>
+                        </div>
+                        <div class="mb-0">
+                            <label for="observacao-cancelamento" class="form-label">Observação {{ formCancelamento.motivo_cancelamento === 'Outro motivo' ? '*' : '(opcional)' }}</label>
+                            <textarea id="observacao-cancelamento" v-model.trim="formCancelamento.observacao_cancelamento" class="form-control" rows="3" maxlength="1000" :disabled="cancelandoContratacao"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" :disabled="cancelandoContratacao" @click="confirmarCancelamento">
+                            <span v-if="cancelandoContratacao" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            {{ cancelandoContratacao ? 'Cancelando...' : 'Confirmar cancelamento' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="modalCancelamentoAberto" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
@@ -126,18 +209,34 @@ import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import adminService from '../../../services/adminServices';
+import { useToast } from '../../../composables/useToast';
+
+const toast = useToast();
 
 const filtros = reactive({ empresa: '', nome: '', cpf: '', curso: '' });
 const contratacoes = ref([]);
 const carregando = ref(false);
 const carregouUmaVez = ref(false);
 const baixandoPdf = ref(false);
+const curriculoGerando = ref(null);
 const erro = ref('');
+const registroExpandido = ref(null);
 const paginacao = reactive({ current_page: 1, last_page: 1, per_page: 10, total: 0, from: null, to: null });
 const filtroAberto = ref('');
 const sugestoes = reactive({ empresa: [], nome: [], cpf: [], curso: [] });
 const requisicoesSugestoes = { empresa: 0, nome: 0, cpf: 0, curso: 0 };
 const temporizadoresSugestoes = {};
+const motivosCancelamento = [
+    'Contratação registrada por engano',
+    'Empresa selecionada incorretamente',
+    'Candidato selecionado incorretamente',
+    'Outro motivo',
+];
+const modalCancelamentoAberto = ref(false);
+const cancelandoContratacao = ref(false);
+const contratacaoParaCancelar = ref(null);
+const erroCampoCancelamento = ref('');
+const formCancelamento = reactive({ motivo_cancelamento: 'Contratação registrada por engano', observacao_cancelamento: '' });
 
 onMounted(async () => {
     await carregarContratacoes();
@@ -172,7 +271,7 @@ async function carregarContratacoes(pagina = paginacao.current_page) {
         paginacao.to = data.to || null;
     } catch (errorResposta) {
         if (requisicao === requisicaoContratacoes) {
-            erro.value = errorResposta.response?.data?.message || 'Não foi possível carregar as contratações.';
+            erro.value = 'Não foi possível carregar as contratações. Tente novamente.';
         }
     } finally {
         if (requisicao === requisicaoContratacoes) carregando.value = false;
@@ -181,7 +280,94 @@ async function carregarContratacoes(pagina = paginacao.current_page) {
 
 function mudarPagina(pagina) {
     if (pagina < 1 || pagina > paginacao.last_page || pagina === paginacao.current_page || carregando.value) return;
+    registroExpandido.value = null;
     carregarContratacoes(pagina);
+}
+
+function alternarDetalhes(id) {
+    registroExpandido.value = registroExpandido.value === id ? null : id;
+}
+
+function abrirModalCancelamento(registro) {
+    contratacaoParaCancelar.value = registro;
+    formCancelamento.motivo_cancelamento = 'Contratação registrada por engano';
+    formCancelamento.observacao_cancelamento = '';
+    erroCampoCancelamento.value = '';
+    modalCancelamentoAberto.value = true;
+}
+
+function fecharModalCancelamento() {
+    if (cancelandoContratacao.value) return;
+    modalCancelamentoAberto.value = false;
+    contratacaoParaCancelar.value = null;
+    erroCampoCancelamento.value = '';
+    formCancelamento.motivo_cancelamento = 'Contratação registrada por engano';
+    formCancelamento.observacao_cancelamento = '';
+}
+
+async function confirmarCancelamento() {
+    if (cancelandoContratacao.value) return;
+    erroCampoCancelamento.value = '';
+    if (!formCancelamento.motivo_cancelamento) {
+        erroCampoCancelamento.value = 'Informe o motivo do cancelamento.';
+        return;
+    }
+    if (formCancelamento.motivo_cancelamento === 'Outro motivo' && !formCancelamento.observacao_cancelamento.trim()) {
+        erroCampoCancelamento.value = 'Informe uma justificativa para outro motivo.';
+        return;
+    }
+    if (!contratacaoParaCancelar.value?.id) return;
+
+    cancelandoContratacao.value = true;
+    try {
+        const { data } = await adminService.cancelarContratacao(contratacaoParaCancelar.value.id, { ...formCancelamento });
+        toast.success(data?.message || 'Contratação cancelada com sucesso.');
+        modalCancelamentoAberto.value = false;
+        contratacaoParaCancelar.value = null;
+        erroCampoCancelamento.value = '';
+        formCancelamento.motivo_cancelamento = 'Contratação registrada por engano';
+        formCancelamento.observacao_cancelamento = '';
+        const pagina = contratacoes.value.length === 1 && paginacao.current_page > 1 ? paginacao.current_page - 1 : paginacao.current_page;
+        await carregarContratacoes(pagina);
+    } catch (errorResposta) {
+        const mensagem = errorResposta.response?.data?.message || '';
+        if (errorResposta.response?.status === 409 && mensagem.includes('já foi cancelada')) {
+            toast.info('Esta contratação já estava cancelada.');
+            modalCancelamentoAberto.value = false;
+            contratacaoParaCancelar.value = null;
+            await carregarContratacoes(paginacao.current_page);
+            return;
+        }
+
+        toast.error(mensagem.includes('SQLSTATE') ? 'Não foi possível cancelar a contratação. Tente novamente.' : (mensagem || 'Não foi possível cancelar a contratação. Tente novamente.'));
+    } finally {
+        cancelandoContratacao.value = false;
+    }
+}
+
+async function baixarCurriculo(registro) {
+    const candidato = registro?.candidato;
+    if (!candidato?.matricula) return;
+
+    curriculoGerando.value = candidato.matricula;
+    erro.value = '';
+
+    try {
+        const response = await adminService.baixarCurriculoAluno(candidato.matricula);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = nomeArquivoCurriculo(response, candidato);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (errorResposta) {
+        erro.value = 'Não foi possível gerar o currículo deste candidato.';
+    } finally {
+        curriculoGerando.value = null;
+    }
 }
 
 function abrirSugestoes(campo) {
@@ -338,8 +524,175 @@ function formatarCpf(valor) {
     return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
+function formatarCnpj(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '').padStart(14, '0');
+    return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
+function formatarTelefone(valor) {
+    const digitos = String(valor || '').replace(/\D/g, '');
+    if (digitos.length === 11) return digitos.replace(/(\d{2})(\d)(\d{4})(\d{4})/, '($1) $2 $3-$4');
+    if (digitos.length === 10) return digitos.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    return valor || 'Não informado';
+}
+
+function formatarLista(valor) {
+    if (Array.isArray(valor)) return valor.filter(Boolean).join(', ') || 'Não informado';
+    if (valor && typeof valor === 'object') return Object.values(valor).flat().filter(Boolean).join(', ') || 'Não informado';
+    return valor || 'Não informado';
+}
+
 function formatarData(valor) {
     if (!valor) return '—';
     return new Date(`${String(valor).slice(0, 10)}T00:00:00`).toLocaleDateString('pt-BR');
 }
+
+function nomeArquivoCurriculo(response, candidato) {
+    const disposicao = response.headers?.['content-disposition'] || '';
+    const encontrado = disposicao.match(/filename="?([^";]+)"?/i);
+
+    if (encontrado?.[1]) {
+        return encontrado[1];
+    }
+
+    const nome = (candidato.pessoa?.nome || 'Candidato')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '');
+
+    return `Curriculo_${nome || 'Candidato'}.pdf`;
+}
 </script>
+
+<style scoped>
+.hired-candidates-table-wrapper {
+    overflow-x: auto;
+}
+
+.hired-candidates-table {
+    min-width: 64rem;
+    table-layout: fixed;
+}
+
+.hired-candidates-table__col-candidate {
+    width: 24%;
+}
+
+.hired-candidates-table__col-cpf {
+    width: 13%;
+}
+
+.hired-candidates-table__col-company {
+    width: 21%;
+}
+
+.hired-candidates-table__col-phone {
+    width: 14%;
+}
+
+.hired-candidates-table__col-date {
+    width: 12%;
+}
+
+.hired-candidates-table__col-actions {
+    width: 22rem;
+}
+
+.hired-candidates-table th,
+.hired-candidates-table td {
+    padding: 0.875rem 0.75rem;
+    vertical-align: middle;
+}
+
+.hired-candidates-table th {
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+}
+
+.hired-candidates-table__row {
+    min-height: 4.5rem;
+}
+
+.hired-candidates-table__candidate,
+.hired-candidates-table__company {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.hired-candidates-table__candidate-name,
+.hired-candidates-table__candidate-email {
+    line-height: 1.35;
+}
+
+.hired-candidates-table__nowrap {
+    white-space: nowrap;
+}
+
+.hired-candidate-details small {
+    margin-bottom: 0.125rem;
+}
+
+.hired-candidate-details span {
+    overflow-wrap: anywhere;
+}
+
+.hired-candidates-table__actions-cell {
+    min-width: 22rem;
+}
+
+.action-buttons {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+.action-buttons .btn {
+    flex: 0 0 auto;
+    min-width: 8.75rem;
+}
+
+.hired-candidates-action-button {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    min-height: 2rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 1199.98px) {
+    .hired-candidates-table {
+        min-width: 60rem;
+    }
+
+    .hired-candidates-table th,
+    .hired-candidates-table td {
+        padding-left: 0.625rem;
+        padding-right: 0.625rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hired-candidates-table-wrapper {
+        margin-left: -0.25rem;
+        margin-right: -0.25rem;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+    }
+
+    .hired-candidates-table {
+        min-width: 56rem;
+    }
+
+    .action-buttons {
+        flex-wrap: nowrap;
+    }
+}
+</style>

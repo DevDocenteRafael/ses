@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('contratacoes', function (Blueprint $table) {
             $table->id();
-            $table->string('candidato_matricula', 15)->unique();
+            $table->string('candidato_matricula', 15);
             $table->string('empresa_cnpj', 14);
             $table->foreignId('registrado_por_pessoa_id')->constrained('pessoa', 'id_pessoa');
             $table->string('origem', 20);

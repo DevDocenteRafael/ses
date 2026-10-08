@@ -250,7 +250,6 @@
                     <div v-if="erroContratacao" class="alert alert-danger py-2 mt-3 mb-0">{{ erroContratacao }}</div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" :disabled="registrandoContratacao" @click="modalContratacaoAberto = false">Cancelar</button>
                     <button type="button" class="btn btn-success" :disabled="registrandoContratacao" @click="registrarContratacao">
                         <span v-if="registrandoContratacao" class="spinner-border spinner-border-sm me-2"></span>
                         Confirmar contratação

@@ -48,10 +48,12 @@ class DashboardIndicadoresService
         $variacaoPerfis = null;
 
         $contratadosUltimos30Dias = Contratacao::query()
+            ->vigentes()
             ->where('contratado_em', '>=', $inicioUltimos30Dias->toDateString())
             ->count();
 
         $cursosMaisContratados = Contratacao::query()
+            ->vigentes()
             ->leftJoin('dados_academicos', function ($join) {
                 $join->on('dados_academicos.candidato_matricula', '=', 'contratacoes.candidato_matricula')
                     ->whereRaw('dados_academicos.id = (SELECT MIN(academico.id) FROM dados_academicos as academico WHERE academico.candidato_matricula = contratacoes.candidato_matricula)');
@@ -199,6 +201,7 @@ class DashboardIndicadoresService
             ->count();
 
         $contratados = Contratacao::query()
+            ->vigentes()
             ->whereBetween('contratado_em', [$periodo['inicio_data'], $periodo['fim_data']])
             ->count();
 

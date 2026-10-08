@@ -184,7 +184,6 @@
                                             <div v-if="erroContratacao" class="alert alert-danger py-2 mt-3 mb-0">{{ erroContratacao }}</div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-outline-secondary" :disabled="salvandoContratacao" @click="fecharModalContratacao">Cancelar</button>
                                             <button type="submit" class="btn btn-primary" :disabled="salvandoContratacao || !empresaContratanteSelecionada">
                                                 <span v-if="salvandoContratacao" class="spinner-border spinner-border-sm me-2"></span>
                                                 Confirmar contratação
@@ -282,7 +281,6 @@
                                             </div>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-outline-secondary" @click="fecharModalCadastro">Cancelar</button>
                                             <button type="submit" class="btn btn-primary" :disabled="salvandoCadastro">
                                                 <span v-if="salvandoCadastro" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                                 {{ salvandoCadastro ? 'Salvando...' : 'Salvar candidato' }}
@@ -735,9 +733,12 @@ function fecharModalContratacao() {
     if (salvandoContratacao.value) return;
     modalContratacaoAberto.value = false;
     candidatoParaContratar.value = null;
+    limparEmpresaContratante();
+    erroContratacao.value = '';
 }
 
 async function registrarContratacao() {
+    if (salvandoContratacao.value) return;
     if (!candidatoParaContratar.value || !empresaContratanteSelecionada.value) return;
     salvandoContratacao.value = true;
     erroContratacao.value = '';
@@ -746,10 +747,22 @@ async function registrarContratacao() {
             empresa_cnpj: empresaContratanteSelecionada.value,
         });
         toast.success('Contratação registrada. O candidato foi movido para Candidatos Contratados.');
-        fecharModalContratacao();
+        modalContratacaoAberto.value = false;
+        candidatoParaContratar.value = null;
+        limparEmpresaContratante();
         await carregarAlunosFiltrados(1);
     } catch (error) {
-        erroContratacao.value = error.response?.data?.message || 'Não foi possível registrar a contratação.';
+        const mensagem = obterMensagemErro(error);
+        if (error.response?.status === 409 && mensagem.includes('contratação ativa')) {
+            toast.info('Este candidato já está contratado. A listagem foi atualizada.');
+            modalContratacaoAberto.value = false;
+            candidatoParaContratar.value = null;
+            limparEmpresaContratante();
+            await carregarAlunosFiltrados(admin.alunosPaginacao.current_page || 1);
+            return;
+        }
+
+        erroContratacao.value = mensagem || 'Não foi possível registrar a contratação.';
     } finally {
         salvandoContratacao.value = false;
     }
@@ -804,6 +817,9 @@ function obterMensagemErro(error) {
     }
 
     if (error?.response?.data?.message) {
+        if (String(error.response.data.message).includes('SQLSTATE')) {
+            return 'Não foi possível carregar os candidatos. Tente novamente.';
+        }
         return error.response.data.message;
     }
 

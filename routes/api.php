@@ -92,6 +92,7 @@ Route::middleware('auth.token')->group(function () {
         ->middleware('candidato.nao_contratado');
 
     Route::get('contratacoes', [ContratacaoController::class, 'index']);
+    Route::patch('contratacoes/{contratacao}/cancelar', [ContratacaoController::class, 'cancelar']);
     Route::post('candidatos/{matricula}/contratacao', [ContratacaoController::class, 'store']);
 
     // Administrativo

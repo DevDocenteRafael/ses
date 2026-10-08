@@ -136,7 +136,6 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" @click="fecharModalInformacoesPessoais">Cancelar</button>
                             <button type="button" class="btn btn-primary" :disabled="salvandoInformacoesPessoais" @click="salvarInformacoesPessoais">
                                 <span v-if="salvandoInformacoesPessoais" class="spinner-border spinner-border-sm me-2"></span>
                                 Salvar alterações

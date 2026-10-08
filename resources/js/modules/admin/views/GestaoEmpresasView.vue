@@ -159,7 +159,6 @@
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
-                                                <button type="button" class="btn btn-outline-secondary" @click="fecharModalCadastro">Cancelar</button>
                                                 <button type="submit" class="btn btn-primary" :disabled="salvandoCadastro">
                                                     <span v-if="salvandoCadastro" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                                     {{ salvandoCadastro ? 'Salvando...' : 'Salvar empresa' }}

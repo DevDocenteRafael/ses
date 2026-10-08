@@ -88,7 +88,17 @@ class Candidato extends Model
 
     public function contratacao()
     {
-        return $this->hasOne(Contratacao::class, 'candidato_matricula', 'matricula');
+        return $this->hasOne(Contratacao::class, 'candidato_matricula', 'matricula')->vigentes();
+    }
+
+    public function contratacoes()
+    {
+        return $this->hasMany(Contratacao::class, 'candidato_matricula', 'matricula');
+    }
+
+    public function contratacoesVigentes()
+    {
+        return $this->hasMany(Contratacao::class, 'candidato_matricula', 'matricula')->vigentes();
     }
 
     public function estaContratado(): bool
