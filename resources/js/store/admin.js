@@ -32,16 +32,21 @@ export const useAdminStore = defineStore('admin', {
     }),
 
     actions: {
-        async carregarDashboard() {
-            this.carregando = true;
-            this.erro = null;
+        async carregarDashboard({ mostrarLoading = true, preservarErro = false } = {}) {
+            if (mostrarLoading) this.carregando = true;
+            if (!preservarErro) this.erro = null;
             try {
                 const { data } = await adminService.getDashboard();
                 this.dashboard = data;
+                this.erro = null;
+                return data;
             } catch (e) {
-                this.erro = e.response?.data?.message || 'Erro ao carregar indicadores.';
+                if (!preservarErro) {
+                    this.erro = e.response?.data?.message || 'Erro ao carregar indicadores.';
+                }
+                throw e;
             } finally {
-                this.carregando = false;
+                if (mostrarLoading) this.carregando = false;
             }
         },
 

@@ -3,7 +3,7 @@
         <div class="card-body d-flex align-items-start justify-content-between">
             <div>
                 <p class="text-uppercase text-secondary small fw-semibold mb-1">{{ titulo }}</p>
-                <p class="fs-3 fw-bold mb-1">{{ valor }}</p>
+                <p class="fs-3 fw-bold mb-1" :class="valorClass">{{ valor }}</p>
                 <p v-if="subtitulo" class="small mb-0" :class="subtituloClass">
                     {{ subtitulo }}
                 </p>
@@ -23,6 +23,7 @@
 defineProps({
     titulo: { type: String, required: true },
     valor: { type: [String, Number], required: true },
+    valorClass: { type: [String, Array, Object], default: '' },
     subtitulo: { type: String, default: '' },
     subtituloClass: { type: String, default: 'text-success' },
     icone: { type: String, default: 'bi-graph-up' },

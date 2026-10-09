@@ -14,15 +14,31 @@
                         <h1 class="h5 fw-bold mb-1">Resumo dos indicadores</h1>
                         <p class="text-secondary small mb-0">Gere um relatório PDF com os dados agregados do dashboard.</p>
                     </div>
-                    <button
-                        ref="botaoRelatorioRef"
-                        type="button"
-                        class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-relatorio"
-                        @click="abrirModalRelatorio"
-                    >
-                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
-                        <span>Relatório Geral</span>
-                    </button>
+                    <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+                        <div class="text-secondary small text-sm-end ses-atualizacao-info">
+                            <span v-if="ultimaAtualizacaoLabel">Última atualização: {{ ultimaAtualizacaoLabel }}</span>
+                            <span v-else>Atualização automática a cada 1 hora</span>
+                        </div>
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-atualizar"
+                            :disabled="atualizandoIndicadores"
+                            @click="atualizarIndicadoresManual"
+                        >
+                            <span v-if="atualizandoIndicadores" class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <i v-else class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                            <span>{{ atualizandoIndicadores ? 'Atualizando...' : 'Atualizar indicadores' }}</span>
+                        </button>
+                        <button
+                            ref="botaoRelatorioRef"
+                            type="button"
+                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-relatorio"
+                            @click="abrirModalRelatorio"
+                        >
+                            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                            <span>Relatório Geral</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="row g-3 mb-4">
@@ -30,6 +46,7 @@
                         <cardIndicador
                             titulo="Perfis Ativos"
                             :valor="dash.perfisAtivos.total"
+                            :valorClass="classeIndicadorAtualizado('perfisAtivos.total')"
                             :subtitulo="variacaoPerfisLabel"
                             :subtituloClass="variacaoPerfisClass"
                             icone="bi-person-check"
@@ -40,6 +57,7 @@
                         <cardIndicador
                             titulo="Contratados"
                             :valor="dash.contratados?.ultimos30Dias || 0"
+                            :valorClass="classeIndicadorAtualizado('contratados.ultimos30Dias')"
                             subtitulo="Últimos 30 dias"
                             icone="bi-person-check"
                             variante="primary"
@@ -49,6 +67,7 @@
                         <cardIndicador
                             titulo="Acessos de Candidatos"
                             :valor="dash.acessosCandidatos.ultimos30Dias"
+                            :valorClass="classeIndicadorAtualizado('acessosCandidatos.ultimos30Dias')"
                             subtitulo="Últimos 30 dias"
                             icone="bi-eye"
                             variante="info"
@@ -58,6 +77,7 @@
                         <cardIndicador
                             titulo="Empresas Ativas"
                             :valor="dash.empresasAtivas.total"
+                            :valorClass="classeIndicadorAtualizado('empresasAtivas.total')"
                             :subtitulo="`${dash.empresasAtivas.engajamentoPercentual}% de engajamento`"
                             icone="bi-building"
                             variante="success"
@@ -304,7 +324,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import Chart from 'chart.js/auto';
 import topbar from '../../../components/common/header.vue';
 import cardIndicador from '../../../components/common/cardIndicador.vue';
@@ -329,6 +349,20 @@ const dataFinalRelatorio = ref('');
 const periodoRelatorioAberto = ref(false);
 let graficoCursos = null;
 let graficoCandidatosCurso = null;
+let timeoutPolling = null;
+let timeoutLimparAnimacoes = null;
+const intervaloAtualizacaoMs = 3600000;
+const atualizandoIndicadores = ref(false);
+const ultimaAtualizacao = ref(null);
+const indicadoresAlterados = ref(new Set());
+const pollingSuspensoPorAutenticacao = ref(false);
+const indicadoresMonitorados = [
+    'perfisAtivos.total',
+    'contratados.ultimos30Dias',
+    'acessosCandidatos.ultimos30Dias',
+    'empresasAtivas.total',
+    'empresasAtivas.engajamentoPercentual',
+];
 
 const opcoesRelatorio = [
     { valor: 'perfis_ativos', label: 'Perfis Ativos' },
@@ -338,7 +372,7 @@ const opcoesRelatorio = [
 ];
 
 onMounted(async () => {
-    await admin.carregarDashboard();
+    await atualizarIndicadores({ inicial: true });
     carregouUmaVez.value = true;
     await nextTick();
 
@@ -448,12 +482,30 @@ onMounted(async () => {
             }],
         });
     }
+
+    document.addEventListener('visibilitychange', tratarMudancaVisibilidade);
+    iniciarPollingIndicadores();
 });
 
 onBeforeUnmount(() => {
+    pararPollingIndicadores();
+    document.removeEventListener('visibilitychange', tratarMudancaVisibilidade);
+    clearTimeout(timeoutLimparAnimacoes);
     graficoCursos?.destroy();
     graficoCandidatosCurso?.destroy();
 });
+
+watch(
+    () => admin.dashboard?.cursosMaisContratados,
+    () => atualizarGraficoContratados(),
+    { deep: true },
+);
+
+watch(
+    () => admin.dashboard?.candidatosPorCurso,
+    () => atualizarGraficoCandidatosPorCurso(),
+    { deep: true },
+);
 
 function quebrarRotuloCurso(valor) {
     const palavras = String(valor || 'Curso não informado').split(/\s+/);
@@ -490,6 +542,15 @@ function resumirRotuloCurso(valor) {
 }
 
 const dash = computed(() => admin.dashboard);
+const ultimaAtualizacaoLabel = computed(() => {
+    if (!ultimaAtualizacao.value) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    }).format(ultimaAtualizacao.value);
+});
 const erroSelecaoRelatorio = computed(() => (
     modoRelatorio.value === 'especificos' && secoesRelatorio.value.length === 0
         ? 'Selecione pelo menos uma informação para gerar o relatório.'
@@ -565,6 +626,120 @@ async function gerarRelatorio() {
     } finally {
         gerandoRelatorio.value = false;
     }
+}
+
+function iniciarPollingIndicadores() {
+    agendarProximaAtualizacao();
+}
+
+function pararPollingIndicadores() {
+    if (!timeoutPolling) return;
+    window.clearTimeout(timeoutPolling);
+    timeoutPolling = null;
+}
+
+function tratarMudancaVisibilidade() {
+    if (document.hidden) {
+        pararPollingIndicadores();
+        return;
+    }
+
+    if (deveAtualizarAgora()) {
+        atualizarIndicadores({ automatico: true });
+        return;
+    }
+
+    agendarProximaAtualizacao();
+}
+
+async function atualizarIndicadoresManual() {
+    await atualizarIndicadores({ manual: true });
+}
+
+async function atualizarIndicadores({ inicial = false, manual = false, automatico = false } = {}) {
+    if (atualizandoIndicadores.value || pollingSuspensoPorAutenticacao.value) return;
+
+    pararPollingIndicadores();
+    atualizandoIndicadores.value = true;
+    const anterior = admin.dashboard;
+
+    try {
+        await admin.carregarDashboard({ mostrarLoading: inicial, preservarErro: !inicial });
+        ultimaAtualizacao.value = new Date();
+        if (anterior && admin.dashboard) {
+            marcarIndicadoresAlterados(anterior, admin.dashboard);
+        }
+    } catch (error) {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+            pollingSuspensoPorAutenticacao.value = true;
+            pararPollingIndicadores();
+        } else if (manual) {
+            toast.error('Não foi possível atualizar os indicadores. Os últimos valores válidos foram mantidos.');
+        }
+    } finally {
+        atualizandoIndicadores.value = false;
+        if (!pollingSuspensoPorAutenticacao.value && !document.hidden) {
+            agendarProximaAtualizacao();
+        }
+    }
+}
+
+function deveAtualizarAgora() {
+    if (!ultimaAtualizacao.value) return true;
+    return Date.now() - ultimaAtualizacao.value.getTime() >= intervaloAtualizacaoMs;
+}
+
+function tempoAteProximaAtualizacao() {
+    if (!ultimaAtualizacao.value) return intervaloAtualizacaoMs;
+    const decorrido = Date.now() - ultimaAtualizacao.value.getTime();
+    return Math.max(intervaloAtualizacaoMs - decorrido, 0);
+}
+
+function agendarProximaAtualizacao() {
+    pararPollingIndicadores();
+    if (document.hidden || pollingSuspensoPorAutenticacao.value) return;
+
+    timeoutPolling = window.setTimeout(() => {
+        timeoutPolling = null;
+        atualizarIndicadores({ automatico: true });
+    }, tempoAteProximaAtualizacao());
+}
+
+function valorPorCaminho(objeto, caminho) {
+    return caminho.split('.').reduce((valor, chave) => valor?.[chave], objeto);
+}
+
+function marcarIndicadoresAlterados(anterior, novo) {
+    const alterados = indicadoresMonitorados.filter((caminho) => valorPorCaminho(anterior, caminho) !== valorPorCaminho(novo, caminho));
+    if (!alterados.length) return;
+
+    indicadoresAlterados.value = new Set(alterados);
+    clearTimeout(timeoutLimparAnimacoes);
+    timeoutLimparAnimacoes = window.setTimeout(() => {
+        indicadoresAlterados.value = new Set();
+    }, 1200);
+}
+
+function classeIndicadorAtualizado(caminho) {
+    return indicadoresAlterados.value.has(caminho) ? 'ses-indicador-atualizado' : '';
+}
+
+function atualizarGraficoContratados() {
+    if (!graficoCursos || !admin.dashboard?.cursosMaisContratados?.length) return;
+    graficoCursos.data.labels = admin.dashboard.cursosMaisContratados.map((item) => quebrarRotuloCurso(item.curso));
+    graficoCursos.data.datasets[0].data = admin.dashboard.cursosMaisContratados.map((item) => Number(item.total));
+    graficoCursos.update('none');
+}
+
+function atualizarGraficoCandidatosPorCurso() {
+    if (!graficoCandidatosCurso || !admin.dashboard?.candidatosPorCurso?.length) return;
+    const cursos = admin.dashboard.candidatosPorCurso;
+    const maiorQuantidade = Math.max(1, ...cursos.map((item) => Number(item.total)));
+    graficoCandidatosCurso.data.labels = cursos.map((item) => resumirRotuloCurso(item.curso));
+    graficoCandidatosCurso.data.datasets[0].data = cursos.map((item) => Number(item.total));
+    graficoCandidatosCurso.options.scales.x.suggestedMax = maiorQuantidade + Math.max(1, Math.ceil(maiorQuantidade * 0.15));
+    graficoCandidatosCurso.update('none');
 }
 
 // ── Card "Perfis Ativos" ────────────────────────────────────────
@@ -648,6 +823,37 @@ const pontosLinha = computed(() => pontosCirculo.value.map((p) => `${p.x},${p.y}
 
 .ses-btn-relatorio {
     min-height: 42px;
+}
+
+.ses-btn-atualizar {
+    min-height: 42px;
+}
+
+.ses-atualizacao-info {
+    min-width: 11rem;
+}
+
+.ses-indicador-atualizado {
+    animation: ses-indicador-atualizado .9s ease-out;
+}
+
+@keyframes ses-indicador-atualizado {
+    0% {
+        color: var(--ses-primary);
+        transform: translateY(-1px) scale(1.03);
+        text-shadow: 0 0 .35rem rgba(11, 79, 145, .18);
+    }
+    100% {
+        color: inherit;
+        transform: none;
+        text-shadow: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ses-indicador-atualizado {
+        animation: none;
+    }
 }
 
 .ses-opcao-relatorio,
