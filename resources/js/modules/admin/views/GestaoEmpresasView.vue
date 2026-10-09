@@ -176,8 +176,17 @@
                     </p>
 
                     <template v-else>
-                        <div class="table-responsive">
-                            <table class="table align-middle mb-0">
+                        <div class="table-responsive ses-empresas-table-wrap">
+                            <table class="table align-middle mb-0 ses-empresas-table">
+                                <colgroup>
+                                    <col class="ses-col-empresa">
+                                    <col class="ses-col-responsavel">
+                                    <col class="ses-col-cnpj">
+                                    <col class="ses-col-telefone">
+                                    <col class="ses-col-atividade">
+                                    <col class="ses-col-status">
+                                    <col class="ses-col-acoes">
+                                </colgroup>
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
                                         <th>Empresa</th>
@@ -185,24 +194,24 @@
                                         <th>CNPJ</th>
                                         <th>Telefone</th>
                                         <th>Atividade</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Ações</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center ses-coluna-acoes">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template v-for="empresa in admin.empresas" :key="empresa.cnpj">
                                     <tr>
-                                        <td><p class="fw-semibold mb-0">{{ empresa.razao_social }}</p></td>
+                                        <td><p class="fw-semibold mb-0 ses-texto-tabela" :title="empresa.razao_social">{{ empresa.razao_social }}</p></td>
                                         <td>
-                                            <p class="mb-0">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
-                                            <p class="text-secondary small mb-0">{{ empresa.responsavel_contratual?.pessoa?.email || '—' }}</p>
+                                            <p class="mb-0 ses-texto-tabela" :title="empresa.responsavel_contratual?.pessoa?.nome || '—'">{{ empresa.responsavel_contratual?.pessoa?.nome || '—' }}</p>
+                                            <p class="text-secondary small mb-0 ses-texto-tabela" :title="empresa.responsavel_contratual?.pessoa?.email || '—'">{{ empresa.responsavel_contratual?.pessoa?.email || '—' }}</p>
                                         </td>
-                                        <td>{{ formatarCnpj(empresa.cnpj) }}</td>
-                                        <td>{{ formatarTelefone(empresa.pessoa?.telefone) || '—' }}</td>
-                                        <td>{{ empresa.atividade_economica }}</td>
-                                        <td>
+                                        <td class="text-nowrap">{{ formatarCnpj(empresa.cnpj) }}</td>
+                                        <td class="text-nowrap">{{ formatarTelefone(empresa.pessoa?.telefone) || '—' }}</td>
+                                        <td><span class="ses-texto-tabela" :title="empresa.atividade_economica">{{ empresa.atividade_economica }}</span></td>
+                                        <td class="text-center">
                                             <span
-                                                class="badge"
+                                                class="badge ses-status-empresa"
                                                 :class="empresa.status
                                                     ? 'text-bg-success-subtle text-success-emphasis'
                                                     : 'text-bg-danger-subtle text-danger-emphasis'"
@@ -210,21 +219,24 @@
                                                 {{ empresa.status ? 'Liberado' : 'Bloqueado' }}
                                             </span>
                                         </td>
-                                        <td class="text-end">
-                                            <button
-                                                class="btn btn-sm btn-outline-primary me-2"
-                                                @click="alternarDetalhes(empresa.cnpj)"
-                                            >
-                                                {{ empresaExpandida === empresa.cnpj ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
-                                            </button>
-                                            <button
-                                                class="btn btn-sm"
-                                                :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
-                                                :disabled="alterando === empresa.cnpj"
-                                                @click="alternarStatus(empresa)"
-                                            >
-                                                {{ empresa.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
-                                            </button>
+                                        <td class="text-center ses-coluna-acoes">
+                                            <div class="ses-acoes-empresa" aria-label="Ações da empresa">
+                                                <button
+                                                    class="btn btn-sm btn-outline-primary ses-btn-acao-empresa ses-btn-detalhes-empresa"
+                                                    @click="alternarDetalhes(empresa.cnpj)"
+                                                >
+                                                    {{ empresaExpandida === empresa.cnpj ? 'Ocultar Detalhes' : 'Ver Detalhes' }}
+                                                </button>
+                                                <button
+                                                    class="btn btn-sm ses-btn-acao-empresa ses-btn-status-empresa"
+                                                    :class="empresa.status ? 'btn-outline-danger' : 'btn-success'"
+                                                    :disabled="alterando === empresa.cnpj"
+                                                    @click="alternarStatus(empresa)"
+                                                >
+                                                    <span v-if="alterando === empresa.cnpj" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                                    <span>{{ empresa.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr v-if="empresaExpandida === empresa.cnpj" :key="`detalhes-${empresa.cnpj}`">
@@ -491,7 +503,6 @@ async function alternarStatus(empresa) {
     const novoStatus = !empresa.status;
     try {
         await admin.atualizarStatusEmpresa(empresa.cnpj, novoStatus);
-        await carregarEmpresasFiltradas();
         toast.info(`Acesso da empresa ${novoStatus ? 'liberado' : 'bloqueado'} com sucesso.`);
     } catch (error) {
         toast.error('Não foi possível alterar o status da empresa.');
@@ -514,5 +525,101 @@ function formatarCnpj(cnpj) {
 .app-modal-panel {
     opacity: 1;
     transform: translateY(0) scale(1);
+}
+
+.ses-empresas-table-wrap {
+    scrollbar-gutter: stable;
+}
+
+.ses-empresas-table {
+    table-layout: fixed;
+    min-width: 1180px;
+}
+
+.ses-empresas-table th,
+.ses-empresas-table td {
+    vertical-align: middle;
+}
+
+.ses-empresas-table :is(th, td) {
+    transition-property: background-color, border-color, color, box-shadow;
+}
+
+.ses-col-empresa {
+    width: 18%;
+}
+
+.ses-col-responsavel {
+    width: 20%;
+}
+
+.ses-col-cnpj {
+    width: 135px;
+}
+
+.ses-col-telefone {
+    width: 130px;
+}
+
+.ses-col-atividade {
+    width: 15%;
+}
+
+.ses-col-status {
+    width: 110px;
+}
+
+.ses-col-acoes {
+    width: 310px;
+}
+
+.ses-texto-tabela {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ses-status-empresa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 86px;
+    min-height: 24px;
+    white-space: nowrap;
+}
+
+.ses-coluna-acoes {
+    width: 310px;
+    min-width: 310px;
+    vertical-align: middle;
+}
+
+.ses-acoes-empresa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 288px;
+    min-width: 288px;
+    margin-inline: auto;
+}
+
+.ses-btn-acao-empresa {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    white-space: nowrap;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.ses-btn-detalhes-empresa {
+    width: 130px;
+}
+
+.ses-btn-status-empresa {
+    width: 150px;
 }
 </style>

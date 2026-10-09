@@ -17,7 +17,7 @@
                     <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
                         <div class="text-secondary small text-sm-end ses-atualizacao-info">
                             <span v-if="ultimaAtualizacaoLabel">Última atualização: {{ ultimaAtualizacaoLabel }}</span>
-                            <span v-else>Atualização automática a cada 1 hora</span>
+                            <span v-else>Atualização automática a cada 5 segundos</span>
                         </div>
                         <button
                             type="button"
@@ -351,7 +351,8 @@ let graficoCursos = null;
 let graficoCandidatosCurso = null;
 let timeoutPolling = null;
 let timeoutLimparAnimacoes = null;
-const intervaloAtualizacaoMs = 3600000;
+const DASHBOARD_REFRESH_INTERVAL_MS = 5000;
+const intervaloAtualizacaoMs = DASHBOARD_REFRESH_INTERVAL_MS;
 const atualizandoIndicadores = ref(false);
 const ultimaAtualizacao = ref(null);
 const indicadoresAlterados = ref(new Set());
