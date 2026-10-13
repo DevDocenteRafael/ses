@@ -4,6 +4,7 @@ namespace App\Services\Candidatos;
 
 use App\Models\Candidato;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class CandidatoStatusService
@@ -15,9 +16,16 @@ class CandidatoStatusService
 
     public const INATIVIDADE_CODE = 'CANDIDATO_INATIVO';
 
+    public function __construct(private readonly CandidatoBloqueioNotificationService $bloqueioNotificationService) {}
+
     public function prazoSegundos(): int
     {
         return max(1, (int) config('candidato.inatividade_segundos', 30));
+    }
+
+    public function inatividadeHabilitada(): bool
+    {
+        return filter_var(config('candidato.inatividade_habilitada', true), FILTER_VALIDATE_BOOL);
     }
 
     public function limiteAtividade(): Carbon
@@ -49,6 +57,10 @@ class CandidatoStatusService
 
     public function estaInativoPorTempo(Candidato $candidato): bool
     {
+        if (! $this->inatividadeHabilitada()) {
+            return false;
+        }
+
         if (! $candidato->ultima_atividade_em) {
             return true;
         }
@@ -61,13 +73,57 @@ class CandidatoStatusService
         $candidato->forceFill(['ultima_atividade_em' => now()])->save();
     }
 
+    public function bloquearManualmente(Candidato $candidato, ?string $motivoPublico = null): bool
+    {
+        return DB::transaction(function () use ($candidato, $motivoPublico): bool {
+            $bloqueado = Candidato::query()->lockForUpdate()->findOrFail($candidato->matricula);
+
+            if (! $bloqueado->status) {
+                return false;
+            }
+
+            if ($bloqueado->estaContratado()) {
+                return false;
+            }
+
+            $bloqueado->forceFill(['status' => false])->save();
+
+            $this->bloqueioNotificationService->registrarBloqueio(
+                $bloqueado,
+                self::BLOQUEADO_MANUALMENTE,
+                $motivoPublico
+            );
+
+            return true;
+        });
+    }
+
+    public function registrarBloqueioPorInatividade(Candidato $candidato): void
+    {
+        if ($this->estadoEfetivo($candidato) !== self::BLOQUEADO_POR_INATIVIDADE) {
+            return;
+        }
+
+        $this->bloqueioNotificationService->registrarBloqueio(
+            $candidato,
+            self::BLOQUEADO_POR_INATIVIDADE,
+            'Inatividade na plataforma.'
+        );
+    }
+
     public function aplicarEscopoDisponiveis(Builder $query): Builder
     {
-        return $query
+        $query
             ->where('status', true)
-            ->whereDoesntHave('contratacao')
-            ->whereNotNull('ultima_atividade_em')
-            ->where('ultima_atividade_em', '>', $this->limiteAtividade());
+            ->whereDoesntHave('contratacao');
+
+        if ($this->inatividadeHabilitada()) {
+            $query
+                ->whereNotNull('ultima_atividade_em')
+                ->where('ultima_atividade_em', '>', $this->limiteAtividade());
+        }
+
+        return $query;
     }
 
     public function rotulo(string $estado): string

@@ -231,21 +231,19 @@ class CandidatoQueryService
 
         match ($normalizado) {
             'contratado', mb_strtolower(CandidatoStatusService::CONTRATADO) => $query->whereHas('contratacao'),
-            'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $query
-                ->where('status', true)
-                ->whereDoesntHave('contratacao')
-                ->where(function (Builder $inativo) {
-                    $inativo->whereNull('ultima_atividade_em')
-                        ->orWhere('ultima_atividade_em', '<=', $this->statusService->limiteAtividade());
-                }),
+            'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $this->statusService->inatividadeHabilitada()
+                ? $query
+                    ->where('status', true)
+                    ->whereDoesntHave('contratacao')
+                    ->where(function (Builder $inativo) {
+                        $inativo->whereNull('ultima_atividade_em')
+                            ->orWhere('ultima_atividade_em', '<=', $this->statusService->limiteAtividade());
+                    })
+                : $query->whereRaw('1 = 0'),
             '0', 'bloqueado', mb_strtolower(CandidatoStatusService::BLOQUEADO_MANUALMENTE) => $query
                 ->where('status', false)
                 ->whereDoesntHave('contratacao'),
-            default => $query
-                ->where('status', true)
-                ->whereDoesntHave('contratacao')
-                ->whereNotNull('ultima_atividade_em')
-                ->where('ultima_atividade_em', '>', $this->statusService->limiteAtividade()),
+            default => $this->statusService->aplicarEscopoDisponiveis($query),
         };
     }
 }

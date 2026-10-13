@@ -3,7 +3,7 @@
     <div v-else class="meu-perfil-page">
         <header class="perfil-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2 sticky-top z-3">
             <div class="perfil-header__brand d-flex align-items-center gap-2">
-                <span class="fw-bold fs-5">Senac</span>
+                <img :src="logoSenacSrc" alt="Logo Senac" class="perfil-header__logo flex-shrink-0">
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
                 <div class="perfil-header__title-wrap">
                     <h1 class="h5 fw-bold mb-0">Meu Perfil Profissional</h1>
@@ -649,6 +649,8 @@ import {
     converterPretensaoSalarialApiParaFaixa,
     faixasPretensaoSalarial,
 } from '../../../utils/faixasPretensaoSalarial';
+
+const logoSenacSrc = '/img/senac-logo.png';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -1660,6 +1662,14 @@ onBeforeUnmount(() => {
     word-break: break-word;
 }
 
+.perfil-header__logo {
+    display: block;
+    width: auto;
+    height: clamp(28px, 4vw, 36px);
+    max-width: 120px;
+    object-fit: contain;
+}
+
 .card-section-header,
 .form-actions {
     flex-wrap: wrap;
@@ -1789,8 +1799,9 @@ onBeforeUnmount(() => {
         width: 100%;
     }
 
-    .perfil-header__brand > .fw-bold {
-        line-height: 1.2;
+    .perfil-header__logo {
+        height: 28px;
+        max-width: 96px;
     }
 
     .perfil-header__title-wrap {

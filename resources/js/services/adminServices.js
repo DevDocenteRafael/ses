@@ -32,8 +32,11 @@ export default {
         return api.get(`/candidatos/${matricula}`);
     },
 
-    atualizarStatusAluno(matricula, status) {
-        return api.put(`/candidatos/${matricula}`, { status });
+    atualizarStatusAluno(matricula, status, motivoBloqueioPublico = null) {
+        return api.put(`/candidatos/${matricula}`, {
+            status,
+            ...(motivoBloqueioPublico ? { motivo_bloqueio_publico: motivoBloqueioPublico } : {}),
+        });
     },
 
     registrarContratacao(matricula, dados) {

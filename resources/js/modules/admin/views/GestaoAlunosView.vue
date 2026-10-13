@@ -964,8 +964,9 @@ async function salvarNovoCandidato() {
 async function alternarStatus(aluno) {
     alterando.value = aluno.matricula;
     const novoStatus = !aluno.status;
+    const motivoBloqueioPublico = novoStatus ? null : window.prompt('Informe um motivo público para o candidato (opcional):') || null;
     try {
-        await admin.atualizarStatusAluno(aluno.matricula, novoStatus);
+        await admin.atualizarStatusAluno(aluno.matricula, novoStatus, motivoBloqueioPublico);
         await carregarAlunosFiltrados();
         toast.info(`Acesso do candidato ${novoStatus ? 'liberado' : 'bloqueado'} com sucesso.`);
     } catch (error) {

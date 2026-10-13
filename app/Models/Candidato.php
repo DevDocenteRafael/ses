@@ -115,6 +115,11 @@ class Candidato extends Model
         return $this->hasMany(VisualizacaoPerfil::class, 'candidato_matricula', 'matricula');
     }
 
+    public function bloqueioNotificacoes()
+    {
+        return $this->hasMany(CandidatoBloqueioNotificacao::class, 'candidato_matricula', 'matricula');
+    }
+
     public function empresas()
     {
         return $this->belongsToMany(

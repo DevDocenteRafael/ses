@@ -155,7 +155,13 @@ class CandidatoController extends Controller
         $perPage = min(max($perPage, 1), 10);
 
         $paginacao = $query->paginate($perPage);
-        $paginacao->getCollection()->transform(fn (Candidato $candidato) => $this->formatarCandidato($candidato));
+        $paginacao->getCollection()->transform(function (Candidato $candidato) use ($solicitante) {
+            if ($solicitante->tipo() === 'administrativo') {
+                $this->statusService->registrarBloqueioPorInatividade($candidato);
+            }
+
+            return $this->formatarCandidato($candidato);
+        });
 
         return response()->json($paginacao);
     }
@@ -350,6 +356,7 @@ class CandidatoController extends Controller
 
         $validated = $request->validate([
             'status'   => 'sometimes|boolean',
+            'motivo_bloqueio_publico' => ['nullable', 'string', 'max:500'],
             'nome'     => 'sometimes|string|max:100',
             'email'    => 'sometimes|email|unique:pessoa,email,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
             'telefone' => 'sometimes|string|max:16|unique:pessoa,telefone,' . $candidato->pessoa_id_pessoa . ',id_pessoa',
@@ -387,7 +394,12 @@ class CandidatoController extends Controller
         DB::beginTransaction();
         try {
             if (isset($validated['status'])) {
-                $candidato->update(['status' => $validated['status']]);
+                if ($validated['status'] === false) {
+                    $this->statusService->bloquearManualmente($candidato, $validated['motivo_bloqueio_publico'] ?? null);
+                    $candidato->refresh();
+                } else {
+                    $candidato->update(['status' => true]);
+                }
             }
 
             $pessoaData = [];

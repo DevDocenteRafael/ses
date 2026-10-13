@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Administrativo;
 use App\Models\Candidato;
+use App\Mail\CandidatoBloqueadoMail;
+use App\Models\CandidatoBloqueioNotificacao;
 use App\Models\Contratacao;
 use App\Models\CursoExterno;
 use App\Models\Empresa;
@@ -13,6 +15,7 @@ use App\Models\ResponsavelContratual;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
@@ -25,7 +28,10 @@ class CandidatoInatividadeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['candidato.inatividade_segundos' => 30]);
+        config([
+            'candidato.inatividade_habilitada' => true,
+            'candidato.inatividade_segundos' => 30,
+        ]);
     }
 
     public function test_fronteiras_29_30_31_segundos_na_busca_da_empresa(): void
@@ -42,8 +48,64 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonPath('data.0.matricula', (string) $ativo29->matricula);
     }
 
+    public function test_prazo_configurado_para_300_segundos_e_usado_na_busca_da_empresa(): void
+    {
+        config(['candidato.inatividade_segundos' => 300]);
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, $ativo299] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(299));
+        $this->criarCandidato(ultimaAtividade: now()->subSeconds(300));
+
+        $this->withToken($tokenEmpresa)->getJson('/api/candidatos?per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $ativo299->matricula);
+    }
+
+    public function test_inatividade_desativada_mantem_candidato_antigo_disponivel_sem_liberar_manual_ou_contratado(): void
+    {
+        config(['candidato.inatividade_habilitada' => false]);
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, $antigo] = $this->criarCandidato(ultimaAtividade: now()->subYear());
+        $this->criarCandidato(status: false, ultimaAtividade: now()->subYear());
+        [, $contratado] = $this->criarCandidato(ultimaAtividade: now()->subYear());
+        $this->registrarContratacao($contratado);
+
+        $this->withToken($tokenEmpresa)->getJson('/api/candidatos?per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $antigo->matricula);
+    }
+
+    public function test_inatividade_desativada_nao_lista_candidatos_no_filtro_inativo(): void
+    {
+        config(['candidato.inatividade_habilitada' => false]);
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        $this->criarCandidato(ultimaAtividade: now()->subYear());
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 0);
+    }
+
+    public function test_candidato_contratado_continua_restrito_com_inatividade_desativada(): void
+    {
+        config(['candidato.inatividade_habilitada' => false]);
+        [$pessoa, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subYear());
+        $this->registrarContratacao($candidato);
+
+        $this->postJson('/api/auth/login', [
+            'identificador' => $pessoa->email,
+            'senha' => '123456',
+        ])->assertOk()
+            ->assertJsonPath('restricoes.estado', 'CONTRATADO')
+            ->assertJsonPath('restricoes.contratado', true)
+            ->assertJsonPath('restricoes.pode_editar_perfil', false);
+    }
+
     public function test_login_reativa_candidato_bloqueado_somente_por_inatividade(): void
     {
+        Mail::fake();
         Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
         [$pessoa, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
 
@@ -55,6 +117,69 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonPath('restricoes.pode_editar_perfil', true);
 
         $this->assertTrue($candidato->refresh()->ultima_atividade_em->equalTo(now()));
+        Mail::assertSent(CandidatoBloqueadoMail::class);
+    }
+
+    public function test_admin_notifica_inatividade_uma_unica_vez_sem_disparo_por_empresa(): void
+    {
+        Mail::fake();
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        [, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $this->withToken($tokenEmpresa)->getJson('/api/candidatos?per_page=10')->assertOk();
+        Mail::assertNothingSent();
+
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')->assertOk();
+        $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')->assertOk();
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, 1);
+        $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 1);
+        $this->assertDatabaseHas('candidato_bloqueio_notificacoes', [
+            'candidato_matricula' => $candidato->matricula,
+            'tipo_bloqueio' => 'BLOQUEADO_POR_INATIVIDADE',
+            'status' => CandidatoBloqueioNotificacao::STATUS_ENVIADO,
+        ]);
+    }
+
+    public function test_bloqueio_manual_envia_email_com_motivo_publico_e_preserva_login_bloqueado(): void
+    {
+        Mail::fake();
+        [$pessoaAdmin, $tokenAdmin] = $this->criarAdminAutenticado();
+        [$pessoa, $candidato] = $this->criarCandidato(ultimaAtividade: now());
+
+        $this->withToken($tokenAdmin)->putJson("/api/candidatos/{$candidato->matricula}", [
+            'status' => false,
+            'motivo_bloqueio_publico' => 'Cadastro com pendência documental.',
+        ])->assertOk();
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, function (CandidatoBloqueadoMail $mail) {
+            return $mail->tipoBloqueio === 'BLOQUEADO_MANUALMENTE'
+                && $mail->motivoPublico === 'Cadastro com pendência documental.';
+        });
+
+        $this->postJson('/api/auth/login', [
+            'identificador' => $pessoa->email,
+            'senha' => '123456',
+        ])->assertForbidden();
+    }
+
+    public function test_falha_smtp_nao_desfaz_bloqueio_manual(): void
+    {
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1', 'mail.mailers.smtp.port' => 1]);
+        [$pessoaAdmin, $tokenAdmin] = $this->criarAdminAutenticado();
+        [, $candidato] = $this->criarCandidato(ultimaAtividade: now());
+
+        $this->withToken($tokenAdmin)->putJson("/api/candidatos/{$candidato->matricula}", [
+            'status' => false,
+        ])->assertOk();
+
+        $this->assertFalse($candidato->refresh()->status);
+        $this->assertDatabaseHas('candidato_bloqueio_notificacoes', [
+            'candidato_matricula' => $candidato->matricula,
+            'tipo_bloqueio' => 'BLOQUEADO_MANUALMENTE',
+            'status' => CandidatoBloqueioNotificacao::STATUS_FALHOU,
+        ]);
     }
 
     public function test_login_nao_libera_bloqueio_manual(): void

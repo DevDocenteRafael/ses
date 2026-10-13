@@ -104,8 +104,8 @@ export const useAdminStore = defineStore('admin', {
          * Libera/bloqueia o acesso de um candidato (FR37). Persiste via
          * PUT /candidatos/{matricula} (coluna `candidato.status`).
          */
-        async atualizarStatusAluno(matricula, status) {
-            await adminService.atualizarStatusAluno(matricula, status);
+        async atualizarStatusAluno(matricula, status, motivoBloqueioPublico = null) {
+            await adminService.atualizarStatusAluno(matricula, status, motivoBloqueioPublico);
             const aluno = this.alunos.find((a) => a.matricula === matricula);
             if (aluno) aluno.status = status;
         },

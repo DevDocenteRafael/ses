@@ -1,11 +1,11 @@
 <template>
     <aside :class="['ses-sidebar', { 'ses-sidebar-collapsed': isCollapsed }]" class="d-flex flex-column flex-shrink-0 p-3 text-white">
         <div class="ses-header d-flex align-items-center justify-content-between mb-4">
-            <span v-if="!isCollapsed" class="ses-brand fs-4 fw-bold">Senac</span>
+            <img :src="logoSenacSrc" alt="Logo Senac" class="ses-brand-logo">
             <button
                 type="button"
                 class="btn btn-sm ses-toggle rounded-circle flex-shrink-0"
-                aria-label="Recolher menu"
+                :aria-label="isCollapsed ? 'Expandir menu' : 'Recolher menu'"
                 @click="toggleCollapse"
             >
                 <i :class="['bi', isCollapsed ? 'bi-chevron-right' : 'bi-chevron-left']"></i>
@@ -42,6 +42,8 @@
 
 <script setup>
 import { ref } from 'vue';
+
+const logoSenacSrc = '/img/senac-logo.png';
 
 defineProps({
     /**
@@ -85,14 +87,36 @@ const toggleCollapse = () => {
     padding: 0.6rem;
 }
 
+.ses-sidebar-collapsed .ses-header {
+    flex-direction: column;
+    justify-content: flex-start !important;
+    gap: 0.55rem;
+}
+
+.ses-sidebar-collapsed .ses-brand-logo {
+    flex: 0 0 auto;
+    width: 100%;
+    height: auto;
+    max-width: 48px;
+    max-height: 30px;
+    object-position: center;
+}
+
 .ses-header {
     min-height: 44px;
     align-items: center;
 }
 
-.ses-brand {
-    letter-spacing: 0.5px;
-    flex-grow: 1;
+.ses-brand-logo {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
+    height: 36px;
+    max-width: 132px;
+    object-fit: contain;
+    object-position: left center;
+    min-width: 0;
+    transition: max-width 0.3s ease-in-out, max-height 0.3s ease-in-out, height 0.3s ease-in-out;
 }
 
 .ses-toggle {

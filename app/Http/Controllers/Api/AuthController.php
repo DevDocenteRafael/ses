@@ -57,6 +57,10 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Conta bloqueada.'], 403);
             }
 
+            if ($estado === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) {
+                $this->statusService->registrarBloqueioPorInatividade($pessoa->candidato);
+            }
+
             if ($estado !== CandidatoStatusService::CONTRATADO) {
                 $this->statusService->registrarAtividade($pessoa->candidato);
                 $pessoa->candidato->refresh()->load('contratacao');

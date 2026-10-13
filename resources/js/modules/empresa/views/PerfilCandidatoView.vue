@@ -1,8 +1,8 @@
 <template>
     <div>
         <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="fw-bold fs-5">Senac</span>
+            <div class="d-flex align-items-center gap-2 min-w-0">
+                <img :src="logoSenacSrc" alt="Logo Senac" class="senac-header-logo flex-shrink-0">
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
                 <h1 class="h5 fw-bold mb-0">Portal da Empresa</h1>
             </div>
@@ -272,6 +272,8 @@ import { normalizarRegioesPreferidas } from '../../../utils/regioesPreferidasTra
 import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import { useToast } from '../../../composables/useToast';
 
+const logoSenacSrc = '/img/senac-logo.png';
+
 const props = defineProps({
     matricula: { type: [String, Number], required: true },
 });
@@ -538,6 +540,14 @@ onMounted(carregar);
 </script>
 
 <style scoped>
+.senac-header-logo {
+    display: block;
+    width: auto;
+    height: clamp(28px, 4vw, 36px);
+    max-width: 120px;
+    object-fit: contain;
+}
+
 .ultima-secao-item:last-child {
     border-bottom: 0 !important;
     margin-bottom: 0 !important;
