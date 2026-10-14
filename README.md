@@ -240,3 +240,188 @@ Projeto desenvolvido como parte da solução de empregabilidade do Senac DF.
 ## Licença ##
 
 Este projeto é destinado para fins acadêmicos e institucionais do Senac DF.
+
+
+**Instalação Mailpit**
+
+## Configuração do Mailpit
+
+O projeto utiliza o **Mailpit** para testar o envio de e-mails em ambiente de desenvolvimento.
+
+O Mailpit captura as mensagens enviadas pela aplicação e permite visualizá-las em uma interface web, sem enviar os e-mails aos destinatários reais.
+
+### 1. Pré-requisitos
+
+É necessário ter instalado:
+
+- Docker Desktop
+- Docker Compose (incluído no Docker Desktop)
+
+Download do Docker Desktop:
+https://www.docker.com/products/docker-desktop/
+
+### 2. Baixar e executar o Mailpit
+
+Abra o Docker Desktop e aguarde sua inicialização.
+
+Em seguida, abra um terminal (PowerShell ou terminal do VS Code) e execute:
+
+```bash
+docker pull axllent/mailpit
+```
+
+Esse comando baixa a imagem oficial do Mailpit.
+
+Depois, execute:
+
+```bash
+docker run -d --name mailpit -p 127.0.0.1:8025:8025 -p 127.0.0.1:1025:1025 axllent/mailpit
+```
+
+Esse comando cria e inicia o contêiner Mailpit.
+
+**Atenção:** se o projeto já possuir o serviço Mailpit configurado no `docker-compose.yml`, não crie outro contêiner. Nesse caso, utilize:
+
+```bash
+docker compose up -d mailpit
+```
+
+### 3. Acessar o Mailpit
+
+Com o contêiner em execução, abra o navegador e acesse:
+
+http://localhost:8025
+
+A interface do Mailpit exibirá os e-mails capturados durante os testes.
+
+**Portas utilizadas:**
+
+| Porta | Função |
+|-------|--------|
+| 8025 | Interface web do Mailpit |
+| 1025 | Servidor SMTP para receber e-mails |
+
+### 4. Configurar o Laravel
+
+Abra o arquivo `.env` na raiz do projeto.
+
+Se o Laravel estiver rodando diretamente no computador, configure:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="noreply@senacdf.local"
+MAIL_FROM_NAME="Portal de Empregabilidade Senac DF"
+```
+
+O endereço do remetente acima é apenas um exemplo para desenvolvimento.
+
+**Importante:** caso o Laravel também esteja rodando dentro de um contêiner Docker na mesma rede do Mailpit, utilize:
+
+```env
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+```
+
+As demais configurações permanecem conforme o ambiente.
+
+### 5. Limpar o cache de configuração
+
+Após editar o `.env`, execute na raiz do projeto:
+
+```bash
+php artisan config:clear
+```
+
+Se o Laravel estiver em um contêiner, execute o comando dentro do contêiner da aplicação.
+
+### 6. Testar o envio de e-mail
+
+Com o Laravel e o Mailpit funcionando, execute uma funcionalidade existente da plataforma que envie um e-mail de teste.
+
+Depois, acesse:
+
+http://localhost:8025
+
+A mensagem deverá aparecer na caixa de entrada do Mailpit.
+
+Se o projeto utilizar filas para enviar e-mails, certifique-se de que o worker da fila esteja em execução.
+
+### 7. Comandos úteis
+
+**Verificar se o Mailpit está rodando:**
+
+```bash
+docker ps
+```
+
+**Parar o Mailpit:**
+
+```bash
+docker stop mailpit
+```
+
+**Iniciar novamente:**
+
+```bash
+docker start mailpit
+```
+
+**Consultar os logs:**
+
+```bash
+docker logs mailpit
+```
+
+**Remover o contêiner:**
+
+```bash
+docker stop mailpit
+docker rm mailpit
+```
+
+Se o Mailpit for gerenciado pelo Docker Compose, prefira os comandos correspondentes do Compose.
+
+### 8. Problemas comuns
+
+**A página localhost:8025 não abre:**
+
+Verifique se o Docker Desktop está aberto e se o contêiner está em execução.
+
+**Os e-mails não aparecem:**
+
+Verifique o `MAIL_HOST`, a porta `1025` e se as configurações do Laravel foram atualizadas.
+
+**Erro de porta já utilizada:**
+
+Verifique se outro contêiner ou programa está usando as portas `8025` ou `1025`.
+
+**Erro informando que o contêiner já existe:**
+
+Execute:
+
+```bash
+docker start mailpit
+```
+
+Não é necessário criar outro contêiner.
+
+### 9. Observações importantes
+
+- O Mailpit deve ser utilizado em ambiente de desenvolvimento e testes.
+- Os e-mails capturados não são enviados automaticamente aos destinatários reais.
+- Não utilize o Mailpit como serviço de e-mail de produção.
+- Não exponha a interface web do Mailpit publicamente sem medidas de segurança.
+- As mensagens podem conter informações sensíveis de testes.
+- Por padrão, mensagens podem ser perdidas quando o contêiner é removido, caso não exista armazenamento persistente configurado.
+
+### Documentação oficial
+
+- Site: https://mailpit.axllent.org/
+- Instalação: https://mailpit.axllent.org/docs/install/
+- Docker: https://mailpit.axllent.org/docs/install/docker/
+- GitHub: https://github.com/axllent/mailpit
