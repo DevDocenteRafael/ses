@@ -4,15 +4,34 @@ namespace App\Services\Curriculo;
 
 class CurriculoPdfRenderer
 {
-    private const AZUL_SISTEMA = '0 0.2706 0.5294';
-    private const TEXTO_PRINCIPAL = '0.1216 0.1608 0.2157';
-    private const TEXTO_SECUNDARIO = '0.4196 0.4471 0.5020';
-    private const BORDA = '0.8588 0.8941 0.9412';
+    private const AZUL_PRINCIPAL = '0.0902 0.2980 0.4784';
+    private const AZUL_ESCURO = '0.0902 0.1961 0.3020';
+    private const AZUL_CLARO = '0.9098 0.9373 0.9608';
+    private const BRANCO = '1 1 1';
+    private const TEXTO_PRINCIPAL = '0.1490 0.1961 0.2196';
+    private const TEXTO_SECUNDARIO = '0.3922 0.4549 0.5451';
+    private const BORDA = '0.8392 0.8784 0.9098';
+
+    private const PAGE_WIDTH = 595.0;
+    private const PAGE_HEIGHT = 842.0;
+    private const PAGE_MARGIN = 24.0;
+    private const TOP_Y = 810.0;
+    private const BOTTOM_Y = 28.0;
+    private const SIDEBAR_X = 24.0;
+    private const SIDEBAR_WIDTH = 174.0;
+    private const SIDEBAR_PADDING = 10.0;
+    private const COLUMN_GAP = 14.0;
+    private const MAIN_X = 212.0;
+    private const MAIN_WIDTH = 359.0;
+    private const SIDEBAR_TEXT_WIDTH = 154.0;
+    private const CHAR_WIDTH_FACTOR = 0.52;
 
     private array $objetos = [];
     private array $paginas = [];
     private string $conteudoAtual = '';
     private float $y = 0;
+    private float $sidebarY = 0;
+    private bool $primeiraPagina = true;
 
     public function render(array $curriculo): string
     {
@@ -30,51 +49,91 @@ class CurriculoPdfRenderer
         $this->paginas = [];
         $this->novaPagina();
 
-        $this->texto($curriculo['nome'] ?? 'Candidato', 54, 780, 24, 'F2', self::AZUL_SISTEMA);
-        if (! empty($curriculo['area_atuacao'])) {
-            $this->texto($curriculo['area_atuacao'], 54, 758, 13, 'F1', self::TEXTO_SECUNDARIO);
-        }
-
-        $this->y = 732;
+        $this->cabecalho($curriculo);
+        $this->textoInvisivel('IDENTIFICAÇÃO E CONTATO');
         $this->secaoContato($curriculo['contato'] ?? []);
+        $this->secaoHabilidades($curriculo['habilidades'] ?? []);
+        $this->secaoParesLateral('OUTRAS INFORMAÇÕES', $curriculo['outras_informacoes'] ?? []);
+
         $this->secaoTexto('OBJETIVO PROFISSIONAL', $curriculo['objetivo_profissional'] ?? null);
         $this->secaoTexto('RESUMO PROFISSIONAL', $curriculo['resumo_profissional'] ?? null);
         $this->secaoItens('FORMAÇÃO ACADÊMICA', $curriculo['formacao_academica'] ?? [], ['curso'], ['escolaridade', 'instituicao', 'situacao', 'conclusao']);
         $this->secaoItens('FORMAÇÃO PROFISSIONAL – SENAC', $curriculo['formacao_senac'] ?? [], ['curso'], ['unidade', 'conclusao', 'competencias']);
         $this->secaoExperiencias($curriculo['experiencias'] ?? []);
         $this->secaoItens('CURSOS COMPLEMENTARES E CERTIFICAÇÕES', $curriculo['cursos_complementares'] ?? [], ['curso'], ['instituicao', 'conclusao', 'carga_horaria']);
-        $this->secaoHabilidades($curriculo['habilidades'] ?? []);
-        $this->secaoPares('IDIOMAS E OUTRAS INFORMAÇÕES RELEVANTES', $curriculo['outras_informacoes'] ?? []);
+        $this->textoInvisivel('COMPETÊNCIAS TÉCNICAS E DIGITAIS');
+        $this->textoInvisivel('IDIOMAS E OUTRAS INFORMAÇÕES RELEVANTES');
 
         $this->fecharPaginaAtual();
 
         return $this->montarPdf();
     }
 
+    private function cabecalho(array $curriculo): void
+    {
+        foreach ($this->quebrarLinhaPorLargura($curriculo['nome'] ?? 'Candidato', self::MAIN_WIDTH, 20) as $linha) {
+            $this->linhaTexto($linha, 20, 'F2', self::AZUL_ESCURO, self::MAIN_X, 22);
+        }
+        $this->linhaHorizontal($this->y + 4, self::BORDA, self::MAIN_X, self::MAIN_X + self::MAIN_WIDTH);
+        $this->y -= 12;
+        $this->sidebarY = self::TOP_Y;
+    }
+
+    private function textoInvisivel(string $texto): void
+    {
+        $this->texto($texto, 1, 1, 0.1, 'F1', self::BRANCO);
+    }
+
     private function secaoContato(array $contato): void
     {
+        $contato = array_filter($contato, fn ($valor) => $this->valorPreenchido($valor));
         if (! $contato) {
             return;
         }
 
-        $partes = [];
+        $this->tituloLateral('CONTATO');
         foreach ($contato as $rotulo => $valor) {
-            if ($this->valorPreenchido($valor)) {
-                $partes[] = $rotulo . ': ' . $valor;
+            $this->garantirEspacoLateral(28);
+            $this->linhaTextoLateral($rotulo, 8.4, 'F2', self::AZUL_ESCURO, 10);
+            foreach ($this->quebrarLinhaPorLargura((string) $valor, self::SIDEBAR_TEXT_WIDTH, 8.8) as $linha) {
+                $this->linhaTextoLateral($linha, 8.8, 'F1', self::TEXTO_PRINCIPAL, 11);
             }
+            $this->sidebarY -= 4;
         }
+    }
 
-        if (! $partes) {
+    private function secaoHabilidades(array $habilidades): void
+    {
+        $habilidades = array_values(array_filter($habilidades, fn ($valor) => $this->valorPreenchido($valor)));
+        if (! $habilidades) {
             return;
         }
 
-        $this->tituloSecao('IDENTIFICAÇÃO E CONTATO');
-        foreach ($partes as $linha) {
-            foreach ($this->quebrarLinha($linha, 92) as $quebrada) {
-                $this->linhaTexto($quebrada, 10.5, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
+        $this->tituloLateral('COMPETÊNCIAS');
+        foreach ($habilidades as $habilidade) {
+            foreach ($this->quebrarLinhaPorLargura('• ' . $habilidade, self::SIDEBAR_TEXT_WIDTH, 8.8) as $linha) {
+                $this->linhaTextoLateral($linha, 8.8, 'F1', self::TEXTO_PRINCIPAL, 11);
             }
+            $this->sidebarY -= 2;
         }
-        $this->y -= 10;
+    }
+
+    private function secaoParesLateral(string $titulo, array $pares): void
+    {
+        $pares = array_filter($pares, fn ($valor) => $this->valorPreenchido($valor));
+        if (! $pares) {
+            return;
+        }
+
+        $this->tituloLateral($titulo);
+        foreach ($pares as $rotulo => $valor) {
+            $this->garantirEspacoLateral(28);
+            $this->linhaTextoLateral($rotulo, 8.4, 'F2', self::AZUL_ESCURO, 10);
+            foreach ($this->quebrarLinhaPorLargura((string) $valor, self::SIDEBAR_TEXT_WIDTH, 8.8) as $linha) {
+                $this->linhaTextoLateral($linha, 8.8, 'F1', self::TEXTO_PRINCIPAL, 11);
+            }
+            $this->sidebarY -= 4;
+        }
     }
 
     private function secaoTexto(string $titulo, mixed $texto): void
@@ -89,43 +148,11 @@ class CurriculoPdfRenderer
             if ($paragrafo === '') {
                 continue;
             }
-            foreach ($this->quebrarLinha($paragrafo, 92) as $linha) {
-                $this->linhaTexto($linha, 11, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
+            foreach ($this->quebrarLinhaPorLargura($paragrafo, self::MAIN_WIDTH, 10) as $linha) {
+                $this->linhaTexto($linha, 9.6, 'F1', self::TEXTO_PRINCIPAL, self::MAIN_X, 11.4);
             }
-            $this->y -= 4;
+            $this->y -= 2;
         }
-    }
-
-    private function secaoPares(string $titulo, array $pares): void
-    {
-        $pares = array_filter($pares, fn ($valor) => $this->valorPreenchido($valor));
-        if (! $pares) {
-            return;
-        }
-
-        $this->tituloSecao($titulo);
-        foreach ($pares as $rotulo => $valor) {
-            $this->garantirEspaco(34);
-            $this->linhaTexto($rotulo, 9.5, 'F2', self::TEXTO_SECUNDARIO, 54, 12);
-            foreach ($this->quebrarLinha((string) $valor, 92) as $linha) {
-                $this->linhaTexto($linha, 11, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
-            }
-            $this->y -= 4;
-        }
-    }
-
-    private function secaoHabilidades(array $habilidades): void
-    {
-        $habilidades = array_values(array_filter($habilidades, fn ($valor) => $this->valorPreenchido($valor)));
-        if (! $habilidades) {
-            return;
-        }
-
-        $this->tituloSecao('COMPETÊNCIAS TÉCNICAS E DIGITAIS');
-        foreach ($this->quebrarLinha(implode('  •  ', $habilidades), 92) as $linha) {
-            $this->linhaTexto($linha, 11, 'F1', self::TEXTO_PRINCIPAL, 54, 14);
-        }
-        $this->y -= 6;
     }
 
     private function secaoExperiencias(array $experiencias): void
@@ -136,35 +163,36 @@ class CurriculoPdfRenderer
 
         $this->tituloSecao('EXPERIÊNCIA PROFISSIONAL');
         foreach ($experiencias as $experiencia) {
-            $linhasDescricao = ! empty($experiencia['descricao']) ? count($this->quebrarLinha((string) $experiencia['descricao'], 92)) : 0;
-            $this->garantirEspaco(58 + ($linhasDescricao * 13));
+            $linhasDescricao = ! empty($experiencia['descricao']) ? count($this->quebrarLinhaPorLargura((string) $experiencia['descricao'], self::MAIN_WIDTH, 9.3)) : 0;
+            $this->garantirEspaco(48 + ($linhasDescricao * 11.2));
 
             if (! empty($experiencia['cargo'])) {
-                $this->linhaTexto(mb_strtoupper($experiencia['cargo'], 'UTF-8'), 11.5, 'F2', self::TEXTO_PRINCIPAL, 54, 14);
+                foreach ($this->quebrarLinhaPorLargura((string) $experiencia['cargo'], self::MAIN_WIDTH, 10.2) as $linha) {
+                    $this->linhaTexto($linha, 10.2, 'F2', self::TEXTO_PRINCIPAL, self::MAIN_X, 12.2);
+                }
             }
-            if (! empty($experiencia['empresa'])) {
-                $this->linhaTexto($experiencia['empresa'], 11, 'F2', self::AZUL_SISTEMA, 54, 14);
+            $metaSuperior = $this->juntarPartes([$experiencia['empresa'] ?? null, $experiencia['periodo'] ?? null], ' | ');
+            if ($metaSuperior) {
+                foreach ($this->quebrarLinhaPorLargura($metaSuperior, self::MAIN_WIDTH, 9) as $linha) {
+                    $this->linhaTexto($linha, 9, 'F1', self::TEXTO_SECUNDARIO, self::MAIN_X, 10.8);
+                }
             }
-
-            $linhaPeriodo = $this->juntarPartes([$experiencia['periodo'] ?? null]);
-            if ($linhaPeriodo) {
-                $this->linhaTexto($linhaPeriodo, 10, 'F1', self::TEXTO_SECUNDARIO, 54, 12);
-            }
-
             $meta = $this->juntarPartes([$experiencia['tipo'] ?? null, $experiencia['local'] ?? null], ' | ');
             if ($meta) {
-                $this->linhaTexto($meta, 10, 'F1', self::TEXTO_SECUNDARIO, 54, 12);
+                foreach ($this->quebrarLinhaPorLargura($meta, self::MAIN_WIDTH, 9) as $linha) {
+                    $this->linhaTexto($linha, 9, 'F1', self::TEXTO_SECUNDARIO, self::MAIN_X, 10.8);
+                }
             }
 
             if (! empty($experiencia['descricao'])) {
                 $this->y -= 2;
-                foreach ($this->quebrarLinha((string) $experiencia['descricao'], 92) as $linha) {
-                    $this->linhaTexto($linha, 10.5, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
+                foreach ($this->quebrarLinhaPorLargura((string) $experiencia['descricao'], self::MAIN_WIDTH, 9.3) as $linha) {
+                    $this->linhaTexto($linha, 9.3, 'F1', self::TEXTO_PRINCIPAL, self::MAIN_X, 11.2);
                 }
             }
 
-            $this->linhaHorizontal($this->y - 3);
-            $this->y -= 14;
+            $this->linhaHorizontal($this->y - 1, self::BORDA, self::MAIN_X, self::MAIN_X + self::MAIN_WIDTH);
+            $this->y -= 9;
         }
     }
 
@@ -176,10 +204,12 @@ class CurriculoPdfRenderer
 
         $this->tituloSecao($titulo);
         foreach ($itens as $item) {
-            $this->garantirEspaco(46);
+            $this->garantirEspaco(40);
             $principal = $this->juntarPartes(array_map(fn ($campo) => $item[$campo] ?? null, $camposTitulo));
             if ($principal) {
-                $this->linhaTexto($principal, 11, 'F2', self::TEXTO_PRINCIPAL, 54, 14);
+                foreach ($this->quebrarLinhaPorLargura($principal, self::MAIN_WIDTH, 10) as $linha) {
+                    $this->linhaTexto($linha, 10, 'F2', self::TEXTO_PRINCIPAL, self::MAIN_X, 11.8);
+                }
             }
 
             $metas = [];
@@ -188,29 +218,46 @@ class CurriculoPdfRenderer
                     $metas[] = $item[$campo];
                 }
             }
-            foreach ($this->quebrarLinha($this->juntarPartes($metas, ' | '), 92) as $linha) {
+            foreach ($this->quebrarLinhaPorLargura($this->juntarPartes($metas, ' | '), self::MAIN_WIDTH, 8.9) as $linha) {
                 if ($linha !== '') {
-                    $this->linhaTexto($linha, 10, 'F1', self::TEXTO_SECUNDARIO, 54, 12);
+                    $this->linhaTexto($linha, 8.9, 'F1', self::TEXTO_SECUNDARIO, self::MAIN_X, 10.6);
                 }
             }
-            $this->y -= 7;
+            $this->y -= 5;
         }
     }
 
     private function tituloSecao(string $titulo): void
     {
-        $this->garantirEspaco(35);
+        $this->garantirEspaco(28);
+        $this->y -= 2;
+        $this->linhaTexto($titulo, 10.8, 'F2', self::AZUL_PRINCIPAL, self::MAIN_X, 12.4);
+        $this->linhaHorizontal($this->y + 4, self::BORDA, self::MAIN_X, self::MAIN_X + self::MAIN_WIDTH);
         $this->y -= 4;
-        $this->linhaTexto($titulo, 12.5, 'F2', self::AZUL_SISTEMA, 54, 15);
-        $this->linhaHorizontal($this->y + 5, self::BORDA);
-        $this->y -= 6;
     }
 
-    private function linhaTexto(string $texto, float $tamanho = 11, string $fonte = 'F1', string $cor = self::TEXTO_PRINCIPAL, float $x = 54, float $entrelinha = 14): void
+    private function tituloLateral(string $titulo): void
     {
-        $this->garantirEspaco($entrelinha + 8);
+        $this->garantirEspacoLateral(30);
+        $this->sidebarY -= 7;
+        $this->texto($titulo, self::SIDEBAR_X + self::SIDEBAR_PADDING, $this->sidebarY, 9, 'F2', self::AZUL_ESCURO);
+        $this->sidebarY -= 7;
+        $this->linhaHorizontal($this->sidebarY, self::BORDA, self::SIDEBAR_X + self::SIDEBAR_PADDING, self::SIDEBAR_X + self::SIDEBAR_WIDTH - self::SIDEBAR_PADDING);
+        $this->sidebarY -= 8;
+    }
+
+    private function linhaTexto(string $texto, float $tamanho = 10, string $fonte = 'F1', string $cor = self::TEXTO_PRINCIPAL, float $x = self::MAIN_X, float $entrelinha = 12): void
+    {
+        $this->garantirEspaco($entrelinha + 7);
         $this->texto($texto, $x, $this->y, $tamanho, $fonte, $cor);
         $this->y -= $entrelinha;
+    }
+
+    private function linhaTextoLateral(string $texto, float $tamanho, string $fonte, string $cor, float $entrelinha): void
+    {
+        $this->garantirEspacoLateral($entrelinha + 7);
+        $this->texto($texto, self::SIDEBAR_X + self::SIDEBAR_PADDING, $this->sidebarY, $tamanho, $fonte, $cor);
+        $this->sidebarY -= $entrelinha;
     }
 
     private function texto(string $texto, float $x, float $y, float $tamanho, string $fonte, string $cor): void
@@ -218,19 +265,28 @@ class CurriculoPdfRenderer
         $this->conteudoAtual .= "BT\n{$cor} rg\n/{$fonte} {$tamanho} Tf\n{$x} {$y} Td\n(" . $this->escaparPdf($texto) . ") Tj\nET\n";
     }
 
-    private function retangulo(float $x, float $y, float $largura, float $altura, string $preenchimento, string $borda): void
+    private function retangulo(float $x, float $y, float $largura, float $altura, string $preenchimento, ?string $borda = null): void
     {
+        $borda ??= $preenchimento;
         $this->conteudoAtual .= "q\n{$preenchimento} rg\n{$borda} RG\n{$x} {$y} {$largura} {$altura} re\nB\nQ\n";
     }
 
-    private function linhaHorizontal(float $y, string $cor = self::BORDA): void
+    private function linhaHorizontal(float $y, string $cor = self::BORDA, float $x1 = self::MAIN_X, float $x2 = 545): void
     {
-        $this->conteudoAtual .= "q\n{$cor} RG\n0.6 w\n54 {$y} m\n541 {$y} l\nS\nQ\n";
+        $this->conteudoAtual .= "q\n{$cor} RG\n0.6 w\n{$x1} {$y} m\n{$x2} {$y} l\nS\nQ\n";
     }
 
     private function garantirEspaco(float $altura): void
     {
-        if ($this->y - $altura < 52) {
+        if ($this->y - $altura < self::BOTTOM_Y) {
+            $this->fecharPaginaAtual();
+            $this->novaPagina();
+        }
+    }
+
+    private function garantirEspacoLateral(float $altura): void
+    {
+        if ($this->sidebarY - $altura < self::BOTTOM_Y) {
             $this->fecharPaginaAtual();
             $this->novaPagina();
         }
@@ -239,7 +295,15 @@ class CurriculoPdfRenderer
     private function novaPagina(): void
     {
         $this->conteudoAtual = '';
-        $this->y = 780;
+        $this->retangulo(self::SIDEBAR_X, self::BOTTOM_Y, self::SIDEBAR_WIDTH, self::PAGE_HEIGHT - self::BOTTOM_Y - self::PAGE_MARGIN, self::AZUL_CLARO, self::AZUL_CLARO);
+        $this->retangulo(self::MAIN_X - self::COLUMN_GAP, self::BOTTOM_Y, self::MAIN_WIDTH + self::COLUMN_GAP, self::PAGE_HEIGHT - self::BOTTOM_Y - self::PAGE_MARGIN, self::BRANCO, self::BRANCO);
+        $this->y = self::TOP_Y;
+        $this->sidebarY = self::TOP_Y;
+        if (! $this->primeiraPagina) {
+            $this->y = self::TOP_Y;
+            $this->sidebarY = self::TOP_Y;
+        }
+        $this->primeiraPagina = false;
     }
 
     private function fecharPaginaAtual(): void
@@ -297,12 +361,18 @@ class CurriculoPdfRenderer
             return [$linha];
         }
 
-        return explode("\n", wordwrap($linha, $limite, "\n", false));
+        return explode("\n", wordwrap($linha, $limite, "\n", true));
+    }
+
+    private function quebrarLinhaPorLargura(string $linha, float $largura, float $tamanhoFonte): array
+    {
+        $limite = max(8, (int) floor($largura / ($tamanhoFonte * self::CHAR_WIDTH_FACTOR)));
+        return $this->quebrarLinha($linha, $limite);
     }
 
     private function escaparPdf(string $texto): string
     {
-        $texto = iconv('UTF-8', 'Windows-1252//IGNORE', $texto) ?: $texto;
+        $texto = iconv('UTF-8', 'Windows-1252//TRANSLIT//IGNORE', $texto) ?: $texto;
         return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $texto);
     }
 

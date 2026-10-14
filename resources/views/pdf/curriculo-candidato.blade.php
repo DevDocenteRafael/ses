@@ -4,33 +4,60 @@
     <meta charset="utf-8">
     <title>{{ $curriculo['nome'] }}</title>
     <style>
-        @page { size: A4; margin: 20mm; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; color: #1f2937; font-size: 11px; line-height: 1.45; }
-        h1 { color: #004587; font-size: 25px; margin: 0 0 3px; text-transform: uppercase; letter-spacing: .4px; }
-        .area { color: #4b5563; font-size: 14px; margin: 0 0 14px; }
-        h2 { color: #004587; font-size: 12.5px; border-bottom: 1px solid #dbeafe; padding-bottom: 4px; margin: 16px 0 8px; text-transform: uppercase; }
-        p { margin: 0 0 4px; }
-        ul { margin: 0; padding-left: 18px; }
-        li { margin-bottom: 3px; }
-        .contato { background: #f8fbff; border: 1px solid #dbeafe; padding: 8px 10px; margin-bottom: 12px; }
-        .item { margin-bottom: 11px; page-break-inside: avoid; }
-        .titulo { font-weight: bold; color: #111827; text-transform: uppercase; }
-        .empresa { font-weight: bold; color: #004587; }
-        .muted { color: #6b7280; }
-        .label { color: #6b7280; font-weight: bold; font-size: 10px; }
-        .divisor { border-bottom: 1px solid #eef2f7; padding-bottom: 8px; }
+        @page { size: A4; margin: 8.5mm; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; color: #263238; font-size: 9.6px; line-height: 1.38; margin: 0; background: #FFFFFF; }
+        .page { width: 100%; }
+        .layout { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .sidebar { width: 32%; background: #E8EFF5; padding: 11px 10px; vertical-align: top; word-wrap: break-word; overflow-wrap: anywhere; }
+        .gutter { width: 2.5%; background: #FFFFFF; }
+        .main { width: 65.5%; background: #FFFFFF; padding: 0; vertical-align: top; word-wrap: break-word; overflow-wrap: anywhere; }
+        h1 { color: #17324D; font-size: 20px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .35px; border-bottom: 1px solid #D6E0E8; padding-bottom: 8px; line-height: 1.16; word-wrap: break-word; overflow-wrap: anywhere; }
+        h2 { color: #174C7A; font-size: 10.8px; border-bottom: 1px solid #D6E0E8; padding-bottom: 3px; margin: 11px 0 5px; text-transform: uppercase; page-break-after: avoid; word-wrap: break-word; overflow-wrap: anywhere; }
+        .sidebar h2 { color: #17324D; font-size: 9px; margin: 0 0 6px; padding-top: 9px; page-break-after: avoid; }
+        .sidebar h2:first-child { padding-top: 0; }
+        p { margin: 0 0 3px; word-wrap: break-word; overflow-wrap: anywhere; }
+        ul { margin: 0; padding-left: 12px; }
+        li { margin-bottom: 2px; word-wrap: break-word; overflow-wrap: anywhere; }
+        .item { margin-bottom: 7px; page-break-inside: avoid; }
+        .titulo { font-weight: bold; color: #263238; }
+        .empresa { color: #64748B; }
+        .muted { color: #64748B; }
+        .label { color: #17324D; font-weight: bold; font-size: 8.6px; }
+        .divisor { border-bottom: 1px solid #D6E0E8; padding-bottom: 6px; }
+        .lateral-item { margin-bottom: 6px; word-wrap: break-word; overflow-wrap: anywhere; }
     </style>
 </head>
 <body>
-    <h1>{{ $curriculo['nome'] }}</h1>
-    @if($curriculo['contato'])
-        <h2>Identificação e contato</h2>
-        <div class="contato">
-            @foreach($curriculo['contato'] as $rotulo => $valor)
-                @if(!empty($valor))<p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>@endif
-            @endforeach
-        </div>
-    @endif
+    <div class="page">
+        <table class="layout">
+            <tr>
+                <td class="sidebar">
+                    @if($curriculo['contato'])
+                        <h2>Identificação e contato</h2>
+                        @foreach($curriculo['contato'] as $rotulo => $valor)
+                            @if(!empty($valor))<div class="lateral-item"><span class="label">{{ $rotulo }}</span><br>{{ $valor }}</div>@endif
+                        @endforeach
+                    @endif
+
+                    @if($curriculo['habilidades'])
+                        <h2>Competências</h2>
+                        <ul>
+                            @foreach(array_filter($curriculo['habilidades']) as $habilidade)
+                                <li>{{ $habilidade }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if($curriculo['outras_informacoes'])
+                        <h2>Outras informações</h2>
+                        @foreach($curriculo['outras_informacoes'] as $rotulo => $valor)
+                            @if(!empty($valor))<div class="lateral-item"><span class="label">{{ $rotulo }}</span><br>{{ $valor }}</div>@endif
+                        @endforeach
+                    @endif
+                </td>
+                <td class="gutter"></td>
+                <td class="main">
+                    <h1>{{ $curriculo['nome'] }}</h1>
 
     @if($curriculo['objetivo_profissional'])
         <h2>Objetivo profissional</h2>
@@ -94,16 +121,9 @@
         @endforeach
     @endif
 
-    @if($curriculo['habilidades'])
-        <h2>Competências técnicas e digitais</h2>
-        <p>{{ implode(' • ', array_filter($curriculo['habilidades'])) }}</p>
-    @endif
-
-    @if($curriculo['outras_informacoes'])
-        <h2>Idiomas e outras informações relevantes</h2>
-        @foreach($curriculo['outras_informacoes'] as $rotulo => $valor)
-            <p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>
-        @endforeach
-    @endif
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>
 </html>

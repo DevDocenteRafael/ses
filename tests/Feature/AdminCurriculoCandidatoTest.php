@@ -52,11 +52,17 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertStringContainsString('CURSOS COMPLEMENTARES E CERTIFICAÇÕES', $conteudo);
         $this->assertStringContainsString('COMPETÊNCIAS TÉCNICAS E DIGITAIS', $conteudo);
         $this->assertStringContainsString('IDIOMAS E OUTRAS INFORMAÇÕES RELEVANTES', $conteudo);
+        $this->assertStringContainsString('0.9098 0.9373 0.9608 rg', $response->getContent());
+        $this->assertStringContainsString('24 28 174 790 re', $response->getContent());
+        $this->assertStringContainsString('COMPETÊNCIAS', $conteudo);
+        $this->assertStringContainsString('OUTRAS INFORMAÇÕES', $conteudo);
         $this->assertStringNotContainsString('@page', $response->getContent());
         $this->assertStringNotContainsString('font-family', $response->getContent());
         $this->assertStringNotContainsString('.item', $response->getContent());
         $this->assertStringNotContainsString('<style>', $response->getContent());
         $this->assertStringNotContainsString('<body>', $response->getContent());
+        $this->assertStringNotContainsString($candidato->cpf, $conteudo);
+        $this->assertStringNotContainsString((string) $candidato->matricula, $conteudo);
     }
 
     public function test_sem_autenticacao_recebe_401(): void
@@ -278,6 +284,27 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
         $this->assertStringContainsString('&lt;script&gt;malicioso&lt;/script&gt; &amp; gestão', $html);
         $this->assertStringNotContainsString('Experiência com <script>malicioso</script>', $html);
+    }
+
+    public function test_html_do_curriculo_aplica_modelo_com_coluna_lateral_sem_duplicar_secoes_laterais(): void
+    {
+        $candidato = $this->criarCandidatoCompleto();
+        $curriculo = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula);
+
+        $html = app(CurriculoPdfRenderer::class)->renderHtml($curriculo);
+
+        $this->assertStringContainsString('class="sidebar"', $html);
+        $this->assertStringContainsString('background: #E8EFF5', $html);
+        $this->assertStringContainsString('class="main"', $html);
+        $this->assertStringContainsString('Objetivo profissional', $html);
+        $this->assertStringContainsString('Resumo profissional', $html);
+        $this->assertStringContainsString('Formação Acadêmica', $html);
+        $this->assertStringContainsString('Formação profissional – Senac', $html);
+        $this->assertStringContainsString('Experiência Profissional', $html);
+        $this->assertStringContainsString('Cursos complementares e certificações', $html);
+        $this->assertStringContainsString('Competências', $html);
+        $this->assertStringContainsString('Outras informações', $html);
+        $this->assertSame(2, substr_count($html, 'PHP'));
     }
 
     public function test_admin_baixa_zip_da_pagina_atual_respeitando_filtros_e_ordem(): void
