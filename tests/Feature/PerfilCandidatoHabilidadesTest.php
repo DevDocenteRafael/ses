@@ -22,7 +22,7 @@ class PerfilCandidatoHabilidadesTest extends TestCase
         $payload = [
             'sobre_mim' => 'Perfil de teste',
             'cargo_de_interesse' => 'Desenvolvedor',
-            'area_de_atuacao' => 'Tecnologia da Informação',
+            'area_de_atuacao' => 'Tecnologia e Games',
             'habilidades' => ['Vue.js', 'Laravel', 'Comunicação'],
         ];
 
@@ -35,7 +35,7 @@ class PerfilCandidatoHabilidadesTest extends TestCase
 
         $this->assertDatabaseHas('informacoes_profissionais', [
             'candidato_matricula' => $candidato->matricula,
-            'area_de_atuacao' => 'Tecnologia da Informação',
+            'area_de_atuacao' => 'Tecnologia e Games',
         ]);
 
         $recarregar = $this->withToken($token)->getJson("/api/candidatos/{$candidato->matricula}");

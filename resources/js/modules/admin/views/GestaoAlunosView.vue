@@ -46,58 +46,19 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="position-relative" style="min-width: 180px; max-width: 200px;">
-                                <input
-                                    v-model="statusBusca"
-                                    class="form-control"
-                                    type="search"
-                                    placeholder="Pesquisar status"
-                                    aria-label="Pesquisar status do candidato"
-                                    autocomplete="off"
-                                    @focus="statusDropdownAberto = true"
-                                    @input="statusFiltro = ''; statusDropdownAberto = true"
-                                    @blur="fecharSugestaoStatus"
-                                >
-                                <div v-if="statusDropdownAberto && statusOpcoesFiltradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060;">
-                                    <button v-for="opcao in statusOpcoesFiltradas" :key="opcao.value" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarStatus(opcao)">
-                                        {{ opcao.label }}
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="position-relative" style="min-width: 200px; max-width: 240px;">
-                                <input
-                                    v-model="unidadeFiltro"
-                                    class="form-control"
-                                    type="search"
-                                    placeholder="Pesquisar unidade"
-                                    aria-label="Pesquisar unidade"
-                                    autocomplete="off"
-                                    @focus="unidadeDropdownAberto = true"
-                                    @blur="fecharSugestaoUnidade"
-                                >
-                                <div v-if="unidadeDropdownAberto && unidadesFiltradas.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
-                                    <button v-for="unidade in unidadesFiltradas" :key="unidade" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarUnidade(unidade)">
-                                        {{ unidade }}
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="position-relative" style="min-width: 200px; max-width: 240px;">
-                                <input
-                                    v-model="cursoFiltro"
-                                    class="form-control"
-                                    type="search"
-                                    placeholder="Pesquisar curso"
-                                    aria-label="Pesquisar curso"
-                                    autocomplete="off"
-                                    @focus="abrirSugestoesCurso"
-                                    @blur="fecharSugestaoCurso"
-                                >
-                                <div v-if="cursoDropdownAberto && cursosEncontrados.length" class="list-group position-absolute w-100 shadow mt-1" style="z-index: 1060; max-height: 220px; overflow-y: auto;">
-                                    <button v-for="curso in cursosEncontrados" :key="curso" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarCurso(curso)">
-                                        {{ curso }}
-                                    </button>
-                                </div>
-                            </div>
+                            <button
+                                type="button"
+                                class="btn admin-filter-toggle text-nowrap flex-shrink-0"
+                                :class="{ 'admin-filter-toggle--open': bandejaFiltrosAberta }"
+                                :aria-expanded="bandejaFiltrosAberta"
+                                aria-controls="admin-candidatos-bandeja-filtros"
+                                @click="bandejaFiltrosAberta = !bandejaFiltrosAberta"
+                            >
+                                <i class="bi bi-funnel me-1"></i>
+                                Filtros
+                                <span v-if="totalFiltrosAtivos" class="badge rounded-pill bg-warning text-dark ms-1">{{ totalFiltrosAtivos }}</span>
+                                <i class="bi ms-1" :class="bandejaFiltrosAberta ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
                             <div class="d-flex flex-nowrap align-items-stretch gap-2">
                                 <button
                                     class="btn btn-outline-secondary text-nowrap flex-shrink-0"
@@ -119,6 +80,81 @@
                                     Baixar currículos
                                 </button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div v-if="bandejaFiltrosAberta" id="admin-candidatos-bandeja-filtros" class="admin-filter-tray rounded-3 p-3 mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                            <div>
+                                <h3 class="h6 fw-bold mb-1 text-white">Bandeja de filtros</h3>
+                                <p class="small text-white-50 mb-0">Filtros compartilhados com a Pesquisa de Talentos, preservando o escopo administrativo.</p>
+                            </div>
+                        </div>
+                        <div class="row g-3 admin-filter-grid">
+                            <div class="col-md-6 col-xl-3">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Status administrativo</label>
+                                <select v-model="statusFiltro" class="form-select form-select-sm">
+                                    <option v-for="opcao in statusOpcoes" :key="opcao.value" :value="opcao.value">{{ opcao.label }}</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Contratação</label>
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <div class="form-check small"><input id="admin-filtro-clt" v-model="filtroClt" class="form-check-input" type="checkbox"><label class="form-check-label" for="admin-filtro-clt">CLT / Efetivo</label></div>
+                                    <div class="form-check small"><input id="admin-filtro-estagio" v-model="filtroEstagio" class="form-check-input" type="checkbox"><label class="form-check-label" for="admin-filtro-estagio">Estágio</label></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3 position-relative" ref="segmentosDropdownContainer">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Segmento</label>
+                                <button type="button" class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center" :aria-expanded="mostrarDropdownSegmentos" @click.stop="alternarDropdownSegmentos">
+                                    <span class="text-truncate" :class="filtros.segmento.length ? 'text-body' : 'text-secondary'">{{ rotuloFiltroSegmentos }}</span>
+                                    <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                                </button>
+                                <div v-if="mostrarDropdownSegmentos" class="filtro-multiselect-dropdown border rounded shadow-sm mt-1">
+                                    <div class="p-2 border-bottom"><input ref="segmentoBuscaInput" v-model="buscaSegmento" type="text" class="form-control form-control-sm" placeholder="Pesquisar segmento..." autocomplete="off"></div>
+                                    <div class="filtro-multiselect-lista p-2"><label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1"><input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)"><span class="form-check-label">{{ segmento.nome }}</span></label><p v-if="!segmentosFiltrados.length" class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade</label>
+                                <select v-model="disponibilidadeFiltro" class="form-select form-select-sm">
+                                    <option value="">Qualquer Horário</option>
+                                    <option value="Manhã">Manhã</option>
+                                    <option value="Tarde">Tarde</option>
+                                    <option value="Noite">Noite</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 col-xl-3 position-relative">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Unidade</label>
+                                <input v-model="unidadeFiltro" class="form-control form-control-sm" type="search" placeholder="Pesquisar unidade" autocomplete="off" @focus="unidadeDropdownAberto = true" @blur="fecharSugestaoUnidade">
+                                <div v-if="unidadeDropdownAberto && unidadesFiltradas.length" class="list-group admin-filter-suggestions position-absolute w-100 shadow mt-1"><button v-for="unidade in unidadesFiltradas" :key="unidade" type="button" class="list-group-item list-group-item-action text-start" @mousedown.prevent="selecionarUnidade(unidade)">{{ unidade }}</button></div>
+                            </div>
+                            <div class="col-md-6 col-xl-3 position-relative" ref="regioesDropdownContainer">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Região Administrativa</label>
+                                <button type="button" class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center" :aria-expanded="mostrarDropdownRegioes" @click.stop="alternarDropdownRegioes">
+                                    <span class="text-truncate" :class="filtros.regioes_administrativas.length ? 'text-body' : 'text-secondary'">{{ rotuloFiltroRegioes }}</span>
+                                    <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                                </button>
+                                <div v-if="mostrarDropdownRegioes" class="filtro-multiselect-dropdown border rounded shadow-sm mt-1">
+                                    <div class="p-2 border-bottom"><input ref="regiaoBuscaInput" v-model="buscaRegiao" type="text" class="form-control form-control-sm" placeholder="Pesquisar região..." autocomplete="off"></div>
+                                    <div class="filtro-multiselect-lista p-2"><label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1"><input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)"><span class="form-check-label text-truncate">{{ regiao.label }}</span></label><p v-if="!regioesFiltradas.length" class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3 position-relative" ref="habilidadesDropdownContainer">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas</label>
+                                <button type="button" class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center" :aria-expanded="mostrarDropdownHabilidades" @click.stop="alternarDropdownHabilidades">
+                                    <span class="text-truncate" :class="filtros.habilidades.length ? 'text-body' : 'text-secondary'">{{ rotuloFiltroHabilidades }}</span>
+                                    <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                                </button>
+                                <div v-if="mostrarDropdownHabilidades" class="filtro-multiselect-dropdown border rounded shadow-sm mt-1">
+                                    <div class="p-2 border-bottom"><input ref="habilidadeBuscaInput" v-model="buscaHabilidade" type="text" class="form-control form-control-sm" placeholder="Buscar habilidade..." autocomplete="off"></div>
+                                    <div class="filtro-multiselect-lista p-2"><div v-if="carregandoHabilidades" class="small text-secondary py-2 text-center"><span class="spinner-border spinner-border-sm me-1"></span> Carregando...</div><template v-else><label v-for="habilidade in habilidadesFiltradas" :key="habilidade" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1"><input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)"><span class="form-check-label text-truncate">{{ habilidade }}</span></label><p v-if="!habilidadesFiltradas.length" class="small text-secondary mb-0 py-2 text-center">Nenhuma habilidade encontrada.</p></template></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 flex-wrap mt-3">
+                            <button type="button" class="btn btn-link text-secondary" @click="limparFiltros">Limpar Tudo</button>
+                            <button type="button" class="btn btn-primary" :disabled="admin.carregando" @click="carregarAlunosFiltrados(1)">Aplicar Filtros</button>
                         </div>
                     </div>
 
@@ -450,7 +486,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
@@ -461,6 +497,8 @@ import { useToast } from '../../../composables/useToast';
 import { formatarTelefone, somenteNumeros } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
+import { areasAtuacao, deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
+import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import {
     formatarCpf as formatarCpfDocumento,
     formatarCnpj as formatarCnpjDocumento,
@@ -482,13 +520,28 @@ const carregouUmaVez = ref(false);
 const busca = ref('');
 const buscaDropdownAberto = ref(false);
 const statusFiltro = ref('');
-const statusBusca = ref('');
-const statusDropdownAberto = ref(false);
 const unidadeFiltro = ref('');
 const unidadeDropdownAberto = ref(false);
-const cursoFiltro = ref('');
-const cursoDropdownAberto = ref(false);
-const cursosEncontrados = ref([]);
+const bandejaFiltrosAberta = ref(false);
+const filtroClt = ref(false);
+const filtroEstagio = ref(false);
+const disponibilidadeFiltro = ref('');
+const filtros = reactive({ segmento: [], regioes_administrativas: [], habilidades: [] });
+const segmentosAcademicos = ref(areasAtuacao.map((area) => ({ id: area, nome: area })));
+const buscaSegmento = ref('');
+const buscaRegiao = ref('');
+const buscaHabilidade = ref('');
+const mostrarDropdownSegmentos = ref(false);
+const mostrarDropdownRegioes = ref(false);
+const mostrarDropdownHabilidades = ref(false);
+const segmentoBuscaInput = ref(null);
+const regiaoBuscaInput = ref(null);
+const habilidadeBuscaInput = ref(null);
+const segmentosDropdownContainer = ref(null);
+const regioesDropdownContainer = ref(null);
+const habilidadesDropdownContainer = ref(null);
+const habilidadesDisponiveis = ref([]);
+const carregandoHabilidades = ref(false);
 const alterando = ref(null);
 const curriculoGerando = ref(null);
 const alunoExpandido = ref(null);
@@ -533,10 +586,21 @@ const statusOpcoes = [
     { value: 'inativo', label: 'Bloqueado por inatividade' },
     { value: 'contratado', label: 'Contratado' },
 ];
-const statusOpcoesFiltradas = computed(() => {
-    const termo = statusBusca.value.trim().toLocaleLowerCase('pt-BR');
-    return statusOpcoes.filter((opcao) => opcao.label.toLocaleLowerCase('pt-BR').includes(termo));
-});
+const totalFiltrosAtivos = computed(() => [
+    statusFiltro.value !== '',
+    Boolean(unidadeFiltro.value),
+    filtros.segmento.length > 0,
+    filtros.regioes_administrativas.length > 0,
+    filtros.habilidades.length > 0,
+    Boolean(disponibilidadeFiltro.value),
+    filtroClt.value || filtroEstagio.value,
+].filter(Boolean).length);
+const rotuloFiltroSegmentos = computed(() => filtros.segmento.length === 0 ? 'Selecione segmentos...' : (filtros.segmento.length === 1 ? filtros.segmento[0] : `${filtros.segmento.length} segmentos selecionados`));
+const rotuloFiltroRegioes = computed(() => filtros.regioes_administrativas.length === 0 ? 'Selecione regiões...' : (filtros.regioes_administrativas.length === 1 ? regioesAdministrativasDf.find((regiao) => regiao.codigo === filtros.regioes_administrativas[0])?.label || '1 região selecionada' : `${filtros.regioes_administrativas.length} regiões selecionadas`));
+const rotuloFiltroHabilidades = computed(() => filtros.habilidades.length === 0 ? 'Selecione habilidades...' : (filtros.habilidades.length === 1 ? '1 habilidade selecionada' : `${filtros.habilidades.length} habilidades selecionadas`));
+const segmentosFiltrados = computed(() => segmentosAcademicos.value.filter((segmento) => normalizarTexto(segmento.nome).includes(normalizarTexto(buscaSegmento.value))));
+const regioesFiltradas = computed(() => regioesAdministrativasDf.filter((regiao) => normalizarTexto(`${regiao.label} ${regiao.nome}`).includes(normalizarTexto(buscaRegiao.value))));
+const habilidadesFiltradas = computed(() => habilidadesDisponiveis.value.filter((habilidade) => normalizarTexto(habilidade).includes(normalizarTexto(buscaHabilidade.value))));
 const unidadesFiltradas = computed(() => {
     const termo = unidadeFiltro.value.trim().toLocaleLowerCase('pt-BR');
     return admin.unidadesAlunos
@@ -558,26 +622,25 @@ onMounted(async () => {
     try {
         await Promise.all([
             admin.carregarUnidadesAlunos(),
+            carregarHabilidadesDisponiveis(),
             carregarAlunosFiltrados(),
         ]);
+        document.addEventListener('click', aoClicarForaDosDropdowns);
     } finally {
         carregouUmaVez.value = true;
     }
 });
 
+onBeforeUnmount(() => {
+    document.removeEventListener('click', aoClicarForaDosDropdowns);
+});
+
 let temporizadorFiltro = null;
-watch([busca, statusFiltro, unidadeFiltro, cursoFiltro], () => {
+watch([busca], () => {
     clearTimeout(temporizadorFiltro);
     temporizadorFiltro = setTimeout(() => {
         carregarAlunosFiltrados(1);
     }, 300);
-});
-
-let temporizadorCursos = null;
-let requisicaoCursos = 0;
-watch(cursoFiltro, (termo) => {
-    clearTimeout(temporizadorCursos);
-    temporizadorCursos = setTimeout(() => carregarSugestoesCurso(termo), 200);
 });
 
 let temporizadorBuscaEmpresa = null;
@@ -591,8 +654,30 @@ function parametrosFiltro(pagina = admin.alunosPaginacao.current_page || 1) {
         ...(buscaNormalizada ? { busca: buscaNormalizada } : {}),
         ...(statusFiltro.value !== '' ? { status: statusFiltro.value } : {}),
         ...(unidadeFiltro.value !== '' ? { unidade: unidadeFiltro.value } : {}),
-        ...(cursoFiltro.value.trim() ? { curso: cursoFiltro.value.trim() } : {}),
+        ...(filtros.segmento.length ? { segmento: filtros.segmento } : {}),
+        ...(filtros.regioes_administrativas.length ? { regioes_administrativas: filtros.regioes_administrativas } : {}),
+        ...(filtros.habilidades.length ? { habilidades: filtros.habilidades } : {}),
+        ...(disponibilidadeFiltro.value ? { disponibilidade: disponibilidadeFiltro.value } : {}),
+        ...((filtroClt.value || filtroEstagio.value) ? { tipo_contratacao: (filtroClt.value ? 1 : 0) + (filtroEstagio.value ? 2 : 0) } : {}),
     };
+}
+
+function limparFiltros() {
+    statusFiltro.value = '';
+    unidadeFiltro.value = '';
+    filtros.segmento = [];
+    filtros.regioes_administrativas = [];
+    filtros.habilidades = [];
+    buscaSegmento.value = '';
+    buscaRegiao.value = '';
+    buscaHabilidade.value = '';
+    disponibilidadeFiltro.value = '';
+    filtroClt.value = false;
+    filtroEstagio.value = false;
+    fecharDropdownSegmentos();
+    fecharDropdownRegioes();
+    fecharDropdownHabilidades();
+    carregarAlunosFiltrados(1);
 }
 
 function parametrosCurriculos(paginaInicial, paginaFinal) {
@@ -631,49 +716,45 @@ function fecharSugestaoBusca() {
     setTimeout(() => { buscaDropdownAberto.value = false; }, 150);
 }
 
-function selecionarStatus(opcao) {
-    statusFiltro.value = opcao.value;
-    statusBusca.value = opcao.value ? opcao.label : '';
-    statusDropdownAberto.value = false;
-}
-
-function fecharSugestaoStatus() {
-    setTimeout(() => { statusDropdownAberto.value = false; }, 150);
-}
-
 function selecionarUnidade(unidade) {
     unidadeFiltro.value = unidade;
     unidadeDropdownAberto.value = false;
 }
 
+function normalizarTexto(valor) {
+    return String(valor ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function segmentoSelecionado(segmento) { return filtros.segmento.includes(segmento); }
+function alternarSegmento(segmento) { const indice = filtros.segmento.indexOf(segmento); indice >= 0 ? filtros.segmento.splice(indice, 1) : filtros.segmento.push(segmento); }
+function regiaoSelecionada(codigo) { return filtros.regioes_administrativas.includes(Number(codigo)); }
+function alternarRegiao(codigo) { const valor = Number(codigo); const indice = filtros.regioes_administrativas.indexOf(valor); indice >= 0 ? filtros.regioes_administrativas.splice(indice, 1) : filtros.regioes_administrativas.push(valor); filtros.regioes_administrativas.sort((a, b) => a - b); }
+function habilidadeSelecionada(habilidade) { const valor = normalizarTexto(habilidade); return filtros.habilidades.some((item) => normalizarTexto(item) === valor); }
+function alternarHabilidade(habilidade) { const valor = normalizarTexto(habilidade); const indice = filtros.habilidades.findIndex((item) => normalizarTexto(item) === valor); indice >= 0 ? filtros.habilidades.splice(indice, 1) : filtros.habilidades.push(habilidade); }
+function alternarDropdownSegmentos() { mostrarDropdownSegmentos.value = !mostrarDropdownSegmentos.value; if (mostrarDropdownSegmentos.value) nextTick(() => segmentoBuscaInput.value?.focus()); }
+function alternarDropdownRegioes() { mostrarDropdownRegioes.value = !mostrarDropdownRegioes.value; if (mostrarDropdownRegioes.value) nextTick(() => regiaoBuscaInput.value?.focus()); }
+function alternarDropdownHabilidades() { mostrarDropdownHabilidades.value = !mostrarDropdownHabilidades.value; if (mostrarDropdownHabilidades.value) nextTick(() => habilidadeBuscaInput.value?.focus()); }
+function fecharDropdownSegmentos() { mostrarDropdownSegmentos.value = false; buscaSegmento.value = ''; }
+function fecharDropdownRegioes() { mostrarDropdownRegioes.value = false; buscaRegiao.value = ''; }
+function fecharDropdownHabilidades() { mostrarDropdownHabilidades.value = false; buscaHabilidade.value = ''; }
+function aoClicarForaDosDropdowns(evento) {
+    if (segmentosDropdownContainer.value && !segmentosDropdownContainer.value.contains(evento.target)) fecharDropdownSegmentos();
+    if (regioesDropdownContainer.value && !regioesDropdownContainer.value.contains(evento.target)) fecharDropdownRegioes();
+    if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) fecharDropdownHabilidades();
+}
+
+async function carregarHabilidadesDisponiveis() {
+    carregandoHabilidades.value = true;
+    try {
+        const { data } = await adminService.listarHabilidadesCandidatos();
+        habilidadesDisponiveis.value = deduplicarHabilidades([...habilidadesPadrao, ...(Array.isArray(data) ? data : [])]).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+    } finally {
+        carregandoHabilidades.value = false;
+    }
+}
+
 function fecharSugestaoUnidade() {
     setTimeout(() => { unidadeDropdownAberto.value = false; }, 150);
-}
-
-function abrirSugestoesCurso() {
-    cursoDropdownAberto.value = true;
-    carregarSugestoesCurso(cursoFiltro.value);
-}
-
-function selecionarCurso(curso) {
-    cursoFiltro.value = curso;
-    cursoDropdownAberto.value = false;
-}
-
-function fecharSugestaoCurso() {
-    setTimeout(() => { cursoDropdownAberto.value = false; }, 150);
-}
-
-async function carregarSugestoesCurso(termo = '') {
-    const requisicao = ++requisicaoCursos;
-    try {
-        const { data } = await adminService.listarCursosAlunos(termo.trim());
-        if (requisicao === requisicaoCursos) {
-            cursosEncontrados.value = Array.isArray(data) ? data : [];
-        }
-    } catch (error) {
-        if (requisicao === requisicaoCursos) cursosEncontrados.value = [];
-    }
 }
 
 async function carregarEmpresasParaContratacao(termo = '') {
@@ -1029,9 +1110,11 @@ async function baixarCandidatosFiltradosPdf() {
         const resumoFiltros = [
             filtrosExportacao.busca ? `Busca: ${filtrosExportacao.busca}` : null,
             rotuloFiltroStatusExportacao(filtrosExportacao.status),
-            filtrosExportacao.unidade ? `Unidade: ${filtrosExportacao.unidade}` : null,
-            filtrosExportacao.curso ? `Curso: ${filtrosExportacao.curso}` : null,
-        ].filter(Boolean).join(' | ') || 'Sem filtros adicionais';
+                            filtrosExportacao.unidade ? `Unidade: ${filtrosExportacao.unidade}` : null,
+                            filtrosExportacao.segmento?.length ? `Segmentos: ${filtrosExportacao.segmento.join(', ')}` : null,
+                            filtrosExportacao.regioes_administrativas?.length ? `Regiões: ${filtrosExportacao.regioes_administrativas.length}` : null,
+                            filtrosExportacao.habilidades?.length ? `Habilidades: ${filtrosExportacao.habilidades.join(', ')}` : null,
+                        ].filter(Boolean).join(' | ') || 'Sem filtros adicionais';
 
         const linhas = candidatos.map((aluno) => `
             <tr>
@@ -1155,6 +1238,232 @@ function formatarDisponibilidade(valor) {
 </script>
 
 <style scoped>
+.admin-filter-toggle {
+    border: 1px solid #163f70;
+    color: #163f70;
+    background: #fff;
+    min-height: 2.375rem;
+}
+
+.admin-filter-toggle:hover,
+.admin-filter-toggle--open {
+    color: #fff;
+    background: #163f70;
+}
+
+.admin-filter-tray {
+    --ses-admin-filter-bg: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    --ses-admin-filter-surface: #ffffff;
+    --ses-admin-filter-input-bg: #f8fafc;
+    --ses-admin-filter-border: #cbd5e1;
+    --ses-admin-filter-heading: #1e3a5f;
+    --ses-admin-filter-text: #0f172a;
+    --ses-admin-filter-text-soft: #475569;
+    --ses-admin-filter-dropdown-bg: #ffffff;
+    --ses-admin-filter-option-hover: #e2e8f0;
+    --ses-admin-filter-option-selected: #dbeafe;
+    --ses-admin-filter-option-selected-text: #1e3a8a;
+    --ses-admin-filter-scrollbar-thumb: #cbd5e1;
+    --ses-admin-filter-scrollbar-track: #f8fafc;
+    border: 1px solid var(--ses-admin-filter-border);
+    background: var(--ses-admin-filter-bg);
+    overflow: visible;
+}
+
+html.dark .admin-filter-tray {
+    --ses-admin-filter-bg: linear-gradient(135deg, #102f55 0%, #163f70 100%);
+    --ses-admin-filter-surface: #111827;
+    --ses-admin-filter-input-bg: #0b1220;
+    --ses-admin-filter-border: rgba(148, 163, 184, 0.22);
+    --ses-admin-filter-heading: #f8fafc;
+    --ses-admin-filter-text: #e5e7eb;
+    --ses-admin-filter-text-soft: #cbd5e1;
+    --ses-admin-filter-dropdown-bg: #111827;
+    --ses-admin-filter-option-hover: #1e3a5f;
+    --ses-admin-filter-option-selected: #1d4ed8;
+    --ses-admin-filter-option-selected-text: #ffffff;
+    --ses-admin-filter-scrollbar-thumb: #475569;
+    --ses-admin-filter-scrollbar-track: #0f172a;
+    border-color: var(--ses-admin-filter-border);
+    background: var(--ses-admin-filter-bg);
+}
+
+.admin-filter-tray .form-label {
+    color: var(--ses-admin-filter-heading) !important;
+}
+
+.admin-filter-tray .form-control,
+.admin-filter-tray .form-select,
+.admin-filter-tray .filtro-multiselect {
+    border-color: var(--ses-admin-filter-border);
+    background-color: var(--ses-admin-filter-input-bg);
+    color: var(--ses-admin-filter-text);
+}
+
+.admin-filter-tray .form-control::placeholder {
+    color: var(--ses-admin-filter-text-soft);
+    opacity: 1;
+}
+
+.admin-filter-tray .form-control:focus,
+.admin-filter-tray .form-select:focus,
+.admin-filter-tray .filtro-multiselect:focus,
+.admin-filter-tray .filtro-multiselect:focus-visible {
+    border-color: #60a5fa;
+    background-color: var(--ses-admin-filter-input-bg);
+    color: var(--ses-admin-filter-text);
+    box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
+    outline: 0;
+}
+
+.admin-filter-tray .form-select option {
+    background-color: var(--ses-admin-filter-dropdown-bg);
+    color: var(--ses-admin-filter-text);
+}
+
+.admin-filter-tray .form-select option:checked {
+    background-color: var(--ses-admin-filter-option-selected);
+    color: var(--ses-admin-filter-option-selected-text);
+}
+
+.admin-filter-tray .form-check-label,
+.admin-filter-tray .filtro-multiselect .text-body {
+    color: var(--ses-admin-filter-text) !important;
+}
+
+.admin-filter-tray .text-secondary,
+.admin-filter-tray .filtro-multiselect .text-secondary {
+    color: var(--ses-admin-filter-text-soft) !important;
+}
+
+.admin-filter-tray .form-check-input {
+    border-color: var(--ses-admin-filter-border);
+    background-color: var(--ses-admin-filter-input-bg);
+}
+
+.admin-filter-tray .form-check-input:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 0.12rem rgba(96, 165, 250, 0.18);
+}
+
+.admin-filter-tray .form-check-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 0.2rem rgba(96, 165, 250, 0.28);
+}
+
+.admin-filter-tray .form-check-input:checked {
+    border-color: #60a5fa;
+    background-color: #1d4ed8;
+}
+
+.admin-filter-tray .form-check-input:disabled {
+    border-color: var(--ses-admin-filter-border);
+    background-color: rgba(148, 163, 184, 0.2);
+    opacity: 0.72;
+}
+
+.admin-filter-grid {
+    overflow: visible;
+}
+
+.filtro-multiselect {
+    position: relative;
+    min-height: 2rem;
+    justify-content: space-between;
+    padding-right: 2.25rem;
+    background-image: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.filtro-multiselect-seta {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    line-height: 1;
+    color: var(--ses-admin-filter-text);
+}
+
+.filtro-multiselect-dropdown {
+    position: absolute;
+    z-index: 1060;
+    width: calc(100% - var(--bs-gutter-x));
+    max-height: 18rem;
+    overflow: hidden;
+    border-color: var(--ses-admin-filter-border) !important;
+    background: var(--ses-admin-filter-dropdown-bg);
+    color: var(--ses-admin-filter-text);
+}
+
+.filtro-multiselect-dropdown .border-bottom {
+    border-color: var(--ses-admin-filter-border) !important;
+}
+
+.filtro-multiselect-lista {
+    max-height: 12rem;
+    overflow-y: auto;
+    scrollbar-color: var(--ses-admin-filter-scrollbar-thumb) var(--ses-admin-filter-scrollbar-track);
+}
+
+.filtro-multiselect-opcao {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    color: var(--ses-admin-filter-text);
+    transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.filtro-multiselect-opcao:hover,
+.filtro-multiselect-opcao:focus-within {
+    background: var(--ses-admin-filter-option-hover);
+    color: var(--ses-admin-filter-text);
+}
+
+.filtro-multiselect-opcao:has(.form-check-input:checked) {
+    background: var(--ses-admin-filter-option-selected);
+    color: var(--ses-admin-filter-option-selected-text);
+}
+
+.filtro-multiselect-opcao:has(.form-check-input:focus-visible) {
+    box-shadow: 0 0 0 0.16rem rgba(96, 165, 250, 0.42);
+}
+
+.admin-filter-suggestions {
+    z-index: 1060;
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--ses-admin-filter-border);
+    border-radius: 0.375rem;
+    background: var(--ses-admin-filter-dropdown-bg);
+    scrollbar-color: var(--ses-admin-filter-scrollbar-thumb) var(--ses-admin-filter-scrollbar-track);
+}
+
+.admin-filter-suggestions .list-group-item {
+    border-color: var(--ses-admin-filter-border);
+    background: var(--ses-admin-filter-dropdown-bg);
+    color: var(--ses-admin-filter-text);
+}
+
+.admin-filter-suggestions .list-group-item:hover,
+.admin-filter-suggestions .list-group-item:focus,
+.admin-filter-suggestions .list-group-item:focus-visible,
+.admin-filter-suggestions .list-group-item.active {
+    border-color: var(--ses-admin-filter-border);
+    background: var(--ses-admin-filter-option-hover);
+    color: var(--ses-admin-filter-text);
+    outline: 0;
+}
+
+.admin-filter-suggestions .list-group-item:active {
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
 .admin-candidates-table-wrapper {
     width: 100%;
 }

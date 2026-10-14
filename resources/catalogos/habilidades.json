@@ -1,6 +1,76 @@
 {
   "habilidadesPorArea": {
-    "Tecnologia da Informação": [
+    "Beleza e Cuidado Pessoal": [
+      "Atendimento ao Cliente",
+      "Biossegurança",
+      "Colorimetria",
+      "Corte de Cabelo",
+      "Escova e Finalização",
+      "Estética Facial",
+      "Manicure e Pedicure",
+      "Maquiagem",
+      "Visagismo",
+      "Organização do Ambiente"
+    ],
+    "Gastronomia e Turismo": [
+      "Boas Práticas de Manipulação",
+      "Cozinha Básica",
+      "Panificação",
+      "Confeitaria",
+      "Atendimento em Eventos",
+      "Hospedagem",
+      "Turismo Receptivo",
+      "Controle de Qualidade",
+      "Ficha Técnica",
+      "Segurança Alimentar"
+    ],
+    "Gestão Comércio e Negócio": [
+      "Excel",
+      "Word",
+      "PowerPoint",
+      "Power BI",
+      "Pacote Office",
+      "Rotinas Administrativas",
+      "Atendimento ao Cliente",
+      "Controle de Documentos",
+      "Gestão de Processos",
+      "Vendas",
+      "Controle Financeiro",
+      "Recursos Humanos"
+    ],
+    "Moda": [
+      "Costura",
+      "Modelagem",
+      "Desenho de Moda",
+      "Ficha Técnica de Produto",
+      "Corte e Montagem",
+      "Ajustes e Reformas",
+      "Vitrinismo",
+      "Produção de Moda",
+      "Pesquisa de Tendências",
+      "Atendimento ao Cliente"
+    ],
+    "Saúde": [
+      "Atendimento ao Paciente",
+      "Primeiros Socorros",
+      "Biossegurança",
+      "Controle de Infecção",
+      "Saúde Coletiva",
+      "Cuidados Básicos",
+      "Ética em Saúde",
+      "Registro de Informações"
+    ],
+    "Segurança": [
+      "Segurança do Trabalho",
+      "Prevenção de Acidentes",
+      "Normas Regulamentadoras",
+      "Análise de Riscos",
+      "Controle de EPI",
+      "Brigada de Incêndio",
+      "Primeiros Socorros",
+      "Relatórios de Segurança"
+    ],
+    "Tecnologia e Games": [
       "HTML",
       "CSS",
       "JavaScript",
@@ -12,23 +82,11 @@
       "Redes",
       "Suporte Técnico",
       "Segurança da Informação",
-      "Banco de Dados"
+      "Banco de Dados",
+      "Lógica de Programação",
+      "Desenvolvimento de Games"
     ],
-    "Negócios, Finanças e Gestão": [
-      "Excel",
-      "Word",
-      "PowerPoint",
-      "Power BI",
-      "Pacote Office",
-      "Rotinas Administrativas",
-      "Atendimento ao Cliente",
-      "Controle de Documentos",
-      "Gestão de Processos",
-      "Emissão de Relatórios",
-      "Organização de Arquivos",
-      "Controle Financeiro"
-    ],
-    "Comunicação, Arte e Design": [
+    "Economia Criativa": [
       "Marketing Digital",
       "Redes Sociais",
       "Copywriting",
@@ -40,61 +98,9 @@
       "Criação de Conteúdo",
       "Planejamento de Campanhas",
       "Pesquisa de Mercado",
-      "Branding"
-    ],
-    "Educação, Humanas e Sociais": [
-      "Recrutamento e Seleção",
-      "Triagem de Currículos",
-      "Entrevistas",
-      "Onboarding",
-      "Treinamento e Desenvolvimento",
-      "Folha de Pagamento",
-      "Controle de Ponto",
-      "Benefícios",
-      "Clima Organizacional",
-      "Comunicação Interna",
-      "Departamento Pessoal",
-      "Gestão de Pessoas"
-    ],
-    "Ambiente e Saúde": [
-      "Atendimento ao Paciente",
-      "Primeiros Socorros",
-      "Biossegurança",
-      "Controle de Infecção",
-      "Saúde Coletiva",
-      "Cuidados Básicos",
-      "Ética em Saúde",
-      "Registro de Informações"
-    ],
-    "Direito e Políticas Públicas": [
-      "Legislação",
-      "Direito Administrativo",
-      "Políticas Públicas",
-      "Atendimento ao Cidadão",
-      "Análise de Processos",
-      "Redação Oficial",
-      "Mediação de Conflitos",
-      "Compliance"
-    ],
-    "Engenharia e Indústria": [
-      "Desenho Técnico",
-      "Controle de Qualidade",
-      "Segurança do Trabalho",
-      "Processos Industriais",
-      "Manutenção",
-      "Logística",
-      "Metrologia",
-      "Lean Manufacturing"
-    ],
-    "Ciências Exatas e da Terra": [
-      "Matemática",
-      "Estatística",
-      "Análise de Dados",
-      "Modelagem",
-      "Pesquisa Quantitativa",
-      "Geoprocessamento",
-      "Raciocínio Lógico",
-      "Excel Avançado"
+      "Branding",
+      "Design Gráfico",
+      "Fotografia"
     ],
     "Outra": [
       "Pacote Office",

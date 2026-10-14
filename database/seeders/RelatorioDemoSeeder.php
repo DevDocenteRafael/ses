@@ -42,7 +42,7 @@ class RelatorioDemoSeeder extends Seeder
         );
         if (! $academico->segmento) {
             $academico->update([
-                'segmento'   => 'Tecnologia e Economia Criativa',
+                'segmento'   => 'Tecnologia e Games',
                 'tipo_curso' => 'tecnico',
             ]);
         }
@@ -60,7 +60,7 @@ class RelatorioDemoSeeder extends Seeder
 
         if (BuscaTalento::count() === 0) {
             $filtrosExemplo = [
-                ['segmento' => 'Tecnologia e Economia Criativa'],
+                ['segmento' => 'Tecnologia e Games'],
                 ['tipo_curso' => 'tecnico'],
                 ['segmento' => 'Gastronomia e Turismo'],
                 ['tipo_curso' => 'livres'],

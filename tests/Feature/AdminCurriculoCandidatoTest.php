@@ -160,9 +160,9 @@ class AdminCurriculoCandidatoTest extends TestCase
         ]);
         InformacoesProfissionais::query()->create([
             'sobre_mim' => 'Resumo sigiloso de outro candidato.',
-            'area_de_atuacao' => 'Tecnologia da Informação',
+            'area_de_atuacao' => 'Tecnologia e Games',
             'habilidades' => ['PHP'],
-            'habilidades_por_area' => ['Tecnologia da Informação' => ['PHP']],
+            'habilidades_por_area' => ['Tecnologia e Games' => ['PHP']],
             'candidato_matricula' => $candidatoB->matricula,
         ]);
 
@@ -514,11 +514,11 @@ class AdminCurriculoCandidatoTest extends TestCase
         InformacoesProfissionais::query()->create([
             'sobre_mim' => 'Profissional com experiência em sistemas web.',
             'cargo_de_interesse' => 'Desenvolvedor PHP',
-            'area_de_atuacao' => 'Tecnologia da Informação',
+            'area_de_atuacao' => 'Tecnologia e Games',
             'habilidades' => ['Legado'],
             'habilidades_por_area' => [
-                'Tecnologia da Informação' => ['PHP', 'Laravel', 'Docker Personalizado'],
-                'Administração' => ['Excel'],
+                'Tecnologia e Games' => ['PHP', 'Laravel', 'Docker Personalizado'],
+                'Gestão Comércio e Negócio' => ['Excel'],
             ],
             'candidato_matricula' => $candidato->matricula,
         ]);

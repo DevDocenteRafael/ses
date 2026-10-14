@@ -23,26 +23,35 @@ class CandidatoBloqueadoMail extends Mailable
         public string $tipoBloqueio,
         public ?string $motivoPublico = null,
         public ?string $loginUrl = null,
+        public bool $atualizacaoPeriodica = false,
     ) {}
 
     public function build(): self
     {
         $inatividade = $this->tipoBloqueio === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE;
-        $assunto = $inatividade
-            ? 'Portal Senac DF — Seu cadastro está inativo'
-            : 'Portal Senac DF — Comunicado sobre seu cadastro';
+        $assunto = $this->atualizacaoPeriodica
+            ? 'Senac DF — Atualização Periódica do seu Cadastro de Empregabilidade'
+            : ($inatividade
+                ? 'Portal Senac DF — Seu cadastro está inativo'
+                : 'Portal Senac DF — Comunicado sobre seu cadastro');
 
         return $this->subject($assunto)
             ->view('emails.candidatos.bloqueado')
             ->with([
                 'nome' => $this->candidato->pessoa?->nome ?? 'candidato',
                 'inatividade' => $inatividade,
+                'atualizacaoPeriodica' => $this->atualizacaoPeriodica,
                 'logoCid' => 'cid:' . self::LOGO_CID,
-                'motivo' => $inatividade
-                    ? 'Inatividade na plataforma.'
-                    : ($this->motivoPublico ?: 'Bloqueio administrativo do cadastro.'),
+                'motivo' => $this->atualizacaoPeriodica
+                    ? 'Atualização periódica do cadastro.'
+                    : ($inatividade
+                        ? 'Inatividade na plataforma.'
+                        : ($this->motivoPublico ?: 'Bloqueio administrativo do cadastro.')),
                 'loginUrl' => $this->loginUrl ?: $this->urlLogin(),
                 'supportContact' => config('portal.support_contact'),
+                'botaoTexto' => $this->atualizacaoPeriodica
+                    ? 'ATUALIZAR MEU CADASTRO'
+                    : ($inatividade ? 'REATIVAR MEU CADASTRO' : 'ACESSAR A PLATAFORMA'),
             ])->withSymfonyMessage(function ($message): void {
                 $message->addPart(
                     (new DataPart(new File(public_path(self::LOGO_PATH)), basename(self::LOGO_PATH), 'image/png'))

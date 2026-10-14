@@ -28,6 +28,10 @@ export default {
         return api.get('/candidatos/cursos', { params: busca ? { busca } : {} });
     },
 
+    listarHabilidadesCandidatos() {
+        return api.get('/candidatos/habilidades');
+    },
+
     verAluno(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

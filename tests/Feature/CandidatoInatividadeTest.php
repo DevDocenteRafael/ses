@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
+use App\Services\Candidatos\CandidatoStatusService;
 
 class CandidatoInatividadeTest extends TestCase
 {
@@ -629,5 +630,50 @@ class CandidatoInatividadeTest extends TestCase
             'resposta_7' => 'atualizados',
             'resposta_8' => 'mesmas_informacoes',
         ], $sobrescrever);
+    }
+
+    public function test_email_de_atualizacao_periodica_usa_assunto_e_mensagem_corretos(): void
+    {
+        $pessoa = Pessoa::query()->create([
+            'nome' => 'Maria Souza',
+            'email' => 'maria.souza@teste.com',
+            'telefone' => '61999990000',
+            'senha' => bcrypt('123456'),
+            'data_cadastro' => now(),
+        ]);
+
+        $candidato = Candidato::query()->create([
+            'matricula' => '2026000001',
+            'cpf' => '12345678909',
+            'status' => true,
+            'ultima_atividade_em' => now(),
+            'pessoa_id_pessoa' => $pessoa->id_pessoa,
+        ]);
+
+        Mail::fake();
+
+        Mail::to($pessoa->email)->send(new CandidatoBloqueadoMail(
+            $candidato,
+            CandidatoStatusService::ATIVO,
+            'Atualização periódica do cadastro.',
+            'https://portal.test/login',
+            true,
+        ));
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, function (CandidatoBloqueadoMail $mail) use ($pessoa) {
+            $html = $mail->render();
+
+            $this->assertStringContainsString('Senac DF — Atualização Periódica do seu Cadastro de Empregabilidade', $mail->subject);
+            $this->assertStringContainsString('Olá, Maria Souza!', $html);
+            $this->assertStringContainsString('a cada três meses', $html);
+            $this->assertStringContainsString('oito perguntas', $html);
+            $this->assertStringContainsString('ATUALIZAR MEU CADASTRO', $html);
+            $this->assertStringContainsString('https://portal.test/login', $html);
+            $this->assertStringNotContainsString('bloqueado por inatividade', strtolower($html));
+            $this->assertSame('Maria Souza', $mail->candidato->pessoa->nome);
+            $this->assertSame($pessoa->email, $mail->candidato->pessoa->email);
+
+            return true;
+        });
     }
 }

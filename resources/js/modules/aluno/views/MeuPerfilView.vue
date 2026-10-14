@@ -721,7 +721,7 @@ const opcoesDisponibilidadeHorario = ['Manhã', 'Tarde', 'Noite', 'Integral'];
 const perfil = reactive({
     sobre_mim: '',
     cargo_de_interesse: '',
-    area_de_atuacao: 'Tecnologia da Informação',
+    area_de_atuacao: 'Tecnologia e Games',
     habilidades: [],
     habilidades_por_area: {},
 });

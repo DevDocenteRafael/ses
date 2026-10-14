@@ -28,11 +28,11 @@ class EmpresaPerfilCandidatoTest extends TestCase
         InformacoesProfissionais::query()->create([
             'sobre_mim' => 'Perfil profissional resumido.',
             'cargo_de_interesse' => 'Desenvolvedor PHP',
-            'area_de_atuacao' => 'Tecnologia da Informação',
+            'area_de_atuacao' => 'Tecnologia e Games',
             'habilidades' => ['PHP', 'SQL', 'Excel'],
             'habilidades_por_area' => [
-                'Tecnologia da Informação' => ['PHP', 'SQL'],
-                'Administração' => ['Excel'],
+                'Tecnologia e Games' => ['PHP', 'SQL'],
+                'Gestão Comércio e Negócio' => ['Excel'],
             ],
             'candidato_matricula' => $candidato->matricula,
         ]);
@@ -60,8 +60,8 @@ class EmpresaPerfilCandidatoTest extends TestCase
             ->assertJsonPath('matricula', (string) $candidato->matricula)
             ->assertJsonPath('pessoa.nome', $pessoaCandidato->nome)
             ->assertJsonPath('pessoa.email', $pessoaCandidato->email)
-            ->assertJsonPath('informacoes_profissionais.area_de_atuacao', 'Tecnologia da Informação')
-            ->assertJsonPath('informacoes_profissionais.habilidades_por_area.Tecnologia da Informação.0', 'PHP')
+            ->assertJsonPath('informacoes_profissionais.area_de_atuacao', 'Tecnologia e Games')
+            ->assertJsonPath('informacoes_profissionais.habilidades_por_area.Tecnologia e Games.0', 'PHP')
             ->assertJsonPath('pessoa.endereco.cep', '72620207')
             ->assertJsonPath('pessoa.endereco.logradouro', 'Quadra 301 Conjunto 7')
             ->assertJsonPath('pessoa.endereco.numero', '09')

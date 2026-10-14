@@ -1,14 +1,14 @@
 import catalogoHabilidades from '../../catalogos/habilidades.json';
 
 export const areasAtuacao = [
-    'Tecnologia da Informação',
-    'Ambiente e Saúde',
-    'Negócios, Finanças e Gestão',
-    'Direito e Políticas Públicas',
-    'Engenharia e Indústria',
-    'Educação, Humanas e Sociais',
-    'Comunicação, Arte e Design',
-    'Ciências Exatas e da Terra',
+    'Beleza e Cuidado Pessoal',
+    'Gastronomia e Turismo',
+    'Gestão Comércio e Negócio',
+    'Moda',
+    'Saúde',
+    'Segurança',
+    'Tecnologia e Games',
+    'Economia Criativa',
 ];
 
 export const habilidadesPorArea = catalogoHabilidades.habilidadesPorArea;

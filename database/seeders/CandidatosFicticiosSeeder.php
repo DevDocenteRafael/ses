@@ -69,14 +69,14 @@ class CandidatosFicticiosSeeder extends Seeder
 
     /** Segmento acadêmico -> área de atuação profissional (chaves do habilidades.json). */
     private const AREA_POR_SEGMENTO = [
-        'tecnologia-da-informacao' => 'Tecnologia da Informação',
-        'gestao-e-negocios'        => 'Administração',
-        'comercio'                 => 'Administração',
-        'comunicacao'              => 'Marketing',
-        'design'                   => 'Marketing',
-        'moda'                     => 'Marketing',
-        'beleza'                   => 'Marketing',
-        'educacao'                 => 'Recursos Humanos',
+        'Beleza e Cuidado Pessoal' => 'Beleza e Cuidado Pessoal',
+        'Gastronomia e Turismo'    => 'Gastronomia e Turismo',
+        'Gestão Comércio e Negócio' => 'Gestão Comércio e Negócio',
+        'Moda'                     => 'Moda',
+        'Saúde'                    => 'Saúde',
+        'Segurança'                => 'Segurança',
+        'Tecnologia e Games'       => 'Tecnologia e Games',
+        'Economia Criativa'        => 'Economia Criativa',
     ];
 
     private const PREFIXO_TIPO = [
@@ -88,44 +88,48 @@ class CandidatosFicticiosSeeder extends Seeder
     ];
 
     private const ASSUNTOS_POR_SEGMENTO = [
-        'tecnologia-da-informacao' => ['Desenvolvimento de Sistemas', 'Redes de Computadores', 'Ciência de Dados', 'Segurança da Informação', 'Análise de Sistemas', 'Suporte e Manutenção de Computadores', 'Programação Web'],
-        'gestao-e-negocios'        => ['Administração', 'Recursos Humanos', 'Logística', 'Finanças', 'Contabilidade', 'Gestão Comercial', 'Marketing'],
-        'educacao'                 => ['Docência da Educação Profissional', 'Educação Inclusiva', 'Metodologias Ativas'],
-        'ambiente-e-saude'         => ['Enfermagem', 'Saúde Bucal', 'Meio Ambiente', 'Segurança do Trabalho'],
-        'design'                   => ['Design Gráfico', 'Design de Interiores', 'Design Digital'],
-        'gastronomia-e-turismo'    => ['Cozinha', 'Panificação', 'Turismo', 'Hospedagem', 'Eventos'],
-        'seguranca'                => ['Segurança Patrimonial', 'Segurança do Trabalho'],
-        'comercio'                 => ['Vendas', 'Atendimento ao Cliente', 'Comércio Varejista'],
-        'comunicacao'              => ['Produção de Conteúdo', 'Fotografia', 'Comunicação Digital'],
-        'beleza'                   => ['Cabeleireiro', 'Manicure e Pedicure', 'Maquiagem', 'Estética'],
-        'conservacao-e-zeladoria'  => ['Zeladoria', 'Conservação de Ambientes'],
-        'idiomas'                  => ['Inglês', 'Espanhol'],
-        'moda'                     => ['Costura', 'Modelagem', 'Moda'],
-        'producao-de-alimentos'    => ['Boas Práticas de Manipulação', 'Produção de Alimentos'],
+        'Beleza e Cuidado Pessoal' => ['Cabeleireiro', 'Manicure e Pedicure', 'Maquiagem', 'Estética'],
+        'Gastronomia e Turismo'    => ['Cozinha', 'Panificação', 'Turismo', 'Hospedagem', 'Eventos'],
+        'Gestão Comércio e Negócio' => ['Administração', 'Recursos Humanos', 'Logística', 'Finanças', 'Contabilidade', 'Gestão Comercial', 'Marketing'],
+        'Moda'                     => ['Costura', 'Modelagem', 'Moda'],
+        'Saúde'                    => ['Enfermagem', 'Saúde Bucal', 'Cuidados Básicos de Saúde'],
+        'Segurança'                => ['Segurança Patrimonial', 'Segurança do Trabalho'],
+        'Tecnologia e Games'       => ['Desenvolvimento de Sistemas', 'Redes de Computadores', 'Ciência de Dados', 'Segurança da Informação', 'Análise de Sistemas', 'Suporte e Manutenção de Computadores', 'Programação Web', 'Desenvolvimento de Games'],
+        'Economia Criativa'        => ['Design Gráfico', 'Fotografia', 'Comunicação Digital', 'Produção de Conteúdo'],
     ];
 
     /** Cursos curtos (nome => carga horária) por área. */
     private const CURSOS_CURTOS = [
-        'Tecnologia da Informação' => [
+        'Tecnologia e Games' => [
             'Lógica de Programação' => 40, 'JavaScript Básico' => 60, 'Banco de Dados MySQL' => 60,
             'Git e GitHub' => 20, 'Introdução a Redes' => 40, 'Python para Iniciantes' => 60,
             'Segurança Digital' => 30, 'Manutenção de Computadores' => 80, 'Desenvolvimento Web com PHP' => 80,
             'Laravel na Prática' => 60,
         ],
-        'Administração' => [
+        'Gestão Comércio e Negócio' => [
             'Excel Básico' => 30, 'Excel Avançado' => 40, 'Rotinas Administrativas' => 40,
             'Atendimento ao Cliente' => 20, 'Matemática Financeira' => 30, 'Power BI' => 40,
             'Gestão de Documentos' => 30, 'Organização e Métodos' => 30,
         ],
-        'Marketing' => [
+        'Economia Criativa' => [
             'Marketing Digital' => 40, 'Gestão de Redes Sociais' => 30, 'Fotografia com Celular' => 20,
             'Design com Canva' => 20, 'Google Analytics' => 30, 'Copywriting' => 30,
             'SEO na Prática' => 30, 'Edição de Vídeo' => 40,
         ],
-        'Recursos Humanos' => [
-            'Recrutamento e Seleção' => 40, 'Departamento Pessoal' => 60, 'Treinamento e Desenvolvimento' => 40,
-            'Liderança e Gestão de Equipes' => 30, 'Gestão do Tempo' => 20, 'Comunicação Empresarial' => 30,
-            'Rotinas de Folha de Pagamento' => 40,
+        'Beleza e Cuidado Pessoal' => [
+            'Cabeleireiro Básico' => 80, 'Maquiagem Social' => 40, 'Manicure e Pedicure' => 60,
+        ],
+        'Gastronomia e Turismo' => [
+            'Cozinha Básica' => 80, 'Panificação' => 60, 'Atendimento em Eventos' => 40,
+        ],
+        'Moda' => [
+            'Costura Básica' => 60, 'Modelagem' => 60, 'Produção de Moda' => 40,
+        ],
+        'Saúde' => [
+            'Primeiros Socorros' => 20, 'Cuidador de Idosos' => 80, 'Biossegurança' => 20,
+        ],
+        'Segurança' => [
+            'Segurança do Trabalho' => 40, 'Prevenção de Acidentes' => 20, 'Brigada de Incêndio' => 20,
         ],
         'Outra' => [
             'Vendas e Negociação' => 30, 'Atendimento ao Cliente' => 20, 'Controle de Estoque' => 30,
@@ -141,10 +145,14 @@ class CandidatosFicticiosSeeder extends Seeder
     ];
 
     private const CARGOS_POR_AREA = [
-        'Tecnologia da Informação' => ['Desenvolvedor Júnior', 'Analista de Suporte', 'Técnico de Informática', 'Analista de Dados', 'Desenvolvedor Front-end', 'Desenvolvedor Back-end', 'Analista de Redes', 'Estagiário de TI'],
-        'Administração'            => ['Auxiliar Administrativo', 'Assistente Administrativo', 'Assistente Financeiro', 'Recepcionista', 'Auxiliar de Escritório', 'Analista Financeiro Júnior', 'Estagiário Administrativo'],
-        'Marketing'                => ['Social Media', 'Assistente de Marketing', 'Designer Gráfico', 'Analista de Marketing Digital', 'Redator', 'Produtor de Conteúdo', 'Estagiário de Marketing'],
-        'Recursos Humanos'         => ['Assistente de RH', 'Analista de Recrutamento', 'Auxiliar de Departamento Pessoal', 'Analista de RH Júnior', 'Assistente de Treinamento', 'Estagiário de RH'],
+        'Beleza e Cuidado Pessoal' => ['Cabeleireiro Júnior', 'Manicure', 'Maquiador', 'Auxiliar de Estética'],
+        'Gastronomia e Turismo'    => ['Auxiliar de Cozinha', 'Atendente de Eventos', 'Auxiliar de Panificação', 'Recepcionista de Hotel'],
+        'Gestão Comércio e Negócio' => ['Auxiliar Administrativo', 'Assistente Administrativo', 'Assistente Financeiro', 'Recepcionista', 'Auxiliar de Escritório', 'Analista Financeiro Júnior', 'Estagiário Administrativo'],
+        'Moda'                     => ['Costureiro', 'Auxiliar de Modelagem', 'Assistente de Moda', 'Vendedor de Moda'],
+        'Saúde'                    => ['Atendente de Clínica', 'Cuidador', 'Auxiliar de Saúde Bucal', 'Recepcionista de Clínica'],
+        'Segurança'                => ['Auxiliar de Segurança do Trabalho', 'Assistente de Segurança', 'Brigadista'],
+        'Tecnologia e Games'       => ['Desenvolvedor Júnior', 'Analista de Suporte', 'Técnico de Informática', 'Analista de Dados', 'Desenvolvedor Front-end', 'Desenvolvedor Back-end', 'Analista de Redes', 'Estagiário de TI'],
+        'Economia Criativa'        => ['Social Media', 'Assistente de Marketing', 'Designer Gráfico', 'Analista de Marketing Digital', 'Redator', 'Produtor de Conteúdo', 'Estagiário de Marketing'],
         'Outra'                    => ['Vendedor', 'Atendente', 'Auxiliar de Estoque', 'Assistente Comercial', 'Operador de Caixa', 'Auxiliar de Logística', 'Estagiário'],
     ];
 

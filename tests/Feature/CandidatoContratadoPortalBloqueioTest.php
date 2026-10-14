@@ -70,7 +70,7 @@ class CandidatoContratadoPortalBloqueioTest extends TestCase
         $endpoints = [
             ['putJson', "/api/candidatos/{$candidato->matricula}", ['telefone' => '61987654321']],
             ['postJson', "/api/candidatos/{$candidato->matricula}/perfil/links", ['linkedin' => 'https://linkedin.com/in/teste']],
-            ['postJson', "/api/candidatos/{$candidato->matricula}/perfil/profissional", ['area_de_atuacao' => 'Tecnologia da Informação']],
+            ['postJson', "/api/candidatos/{$candidato->matricula}/perfil/profissional", ['area_de_atuacao' => 'Tecnologia e Games']],
             ['postJson', "/api/candidatos/{$candidato->matricula}/perfil/preferencias", ['tipo_de_contratacao' => 1, 'disponibilidade_de_horario' => ['Integral'], 'aceita_todas_regioes' => true]],
             ['postJson', "/api/candidatos/{$candidato->matricula}/perfil/cursos-externos", ['nome_curso' => 'Inglês', 'instituicao' => 'Senac', 'concluido_em' => now()->toDateString()]],
             ['deleteJson', "/api/candidatos/{$candidato->matricula}/perfil/cursos-externos/{$curso->id}", []],

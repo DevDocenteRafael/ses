@@ -326,15 +326,15 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         for ($i = 1; $i <= 12; $i++) {
-            $this->criarCandidatoParaBusca('Aluno Tecnologia ' . $i, areaAtuacao: 'Tecnologia da Informação');
+            $this->criarCandidatoParaBusca('Aluno Tecnologia ' . $i, areaAtuacao: 'Tecnologia e Games');
         }
 
         for ($i = 1; $i <= 5; $i++) {
-            $this->criarCandidatoParaBusca('Aluno Comunicação ' . $i, areaAtuacao: 'Comunicação, Arte e Design');
+            $this->criarCandidatoParaBusca('Aluno Criativa ' . $i, areaAtuacao: 'Economia Criativa');
         }
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Comunica%C3%A7%C3%A3o%2C%20Arte%20e%20Design&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Economia%20Criativa&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 5)
             ->assertJsonPath('last_page', 1)
@@ -349,9 +349,9 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->getJson('/api/candidatos/segmentos-academicos')
             ->assertOk()
             ->assertJsonCount(8)
-            ->assertJsonFragment(['id' => 'Tecnologia da Informação', 'nome' => 'Tecnologia da Informação'])
-            ->assertJsonFragment(['id' => 'Ciências Exatas e da Terra', 'nome' => 'Ciências Exatas e da Terra'])
-            ->assertJsonMissing(['id' => 'moda', 'nome' => 'Moda']);
+            ->assertJsonFragment(['id' => 'Tecnologia e Games', 'nome' => 'Tecnologia e Games'])
+            ->assertJsonFragment(['id' => 'Gestão Comércio e Negócio', 'nome' => 'Gestão Comércio e Negócio'])
+            ->assertJsonMissing(['id' => 'Tecnologia da Informação', 'nome' => 'Tecnologia da Informação']);
     }
 
     public function test_segmento_filtra_area_de_atuacao_antes_da_paginacao(): void
@@ -359,14 +359,14 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
         for ($i = 1; $i <= 12; $i++) {
-            $this->criarCandidatoParaBusca('TI ' . $i, areaAtuacao: 'Tecnologia da Informação');
+            $this->criarCandidatoParaBusca('TI ' . $i, areaAtuacao: 'Tecnologia e Games');
         }
 
-        $this->criarCandidatoParaBusca('Saúde', areaAtuacao: 'Ambiente e Saúde');
-        $this->criarCandidatoParaBusca('Comunicação', areaAtuacao: 'Comunicação, Arte e Design');
+        $this->criarCandidatoParaBusca('Saúde', areaAtuacao: 'Saúde');
+        $this->criarCandidatoParaBusca('Criativa', areaAtuacao: 'Economia Criativa');
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 12)
             ->assertJsonPath('last_page', 2)
@@ -377,8 +377,8 @@ class AuthorizationCriticalEndpointsTest extends TestCase
     {
         [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
 
-        $ti = $this->criarCandidatoParaBusca('TI Todos', areaAtuacao: 'Tecnologia da Informação');
-        $saude = $this->criarCandidatoParaBusca('Saude Todos', areaAtuacao: 'Ambiente e Saúde');
+        $ti = $this->criarCandidatoParaBusca('TI Todos', areaAtuacao: 'Tecnologia e Games');
+        $saude = $this->criarCandidatoParaBusca('Saude Todos', areaAtuacao: 'Saúde');
         $semAreaCanonica = $this->criarCandidatoParaBusca('Legado Todos', areaAtuacao: 'Outra');
 
         $this->withToken($tokenEmpresa)
@@ -408,7 +408,7 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'Aluno Todos Filtros',
             disponibilidade: 'Manhã',
             habilidades: ['PHP'],
-            areaAtuacao: 'Tecnologia da Informação',
+            areaAtuacao: 'Tecnologia e Games',
         );
         \App\Models\RegiaoPreferidaTrabalho::query()->create([
             'candidato_matricula' => $esperado->matricula,
@@ -419,7 +419,7 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'Aluno Outra RA',
             disponibilidade: 'Manhã',
             habilidades: ['PHP'],
-            areaAtuacao: 'Tecnologia da Informação',
+            areaAtuacao: 'Tecnologia e Games',
         );
         $outraRa->preferenciasDeTrabalho()->update(['regiao_administrativa' => 'Guará']);
         \App\Models\RegiaoPreferidaTrabalho::query()->create([
@@ -431,8 +431,8 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             'Aluno Habilidade Inativa',
             disponibilidade: 'Manhã',
             habilidades: ['Excel'],
-            areaAtuacao: 'Negócios, Finanças e Gestão',
-            habilidadesPorArea: ['Tecnologia da Informação' => ['PHP'], 'Negócios, Finanças e Gestão' => ['Excel']],
+            areaAtuacao: 'Gestão Comércio e Negócio',
+            habilidadesPorArea: ['Tecnologia e Games' => ['PHP'], 'Gestão Comércio e Negócio' => ['Excel']],
         );
         $habilidadeInativa->preferenciasDeTrabalho()->update(['regiao_administrativa' => 'Guará']);
         \App\Models\RegiaoPreferidaTrabalho::query()->create([
@@ -441,7 +441,7 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         ]);
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&tipo_contratacao=1&disponibilidade=Manh%C3%A3&regioes_administrativas[]=1&habilidades[]=PHP&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&tipo_contratacao=1&disponibilidade=Manh%C3%A3&regioes_administrativas[]=1&habilidades[]=PHP&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonFragment(['matricula' => $esperado->matricula])
@@ -465,11 +465,11 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         }
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&segmento[]=Comunica%C3%A7%C3%A3o%2C%20Arte%20e%20Design&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&segmento[]=Economia%20Criativa&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 2)
-            ->assertJsonFragment(['matricula' => $candidatos['Tecnologia da Informação']->matricula])
-            ->assertJsonFragment(['matricula' => $candidatos['Comunicação, Arte e Design']->matricula]);
+            ->assertJsonFragment(['matricula' => $candidatos['Tecnologia e Games']->matricula])
+            ->assertJsonFragment(['matricula' => $candidatos['Economia Criativa']->matricula]);
     }
 
     public function test_segmento_usa_area_atual_e_nao_habilidades_de_area_antiga(): void
@@ -478,25 +478,25 @@ class AuthorizationCriticalEndpointsTest extends TestCase
         $candidato = $this->criarCandidatoParaBusca(
             'Aluno Troca Area',
             habilidades: ['Excel'],
-            areaAtuacao: 'Tecnologia da Informação',
-            habilidadesPorArea: ['Tecnologia da Informação' => ['PHP', 'Vue.js'], 'Negócios, Finanças e Gestão' => ['Excel']],
+            areaAtuacao: 'Tecnologia e Games',
+            habilidadesPorArea: ['Tecnologia e Games' => ['PHP', 'Vue.js'], 'Gestão Comércio e Negócio' => ['Excel']],
         );
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&page=1&per_page=10')
             ->assertOk()
             ->assertJsonFragment(['matricula' => $candidato->matricula]);
 
-        $candidato->informacoesProfissionais()->update(['area_de_atuacao' => 'Negócios, Finanças e Gestão']);
+        $candidato->informacoesProfissionais()->update(['area_de_atuacao' => 'Gestão Comércio e Negócio']);
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Tecnologia%20da%20Informa%C3%A7%C3%A3o&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 0)
             ->assertJsonMissing(['matricula' => $candidato->matricula]);
 
         $this->withToken($tokenEmpresa)
-            ->getJson('/api/candidatos?segmento[]=Neg%C3%B3cios%2C%20Finan%C3%A7as%20e%20Gest%C3%A3o&page=1&per_page=10')
+            ->getJson('/api/candidatos?segmento[]=Gest%C3%A3o%20Com%C3%A9rcio%20e%20Neg%C3%B3cio&page=1&per_page=10')
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonFragment(['matricula' => $candidato->matricula]);
@@ -653,6 +653,48 @@ class AuthorizationCriticalEndpointsTest extends TestCase
             ->assertJsonPath('total', 12)
             ->assertJsonCount(2, 'data')
             ->assertJsonMissing(['status' => false]);
+    }
+
+    public function test_admin_combina_filtros_da_bandeja_de_talentos_sem_escopo_de_empresa(): void
+    {
+        [, $tokenAdmin] = $this->criarAdministrativoAutenticado();
+
+        $alvo = $this->criarCandidatoParaBusca(
+            'Admin Bandeja Alvo',
+            status: true,
+            disponibilidade: 'Manhã',
+            habilidades: ['PHP'],
+            areaAtuacao: 'Tecnologia e Games',
+            habilidadesPorArea: ['Tecnologia e Games' => ['PHP']],
+            tipoContratacao: 1,
+        );
+
+        $this->criarCandidatoParaBusca(
+            'Admin Bandeja Outra Area',
+            status: true,
+            disponibilidade: 'Manhã',
+            habilidades: ['PHP'],
+            areaAtuacao: 'Economia Criativa',
+            habilidadesPorArea: ['Economia Criativa' => ['PHP']],
+            tipoContratacao: 1,
+        );
+
+        $bloqueado = $this->criarCandidatoParaBusca(
+            'Admin Bandeja Bloqueado',
+            status: false,
+            disponibilidade: 'Manhã',
+            habilidades: ['PHP'],
+            areaAtuacao: 'Tecnologia e Games',
+            habilidadesPorArea: ['Tecnologia e Games' => ['PHP']],
+            tipoContratacao: 1,
+        );
+
+        $this->withToken($tokenAdmin)
+            ->getJson('/api/candidatos?segmento[]=Tecnologia%20e%20Games&tipo_contratacao=1&disponibilidade=Manh%C3%A3&habilidades[]=PHP&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 2)
+            ->assertJsonFragment(['matricula' => $alvo->matricula])
+            ->assertJsonFragment(['matricula' => $bloqueado->matricula]);
     }
 
     public function test_aluno_acessa_proprio_candidato_mas_nao_acessa_candidato_de_terceiro(): void

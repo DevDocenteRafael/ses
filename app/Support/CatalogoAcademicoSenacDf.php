@@ -22,59 +22,45 @@ class CatalogoAcademicoSenacDf
     ];
 
     private const SEGMENTOS = [
-        'ambiente-e-saude' => 'Ambiente e Saúde',
-        'beleza' => 'Beleza',
-        'comercio' => 'Comércio',
-        'comunicacao' => 'Comunicação',
-        'conservacao-e-zeladoria' => 'Conservação e Zeladoria',
-        'design' => 'Design',
-        'educacao' => 'Educação',
-        'gastronomia-e-turismo' => 'Gastronomia e Turismo',
-        'gestao-e-negocios' => 'Gestão e Negócios',
-        'idiomas' => 'Idiomas',
-        'moda' => 'Moda',
-        'producao-de-alimentos' => 'Produção de Alimentos',
-        'seguranca' => 'Segurança',
-        'tecnologia-da-informacao' => 'Tecnologia da Informação',
+        'Beleza e Cuidado Pessoal' => 'Beleza e Cuidado Pessoal',
+        'Gastronomia e Turismo' => 'Gastronomia e Turismo',
+        'Gestão Comércio e Negócio' => 'Gestão Comércio e Negócio',
+        'Moda' => 'Moda',
+        'Saúde' => 'Saúde',
+        'Segurança' => 'Segurança',
+        'Tecnologia e Games' => 'Tecnologia e Games',
+        'Economia Criativa' => 'Economia Criativa',
     ];
 
     private const SEGMENTOS_POR_TIPO = [
         'livres' => [
-            'ambiente-e-saude',
-            'beleza',
-            'comercio',
-            'comunicacao',
-            'conservacao-e-zeladoria',
-            'design',
-            'educacao',
-            'gastronomia-e-turismo',
-            'gestao-e-negocios',
-            'idiomas',
-            'moda',
-            'producao-de-alimentos',
-            'seguranca',
-            'tecnologia-da-informacao',
+            'Beleza e Cuidado Pessoal',
+            'Gastronomia e Turismo',
+            'Gestão Comércio e Negócio',
+            'Moda',
+            'Saúde',
+            'Segurança',
+            'Tecnologia e Games',
+            'Economia Criativa',
         ],
         'extensao' => [
-            'gestao-e-negocios',
-            'tecnologia-da-informacao',
+            'Gestão Comércio e Negócio',
+            'Tecnologia e Games',
         ],
         'tecnico' => [
-            'ambiente-e-saude',
-            'design',
-            'gastronomia-e-turismo',
-            'gestao-e-negocios',
-            'seguranca',
-            'tecnologia-da-informacao',
+            'Gastronomia e Turismo',
+            'Gestão Comércio e Negócio',
+            'Saúde',
+            'Segurança',
+            'Tecnologia e Games',
         ],
         'graduacao' => [
-            'gestao-e-negocios',
-            'tecnologia-da-informacao',
+            'Gestão Comércio e Negócio',
+            'Tecnologia e Games',
         ],
         'pos-graduacao' => [
-            'educacao',
-            'gestao-e-negocios',
-            'tecnologia-da-informacao',
+            'Gestão Comércio e Negócio',
+            'Tecnologia e Games',
         ],
     ];
 
@@ -121,10 +107,12 @@ class CatalogoAcademicoSenacDf
     public static function valoresLegadosSegmento(string $segmento): array
     {
         $mapa = [
-            'tecnologia-da-informacao' => ['Tecnologia da Informação', 'Tecnologia e Economia Criativa', 'tecnologia-e-games', 'Tecnologia'],
-            'gastronomia-e-turismo' => ['Gastronomia e Turismo'],
-            'gestao-e-negocios' => ['Gestão e Negócios', 'Administração'],
-            'moda' => ['Moda', 'moda-e-costura'],
+            'Beleza e Cuidado Pessoal' => ['beleza', 'Beleza'],
+            'Gastronomia e Turismo' => ['gastronomia-e-turismo'],
+            'Gestão Comércio e Negócio' => ['gestao-e-negocios', 'Gestão e Negócios', 'Administração'],
+            'Moda' => ['moda', 'moda-e-costura'],
+            'Segurança' => ['seguranca'],
+            'Tecnologia e Games' => ['tecnologia-e-games'],
         ];
 
         return array_values(array_unique([$segmento, self::SEGMENTOS[$segmento] ?? $segmento, ...($mapa[$segmento] ?? [])]));

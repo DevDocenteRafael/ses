@@ -7,22 +7,25 @@ use Illuminate\Support\Str;
 class AreasAtuacaoCatalogo
 {
     public const AREAS = [
-        'Tecnologia da Informação',
-        'Ambiente e Saúde',
-        'Negócios, Finanças e Gestão',
-        'Direito e Políticas Públicas',
-        'Engenharia e Indústria',
-        'Educação, Humanas e Sociais',
-        'Comunicação, Arte e Design',
-        'Ciências Exatas e da Terra',
+        'Beleza e Cuidado Pessoal',
+        'Gastronomia e Turismo',
+        'Gestão Comércio e Negócio',
+        'Moda',
+        'Saúde',
+        'Segurança',
+        'Tecnologia e Games',
+        'Economia Criativa',
     ];
 
     private const LEGADOS = [
-        'Tecnologia da Informação' => ['TI', 'Tecnologia', 'Tecnologia e Economia Criativa', 'tecnologia-e-games'],
-        'Ambiente e Saúde' => ['Saúde'],
-        'Negócios, Finanças e Gestão' => ['Administração', 'Gestão', 'Gestão e Negócios', 'Marketing', 'Recursos Humanos'],
-        'Educação, Humanas e Sociais' => ['Educação'],
-        'Comunicação, Arte e Design' => ['Comunicação', 'Design'],
+        'Beleza e Cuidado Pessoal' => ['beleza', 'Beleza'],
+        'Gastronomia e Turismo' => ['gastronomia-e-turismo'],
+        'Gestão Comércio e Negócio' => ['gestao-e-negocios', 'Gestão e Negócios', 'Administração', 'Gestão'],
+        'Moda' => ['moda', 'moda-e-costura'],
+        'Saúde' => [],
+        'Segurança' => ['seguranca'],
+        'Tecnologia e Games' => ['tecnologia-e-games'],
+        'Economia Criativa' => [],
     ];
 
     public static function areas(): array
