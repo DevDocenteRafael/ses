@@ -55,6 +55,10 @@ export default {
         return api.patch(`/contratacoes/${encodeURIComponent(id)}/cancelar`, dados);
     },
 
+    cancelarContratacoes(ids, dados) {
+        return api.patch('/contratacoes/cancelar-lote', { ids, ...dados });
+    },
+
     cadastrarAluno(dados) {
         return api.post('/candidatos', dados);
     },

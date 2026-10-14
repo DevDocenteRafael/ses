@@ -96,6 +96,7 @@ Route::middleware('auth.token')->group(function () {
 
     Route::get('contratacoes', [ContratacaoController::class, 'index']);
     Route::patch('contratacoes/{contratacao}/cancelar', [ContratacaoController::class, 'cancelar']);
+    Route::patch('contratacoes/cancelar-lote', [ContratacaoController::class, 'cancelarLote']);
     Route::post('candidatos/{matricula}/contratacao', [ContratacaoController::class, 'store']);
 
     // Administrativo
@@ -114,6 +115,8 @@ Route::middleware('auth.token')->group(function () {
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
         Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
         Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);
+
+        // Rotas da Central de E-mails removidas (funcionalidade descartada).
         // Precisa ficar por último: sendo um curinga, {pessoaId} casaria com
         // qualquer um dos caminhos estáticos acima (ex: "engajamento") se
         // viesse antes deles, tornando essas rotas inalcançáveis.

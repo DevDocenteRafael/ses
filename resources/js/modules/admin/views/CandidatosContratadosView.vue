@@ -46,6 +46,10 @@
                                     <i v-else class="bi bi-file-earmark-pdf me-1"></i>
                                     {{ baixandoPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}
                                 </button>
+                                <button class="btn btn-outline-danger ms-2" type="button" :disabled="carregando || selectedIds.length === 0" @click="abrirModalCancelamentoLote">
+                                    <i class="bi bi-x-lg me-1"></i>
+                                    Cancelar selecionadas
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -74,6 +78,7 @@
                         <div v-else class="table-responsive hired-candidates-table-wrapper">
                             <table class="table align-middle mb-0 hired-candidates-table">
                                 <colgroup>
+                                    <col style="width:3rem">
                                     <col class="hired-candidates-table__col-candidate">
                                     <col class="hired-candidates-table__col-cpf">
                                     <col class="hired-candidates-table__col-company">
@@ -83,6 +88,7 @@
                                 </colgroup>
                                 <thead>
                                     <tr class="text-secondary small text-uppercase">
+                                        <th class="text-center"><input type="checkbox" :checked="allSelectedOnPage" @change="toggleSelectAll" aria-label="Selecionar todas" /></th>
                                         <th class="text-start">Candidato</th>
                                         <th class="text-center">CPF</th>
                                         <th class="text-center">Empresa</th>
@@ -94,6 +100,9 @@
                                 <tbody>
                                     <template v-for="registro in contratacoes" :key="registro.id">
                                         <tr class="hired-candidates-table__row">
+                                            <td class="text-center">
+                                                <input type="checkbox" :value="registro.id" v-model="selectedIds" aria-label="Selecionar contratação" />
+                                            </td>
                                             <td class="hired-candidates-table__candidate text-start">
                                                 <p class="fw-semibold mb-0 hired-candidates-table__candidate-name">{{ registro.candidato?.pessoa?.nome || '—' }}</p>
                                                 <p class="text-secondary small mb-0 hired-candidates-table__candidate-email">{{ registro.candidato?.pessoa?.email || '—' }}</p>
@@ -200,11 +209,44 @@
             </div>
         </div>
         <div v-if="modalCancelamentoAberto" class="modal-backdrop fade show"></div>
+        <div v-if="modalCancelamentoLoteAberto" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="cancelar-contratacao-lote-titulo">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="cancelar-contratacao-lote-titulo" class="modal-title h5">Cancelar contratações selecionadas</h3>
+                        <button type="button" class="btn-close" aria-label="Fechar" :disabled="cancelandoContratacoes" @click="fecharModalCancelamentoLote"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">Deseja cancelar <strong>{{ selectedIds.length }}</strong> contratação(ões) selecionada(s)?</p>
+                        <p class="text-secondary small">Essa ação removerá os candidatos da lista de contratados e registrará cada cancelamento no histórico.</p>
+                        <div class="mb-3">
+                            <label for="motivo-cancelamento-lote" class="form-label">Motivo do cancelamento *</label>
+                            <select id="motivo-cancelamento-lote" v-model="formCancelamentoLote.motivo_cancelamento" class="form-select" :class="{ 'is-invalid': erroCampoCancelamentoLote }" :disabled="cancelandoContratacoes" required>
+                                <option value="">Selecione</option>
+                                <option v-for="motivo in motivosCancelamento" :key="motivo" :value="motivo">{{ motivo }}</option>
+                            </select>
+                            <div v-if="erroCampoCancelamentoLote" class="invalid-feedback d-block">{{ erroCampoCancelamentoLote }}</div>
+                        </div>
+                        <div class="mb-0">
+                            <label for="observacao-cancelamento-lote" class="form-label">Observação {{ formCancelamentoLote.motivo_cancelamento === 'Outro motivo' ? '*' : '(opcional)' }}</label>
+                            <textarea id="observacao-cancelamento-lote" v-model.trim="formCancelamentoLote.observacao_cancelamento" class="form-control" rows="3" maxlength="1000" :disabled="cancelandoContratacoes"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" :disabled="cancelandoContratacoes" @click="confirmarCancelamentoLote">
+                            <span v-if="cancelandoContratacoes" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            {{ cancelandoContratacoes ? 'Cancelando...' : 'Confirmar cancelamento' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="modalCancelamentoLoteAberto" class="modal-backdrop fade show"></div>
     </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onMounted, reactive, ref, watch, computed } from 'vue';
 import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
@@ -237,6 +279,72 @@ const cancelandoContratacao = ref(false);
 const contratacaoParaCancelar = ref(null);
 const erroCampoCancelamento = ref('');
 const formCancelamento = reactive({ motivo_cancelamento: 'Contratação registrada por engano', observacao_cancelamento: '' });
+
+// Batch cancellation
+const selectedIds = ref([]);
+const modalCancelamentoLoteAberto = ref(false);
+const cancelandoContratacoes = ref(false);
+const erroCampoCancelamentoLote = ref('');
+const formCancelamentoLote = reactive({ motivo_cancelamento: 'Contratação registrada por engano', observacao_cancelamento: '' });
+
+function abrirModalCancelamentoLote() {
+    if (!selectedIds.value.length) return;
+    erroCampoCancelamentoLote.value = '';
+    formCancelamentoLote.motivo_cancelamento = 'Contratação registrada por engano';
+    formCancelamentoLote.observacao_cancelamento = '';
+    modalCancelamentoLoteAberto.value = true;
+}
+
+function fecharModalCancelamentoLote() {
+    if (cancelandoContratacoes.value) return;
+    modalCancelamentoLoteAberto.value = false;
+}
+
+async function confirmarCancelamentoLote() {
+    if (cancelandoContratacoes.value) return;
+    erroCampoCancelamentoLote.value = '';
+    if (!formCancelamentoLote.motivo_cancelamento) {
+        erroCampoCancelamentoLote.value = 'Informe o motivo do cancelamento.';
+        return;
+    }
+    if (formCancelamentoLote.motivo_cancelamento === 'Outro motivo' && !formCancelamentoLote.observacao_cancelamento.trim()) {
+        erroCampoCancelamentoLote.value = 'Informe uma justificativa para outro motivo.';
+        return;
+    }
+
+    cancelandoContratacoes.value = true;
+    try {
+        const { data } = await adminService.cancelarContratacoes(selectedIds.value, { ...formCancelamentoLote });
+        const results = data?.results || [];
+        let sucesso = 0;
+        results.forEach((r) => {
+            if (r.status === 'cancelled') sucesso += 1;
+        });
+
+        if (sucesso) toast.success(`${sucesso} contratação(ões) cancelada(s).`);
+        const erros = results.filter((r) => r.status === 'error');
+        if (erros.length) toast.error(`${erros.length} erro(s) durante cancelamento.`);
+
+        modalCancelamentoLoteAberto.value = false;
+        selectedIds.value = [];
+        await carregarContratacoes(paginacao.current_page);
+    } catch (errorResposta) {
+        const mensagem = errorResposta.response?.data?.message || '';
+        toast.error(mensagem || 'Não foi possível cancelar as contratações. Tente novamente.');
+    } finally {
+        cancelandoContratacoes.value = false;
+    }
+}
+
+function toggleSelectAll(event) {
+    if (event.target.checked) {
+        selectedIds.value = contratacoes.value.map((r) => r.id);
+    } else {
+        selectedIds.value = [];
+    }
+}
+
+const allSelectedOnPage = computed(() => contratacoes.value.length > 0 && selectedIds.value.length === contratacoes.value.length);
 
 onMounted(async () => {
     await carregarContratacoes();

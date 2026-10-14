@@ -193,4 +193,76 @@ class ContratacaoController extends Controller
             'candidato_contratado' => $contratacaoCancelada->candidato?->contratacao()->exists() ?? false,
         ]);
     }
+
+    public function cancelarLote(Request $request): JsonResponse
+    {
+        $solicitante = $this->pessoaAutenticada($request);
+
+        if (! $solicitante || $solicitante->tipo() !== 'administrativo') {
+            abort(403, 'Apenas administradores podem cancelar contratações.');
+        }
+
+        $motivos = [
+            'Contratação registrada por engano',
+            'Empresa selecionada incorretamente',
+            'Candidato selecionado incorretamente',
+            'Outro motivo',
+        ];
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:contratacoes,id'],
+            'motivo_cancelamento' => ['required', 'string', Rule::in($motivos)],
+            'observacao_cancelamento' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($validated['motivo_cancelamento'] === 'Outro motivo' && trim((string) ($validated['observacao_cancelamento'] ?? '')) === '') {
+            throw ValidationException::withMessages([
+                'observacao_cancelamento' => 'Informe uma justificativa para outro motivo.',
+            ]);
+        }
+
+        $results = [];
+
+        foreach ($validated['ids'] as $id) {
+            try {
+                $contr = DB::transaction(function () use ($id, $solicitante, $validated) {
+                    $bloqueada = Contratacao::query()
+                        ->whereKey($id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($bloqueada->status === Contratacao::STATUS_CANCELADA) {
+                        return ['id' => $id, 'status' => 'already_cancelled'];
+                    }
+
+                    $historico = $bloqueada->historico_alteracoes ?? [];
+                    $historico[] = [
+                        'acao' => 'cancelada',
+                        'em' => now()->toIso8601String(),
+                        'por_pessoa_id' => $solicitante->id_pessoa,
+                        'motivo' => $validated['motivo_cancelamento'],
+                        'observacao' => $validated['observacao_cancelamento'] ?? null,
+                    ];
+
+                    $bloqueada->forceFill([
+                        'status' => Contratacao::STATUS_CANCELADA,
+                        'cancelado_em' => now(),
+                        'cancelado_por_pessoa_id' => $solicitante->id_pessoa,
+                        'motivo_cancelamento' => $validated['motivo_cancelamento'],
+                        'observacao_cancelamento' => $validated['observacao_cancelamento'] ?? null,
+                        'historico_alteracoes' => $historico,
+                    ])->save();
+
+                    return ['id' => $id, 'status' => 'cancelled', 'contratacao' => $bloqueada];
+                });
+
+                $results[] = $contr;
+            } catch (\Exception $e) {
+                $results[] = ['id' => $id, 'status' => 'error', 'message' => $e->getMessage()];
+            }
+        }
+
+        return response()->json(['results' => $results]);
+    }
 }

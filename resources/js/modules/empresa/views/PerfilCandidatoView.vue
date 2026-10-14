@@ -1,6 +1,6 @@
 <template>
     <div>
-        <header class="bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <header class="perfil-candidato-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 min-w-0">
                 <img :src="logoSenacSrc" alt="Logo Senac" class="senac-header-logo flex-shrink-0">
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
@@ -540,6 +540,12 @@ onMounted(carregar);
 </script>
 
 <style scoped>
+.perfil-candidato-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
 .senac-header-logo {
     display: block;
     width: auto;
