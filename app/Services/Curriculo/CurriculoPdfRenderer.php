@@ -36,20 +36,22 @@ class CurriculoPdfRenderer
         }
 
         $this->y = 732;
-        $this->blocoContato($curriculo['contato'] ?? []);
-        $this->secaoPares('INFORMAÇÕES PROFISSIONAIS', $curriculo['objetivo'] ?? []);
-        $this->secaoItens('FORMAÇÃO ACADÊMICA', $curriculo['formacao'] ?? [], ['curso'], ['instituicao', 'tipo', 'segmento', 'unidade', 'conclusao']);
-        $this->secaoHabilidades($curriculo['habilidades'] ?? []);
+        $this->secaoContato($curriculo['contato'] ?? []);
+        $this->secaoTexto('OBJETIVO PROFISSIONAL', $curriculo['objetivo_profissional'] ?? null);
+        $this->secaoTexto('RESUMO PROFISSIONAL', $curriculo['resumo_profissional'] ?? null);
+        $this->secaoItens('FORMAÇÃO ACADÊMICA', $curriculo['formacao_academica'] ?? [], ['curso'], ['escolaridade', 'instituicao', 'situacao', 'conclusao']);
+        $this->secaoItens('FORMAÇÃO PROFISSIONAL – SENAC', $curriculo['formacao_senac'] ?? [], ['curso'], ['unidade', 'conclusao', 'competencias']);
         $this->secaoExperiencias($curriculo['experiencias'] ?? []);
-        $this->secaoItens('CURSOS COMPLEMENTARES', $curriculo['cursos_complementares'] ?? [], ['curso'], ['instituicao', 'unidade', 'carga_horaria', 'conclusao']);
-        $this->secaoPares('LINKS PROFISSIONAIS', $curriculo['links'] ?? []);
+        $this->secaoItens('CURSOS COMPLEMENTARES E CERTIFICAÇÕES', $curriculo['cursos_complementares'] ?? [], ['curso'], ['instituicao', 'conclusao', 'carga_horaria']);
+        $this->secaoHabilidades($curriculo['habilidades'] ?? []);
+        $this->secaoPares('IDIOMAS E OUTRAS INFORMAÇÕES RELEVANTES', $curriculo['outras_informacoes'] ?? []);
 
         $this->fecharPaginaAtual();
 
         return $this->montarPdf();
     }
 
-    private function blocoContato(array $contato): void
+    private function secaoContato(array $contato): void
     {
         if (! $contato) {
             return;
@@ -66,12 +68,32 @@ class CurriculoPdfRenderer
             return;
         }
 
-        $this->garantirEspaco(44);
-        $this->retangulo(54, $this->y - 24, 487, 33, '0.9725 0.9804 0.9922', self::BORDA);
-        foreach ($this->quebrarLinha(implode('   |   ', $partes), 86) as $linha) {
-            $this->linhaTexto($linha, 10.5, 'F1', self::TEXTO_PRINCIPAL, 66, 13);
+        $this->tituloSecao('IDENTIFICAÇÃO E CONTATO');
+        foreach ($partes as $linha) {
+            foreach ($this->quebrarLinha($linha, 92) as $quebrada) {
+                $this->linhaTexto($quebrada, 10.5, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
+            }
         }
         $this->y -= 10;
+    }
+
+    private function secaoTexto(string $titulo, mixed $texto): void
+    {
+        if (! $this->valorPreenchido($texto)) {
+            return;
+        }
+
+        $this->tituloSecao($titulo);
+        foreach (preg_split('/\R+/', (string) $texto) ?: [] as $paragrafo) {
+            $paragrafo = trim($paragrafo);
+            if ($paragrafo === '') {
+                continue;
+            }
+            foreach ($this->quebrarLinha($paragrafo, 92) as $linha) {
+                $this->linhaTexto($linha, 11, 'F1', self::TEXTO_PRINCIPAL, 54, 13);
+            }
+            $this->y -= 4;
+        }
     }
 
     private function secaoPares(string $titulo, array $pares): void
@@ -99,7 +121,7 @@ class CurriculoPdfRenderer
             return;
         }
 
-        $this->tituloSecao('HABILIDADES TÉCNICAS');
+        $this->tituloSecao('COMPETÊNCIAS TÉCNICAS E DIGITAIS');
         foreach ($this->quebrarLinha(implode('  •  ', $habilidades), 92) as $linha) {
             $this->linhaTexto($linha, 11, 'F1', self::TEXTO_PRINCIPAL, 54, 14);
         }

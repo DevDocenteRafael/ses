@@ -31,25 +31,22 @@ class CurriculoCandidatoBuilder
             'nome' => $this->texto($pessoa?->nome) ?: 'Candidato',
             'area_atuacao' => $this->texto($info?->area_de_atuacao),
             'contato' => array_filter([
-                'E-mail' => $this->texto($pessoa?->email),
-                'Telefone' => $this->formatarTelefone($pessoa?->telefone),
                 'Localidade' => $this->cidadeUf($pessoa?->endereco_cidade, $pessoa?->endereco_uf),
+                'Telefone' => $this->formatarTelefone($pessoa?->telefone),
+                'E-mail' => $this->texto($pessoa?->email),
+                'LinkedIn' => $this->texto($candidato->linkExterno?->linkedin),
+                'Portfólio' => $this->texto($candidato->linkExterno?->portfolio),
             ]),
-            'objetivo' => array_filter([
-                'Cargo de interesse' => $this->texto($info?->cargo_de_interesse),
-                'Área de atuação' => $this->texto($info?->area_de_atuacao),
-                'Pretensão salarial' => $this->formatarPretensao($preferencias?->pretensao_salarial),
-                'Disponibilidade' => $this->formatarDisponibilidade($preferencias?->disponibilidade_de_horario),
-                'Resumo profissional' => $this->texto($info?->sobre_mim),
-            ]),
-            'formacao' => $this->formatarFormacao($candidato->dadosAcademicos),
+            'objetivo_profissional' => $this->objetivoProfissional($info, $preferencias),
+            'resumo_profissional' => $this->texto($info?->sobre_mim),
+            'formacao_academica' => $this->formatarFormacaoAcademica($candidato->dadosAcademicos),
+            'formacao_senac' => $this->formatarFormacaoSenac($candidato->cursosSenac),
             'habilidades' => $this->habilidadesDaAreaAtual($info),
             'experiencias' => $this->formatarExperiencias($candidato->experienciasProfissionais),
-            'cursos_complementares' => $this->formatarCursosComplementares($candidato->cursosExternos, $candidato->cursosSenac),
-            'links' => array_filter([
-                'LinkedIn' => $this->texto($candidato->linkExterno?->linkedin),
-                'GitHub' => $this->texto($candidato->linkExterno?->github),
-                'Portfólio' => $this->texto($candidato->linkExterno?->portfolio),
+            'cursos_complementares' => $this->formatarCursosComplementares($candidato->cursosExternos),
+            'outras_informacoes' => array_filter([
+                'Disponibilidade de horário' => $this->formatarDisponibilidade($preferencias?->disponibilidade_de_horario),
+                'Tipo de contratação desejada' => $this->formatarTipoContratacao($preferencias?->tipo_de_contratacao),
             ]),
         ];
     }
@@ -79,18 +76,43 @@ class CurriculoCandidatoBuilder
         return $this->deduplicar((array) ($info->habilidades ?? []));
     }
 
-    private function formatarFormacao(Collection $dados): array
+    private function objetivoProfissional($info, $preferencias): ?string
+    {
+        $partes = [];
+        if ($area = $this->texto($info?->area_de_atuacao)) {
+            $partes[] = 'Atuar na área de ' . $area;
+        }
+        if ($cargo = $this->texto($info?->cargo_de_interesse)) {
+            $partes[] = 'buscando oportunidades como ' . $cargo;
+        }
+        if ($tipo = $this->formatarTipoContratacao($preferencias?->tipo_de_contratacao)) {
+            $partes[] = 'em oportunidades de ' . $tipo;
+        }
+
+        return $partes ? implode(', ', $partes) . '.' : null;
+    }
+
+    private function formatarFormacaoAcademica(Collection $dados): array
     {
         return $dados->map(function ($item) {
             return array_filter([
                 'curso' => $this->texto($item->curso),
                 'instituicao' => $this->texto($item->instituicao),
-                'tipo' => $this->texto($item->tipo_curso),
-                'segmento' => $this->texto($item->segmento),
-                'unidade' => $this->texto($item->unidade),
+                'escolaridade' => $this->texto($item->tipo_curso),
+                'situacao' => $item->ano_de_conclusao ? 'Concluído' : null,
                 'conclusao' => $item->ano_de_conclusao ? $item->ano_de_conclusao->format('d/m/Y') : null,
             ]);
         })->filter()->values()->all();
+    }
+
+    private function formatarFormacaoSenac(Collection $senac): array
+    {
+        return $senac->map(fn ($item) => array_filter([
+            'curso' => $this->texto($item->nome_curso),
+            'unidade' => $this->texto($item->unidade),
+            'conclusao' => $item->concluido_em ? $item->concluido_em->format('Y') : null,
+            'competencias' => null,
+        ]))->filter()->values()->all();
     }
 
     private function formatarExperiencias(Collection $experiencias): array
@@ -110,24 +132,14 @@ class CurriculoCandidatoBuilder
             ]))->filter()->values()->all();
     }
 
-    private function formatarCursosComplementares(Collection $externos, Collection $senac): array
+    private function formatarCursosComplementares(Collection $externos): array
     {
-        $cursosExternos = $externos->map(fn ($item) => array_filter([
+        return $externos->map(fn ($item) => array_filter([
             'curso' => $this->texto($item->nome_curso),
             'instituicao' => $this->texto($item->instituicao),
-            'carga_horaria' => $item->carga_horaria ? $item->carga_horaria . 'h' : null,
             'conclusao' => $item->concluido_em ? $item->concluido_em->format('d/m/Y') : null,
-        ]));
-
-        $cursosSenac = $senac->map(fn ($item) => array_filter([
-            'curso' => $this->texto($item->nome_curso),
-            'instituicao' => 'Senac DF',
-            'unidade' => $this->texto($item->unidade),
             'carga_horaria' => $item->carga_horaria ? $item->carga_horaria . 'h' : null,
-            'conclusao' => $item->concluido_em ? $item->concluido_em->format('d/m/Y') : null,
-        ]));
-
-        return $cursosExternos->merge($cursosSenac)->filter()->values()->all();
+        ]))->filter()->values()->all();
     }
 
     private function periodo($inicio, $fim): ?string
@@ -161,6 +173,16 @@ class CurriculoCandidatoBuilder
     {
         if ($valor === null || $valor === '') return null;
         return 'R$ ' . number_format((float) $valor, 2, ',', '.');
+    }
+
+    private function formatarTipoContratacao($valor): ?string
+    {
+        return match ((string) $valor) {
+            '1' => 'Estágio',
+            '2' => 'Aprendizagem',
+            '3' => 'Emprego',
+            default => $this->texto($valor),
+        };
     }
 
     private function texto($valor): ?string

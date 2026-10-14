@@ -12,7 +12,7 @@
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
                     <tr>
                         <td style="background:#004a8f;padding:24px;text-align:center;">
-                            <img src="{{ asset('img/senac-logo.png') }}" alt="Senac DF" width="150" style="max-width:150px;height:auto;display:inline-block;background:#ffffff;border-radius:8px;padding:8px;">
+                            <img src="{{ $logoCid }}" alt="Senac" width="150" style="max-width:150px;height:auto;display:inline-block;border:0;outline:none;text-decoration:none;">
                         </td>
                     </tr>
                     <tr>

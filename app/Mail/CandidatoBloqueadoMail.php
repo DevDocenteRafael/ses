@@ -8,10 +8,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Str;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\Part\File;
 
 class CandidatoBloqueadoMail extends Mailable
 {
     use Queueable, SerializesModels;
+
+    public const LOGO_PATH = 'img/senac-logo.png';
+    public const LOGO_CID = 'senac-logo@portal-senac-df';
 
     public function __construct(
         public Candidato $candidato,
@@ -32,12 +37,19 @@ class CandidatoBloqueadoMail extends Mailable
             ->with([
                 'nome' => $this->candidato->pessoa?->nome ?? 'candidato',
                 'inatividade' => $inatividade,
+                'logoCid' => 'cid:' . self::LOGO_CID,
                 'motivo' => $inatividade
                     ? 'Inatividade na plataforma.'
                     : ($this->motivoPublico ?: 'Bloqueio administrativo do cadastro.'),
                 'loginUrl' => $this->loginUrl ?: $this->urlLogin(),
                 'supportContact' => config('portal.support_contact'),
-            ]);
+            ])->withSymfonyMessage(function ($message): void {
+                $message->addPart(
+                    (new DataPart(new File(public_path(self::LOGO_PATH)), basename(self::LOGO_PATH), 'image/png'))
+                        ->asInline()
+                        ->setContentId(self::LOGO_CID)
+                );
+            });
     }
 
     private function urlLogin(): string

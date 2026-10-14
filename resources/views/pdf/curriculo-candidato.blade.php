@@ -23,43 +23,49 @@
 </head>
 <body>
     <h1>{{ $curriculo['nome'] }}</h1>
-    @if($curriculo['area_atuacao'])
-        <p class="area">{{ $curriculo['area_atuacao'] }}</p>
-    @endif
-
     @if($curriculo['contato'])
+        <h2>Identificação e contato</h2>
         <div class="contato">
             @foreach($curriculo['contato'] as $rotulo => $valor)
-                @if(!empty($valor))<span><strong>{{ $rotulo }}:</strong> {{ $valor }}</span>@if(!$loop->last)<span> &nbsp;|&nbsp; </span>@endif @endif
+                @if(!empty($valor))<p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>@endif
             @endforeach
         </div>
     @endif
 
-    @if($curriculo['objetivo'])
-        <h2>Informações Profissionais</h2>
-        @foreach($curriculo['objetivo'] as $rotulo => $valor)
-            @if(!empty($valor))
-                <p class="label">{{ $rotulo }}</p>
-                <p>{{ $valor }}</p>
-            @endif
+    @if($curriculo['objetivo_profissional'])
+        <h2>Objetivo profissional</h2>
+        <p>{{ $curriculo['objetivo_profissional'] }}</p>
+    @endif
+
+    @if($curriculo['resumo_profissional'])
+        <h2>Resumo profissional</h2>
+        @foreach(preg_split('/\R+/', $curriculo['resumo_profissional']) as $paragrafo)
+            @if(trim($paragrafo) !== '')<p>{{ $paragrafo }}</p>@endif
         @endforeach
     @endif
 
-    @if($curriculo['formacao'])
+    @if($curriculo['formacao_academica'])
         <h2>Formação Acadêmica</h2>
-        @foreach($curriculo['formacao'] as $formacao)
+        @foreach($curriculo['formacao_academica'] as $formacao)
             <div class="item">
                 @if(!empty($formacao['curso']))<p class="titulo">{{ $formacao['curso'] }}</p>@endif
-                @foreach(['instituicao' => 'Instituição', 'tipo' => 'Tipo', 'segmento' => 'Segmento', 'unidade' => 'Unidade', 'conclusao' => 'Conclusão'] as $campo => $rotulo)
+                @foreach(['escolaridade' => 'Escolaridade', 'instituicao' => 'Instituição', 'situacao' => 'Situação', 'conclusao' => 'Conclusão'] as $campo => $rotulo)
                     @if(!empty($formacao[$campo]))<p class="muted">{{ $rotulo }}: {{ $formacao[$campo] }}</p>@endif
                 @endforeach
             </div>
         @endforeach
     @endif
 
-    @if($curriculo['habilidades'])
-        <h2>Habilidades Técnicas</h2>
-        <p>{{ implode(' • ', array_filter($curriculo['habilidades'])) }}</p>
+    @if($curriculo['formacao_senac'])
+        <h2>Formação profissional – Senac</h2>
+        @foreach($curriculo['formacao_senac'] as $curso)
+            <div class="item">
+                @if(!empty($curso['curso']))<p class="titulo">{{ $curso['curso'] }}</p>@endif
+                @foreach(['unidade' => 'Unidade Senac', 'conclusao' => 'Conclusão', 'competencias' => 'Principais competências'] as $campo => $rotulo)
+                    @if(!empty($curso[$campo]))<p class="muted">{{ $rotulo }}: {{ $curso[$campo] }}</p>@endif
+                @endforeach
+            </div>
+        @endforeach
     @endif
 
     @if($curriculo['experiencias'])
@@ -77,20 +83,25 @@
     @endif
 
     @if($curriculo['cursos_complementares'])
-        <h2>Cursos Complementares</h2>
+        <h2>Cursos complementares e certificações</h2>
         @foreach($curriculo['cursos_complementares'] as $curso)
             <div class="item">
                 @if(!empty($curso['curso']))<p class="titulo">{{ $curso['curso'] }}</p>@endif
-                @foreach(['instituicao' => 'Instituição', 'unidade' => 'Unidade', 'carga_horaria' => 'Carga horária', 'conclusao' => 'Conclusão'] as $campo => $rotulo)
+                @foreach(['instituicao' => 'Instituição', 'conclusao' => 'Conclusão', 'carga_horaria' => 'Carga horária'] as $campo => $rotulo)
                     @if(!empty($curso[$campo]))<p class="muted">{{ $rotulo }}: {{ $curso[$campo] }}</p>@endif
                 @endforeach
             </div>
         @endforeach
     @endif
 
-    @if($curriculo['links'])
-        <h2>Links Profissionais</h2>
-        @foreach($curriculo['links'] as $rotulo => $valor)
+    @if($curriculo['habilidades'])
+        <h2>Competências técnicas e digitais</h2>
+        <p>{{ implode(' • ', array_filter($curriculo['habilidades'])) }}</p>
+    @endif
+
+    @if($curriculo['outras_informacoes'])
+        <h2>Idiomas e outras informações relevantes</h2>
+        @foreach($curriculo['outras_informacoes'] as $rotulo => $valor)
             <p><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>
         @endforeach
     @endif

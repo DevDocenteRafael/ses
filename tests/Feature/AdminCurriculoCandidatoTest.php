@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Administrativo;
 use App\Models\Candidato;
 use App\Models\CursoExterno;
+use App\Models\CursoSenac;
 use App\Models\DadosAcademicos;
 use App\Models\Empresa;
 use App\Models\ExperienciaProfissional;
@@ -40,7 +41,17 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $response->getContent());
         $this->assertGreaterThan(2000, strlen($response->getContent()));
         $this->assertStringContainsString('/Type /Page', $response->getContent());
-        $this->assertStringContainsString('João da Silva', $this->normalizarPdfParaTeste($response->getContent()));
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringContainsString('João da Silva', $conteudo);
+        $this->assertStringContainsString('IDENTIFICAÇÃO E CONTATO', $conteudo);
+        $this->assertStringContainsString('OBJETIVO PROFISSIONAL', $conteudo);
+        $this->assertStringContainsString('RESUMO PROFISSIONAL', $conteudo);
+        $this->assertStringContainsString('FORMAÇÃO ACADÊMICA', $conteudo);
+        $this->assertStringContainsString('FORMAÇÃO PROFISSIONAL', $conteudo);
+        $this->assertStringContainsString('EXPERIÊNCIA PROFISSIONAL', $conteudo);
+        $this->assertStringContainsString('CURSOS COMPLEMENTARES E CERTIFICAÇÕES', $conteudo);
+        $this->assertStringContainsString('COMPETÊNCIAS TÉCNICAS E DIGITAIS', $conteudo);
+        $this->assertStringContainsString('IDIOMAS E OUTRAS INFORMAÇÕES RELEVANTES', $conteudo);
         $this->assertStringNotContainsString('@page', $response->getContent());
         $this->assertStringNotContainsString('font-family', $response->getContent());
         $this->assertStringNotContainsString('.item', $response->getContent());
@@ -223,10 +234,32 @@ class AdminCurriculoCandidatoTest extends TestCase
 
         $curriculo = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula);
 
-        $this->assertSame('Técnico em Desenvolvimento de Sistemas', $curriculo['formacao'][0]['curso']);
+        $this->assertSame('Técnico em Desenvolvimento de Sistemas', $curriculo['formacao_academica'][0]['curso']);
         $this->assertSame('Laravel Avançado', $curriculo['cursos_complementares'][0]['curso']);
+        $this->assertSame('Lógica de Programação Senac', $curriculo['formacao_senac'][0]['curso']);
         $this->assertSame('Analista de Sistemas', $curriculo['experiencias'][0]['cargo']);
         $this->assertSame('Experiência Antiga', $curriculo['experiencias'][1]['cargo']);
+    }
+
+    public function test_curriculo_omite_experiencia_e_links_ausentes_sem_campos_vazios(): void
+    {
+        $candidato = $this->criarCandidatoBasico('Aluno Sem Experiência');
+        InformacoesProfissionais::query()->create([
+            'area_de_atuacao' => 'Administração',
+            'habilidades' => ['Excel'],
+            'habilidades_por_area' => ['Administração' => ['Excel']],
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        $response = $this->withToken($this->token($candidato->pessoa))->get('/api/me/curriculo');
+
+        $response->assertOk();
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringNotContainsString('EXPERIÊNCIA PROFISSIONAL', $conteudo);
+        $this->assertStringNotContainsString('LinkedIn', $conteudo);
+        $this->assertStringNotContainsString('Portfólio', $conteudo);
+        $this->assertStringNotContainsString('null', strtolower($conteudo));
+        $this->assertStringNotContainsString('undefined', strtolower($conteudo));
     }
 
     public function test_dados_dinamicos_ficam_escapados_no_html_controlado_pela_aplicacao(): void
@@ -487,6 +520,14 @@ class AdminCurriculoCandidatoTest extends TestCase
             'instituicao' => 'Escola Online',
             'carga_horaria' => 40,
             'concluido_em' => '2026-08-01',
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        CursoSenac::query()->create([
+            'nome_curso' => 'Lógica de Programação Senac',
+            'unidade' => 'Taguatinga',
+            'carga_horaria' => 40,
+            'concluido_em' => '2025-12-01',
             'candidato_matricula' => $candidato->matricula,
         ]);
 

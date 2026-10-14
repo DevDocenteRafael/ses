@@ -132,6 +132,7 @@ class CandidatoInatividadeTest extends TestCase
 
         $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')->assertOk();
         $this->withToken($tokenAdmin)->getJson('/api/candidatos?status=inativo&per_page=10')->assertOk();
+        app(\App\Services\Candidatos\CandidatoStatusService::class)->registrarBloqueioPorInatividade($candidato->fresh(['pessoa', 'contratacao']));
 
         Mail::assertSent(CandidatoBloqueadoMail::class, 1);
         $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 1);
@@ -140,6 +141,22 @@ class CandidatoInatividadeTest extends TestCase
             'tipo_bloqueio' => 'BLOQUEADO_POR_INATIVIDADE',
             'status' => CandidatoBloqueioNotificacao::STATUS_ENVIADO,
         ]);
+    }
+
+    public function test_email_de_bloqueio_renderiza_com_logo_inline_e_link_de_login(): void
+    {
+        [$pessoa, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+        $loginUrl = 'http://localhost:5173/login';
+
+        $mail = new CandidatoBloqueadoMail($candidato->load('pessoa'), 'BLOQUEADO_POR_INATIVIDADE', loginUrl: $loginUrl);
+        $html = $mail->render();
+
+        $this->assertFileExists(public_path(CandidatoBloqueadoMail::LOGO_PATH));
+        $this->assertStringContainsString('cid:' . CandidatoBloqueadoMail::LOGO_CID, $html);
+        $this->assertStringContainsString('Olá, ' . $pessoa->nome . '!', $html);
+        $this->assertStringContainsString($loginUrl, $html);
+        $this->assertStringContainsString('REATIVAR MEU CADASTRO', $html);
+        $this->assertCount(1, $mail->callbacks);
     }
 
     public function test_bloqueio_manual_envia_email_com_motivo_publico_e_preserva_login_bloqueado(): void
@@ -162,6 +179,87 @@ class CandidatoInatividadeTest extends TestCase
             'identificador' => $pessoa->email,
             'senha' => '123456',
         ])->assertForbidden();
+
+        $this->assertDatabaseHas('candidato_bloqueio_notificacoes', [
+            'candidato_matricula' => $candidato->matricula,
+            'tipo_bloqueio' => 'BLOQUEADO_MANUALMENTE',
+            'origem' => CandidatoBloqueioNotificacao::ORIGEM_MANUAL_INDIVIDUAL,
+            'administrador_pessoa_id' => $pessoaAdmin->id_pessoa,
+        ]);
+    }
+
+    public function test_bloqueio_manual_de_candidato_inativo_envia_somente_email_administrativo(): void
+    {
+        Mail::fake();
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        [, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $this->withToken($tokenAdmin)->putJson("/api/candidatos/{$candidato->matricula}", [
+            'status' => false,
+            'motivo_bloqueio_publico' => 'Bloqueio administrativo válido.',
+        ])->assertOk();
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, 1);
+        Mail::assertSent(CandidatoBloqueadoMail::class, function (CandidatoBloqueadoMail $mail) {
+            return $mail->tipoBloqueio === 'BLOQUEADO_MANUALMENTE'
+                && $mail->motivoPublico === 'Bloqueio administrativo válido.';
+        });
+        Mail::assertNotSent(CandidatoBloqueadoMail::class, function (CandidatoBloqueadoMail $mail) {
+            return $mail->tipoBloqueio === 'BLOQUEADO_POR_INATIVIDADE';
+        });
+
+        $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 1);
+        $this->assertDatabaseHas('candidato_bloqueio_notificacoes', [
+            'candidato_matricula' => $candidato->matricula,
+            'tipo_bloqueio' => 'BLOQUEADO_MANUALMENTE',
+            'status' => CandidatoBloqueioNotificacao::STATUS_ENVIADO,
+        ]);
+    }
+
+    public function test_repeticao_de_bloqueio_manual_nao_reenvia_email(): void
+    {
+        Mail::fake();
+        [, $tokenAdmin] = $this->criarAdminAutenticado();
+        [, $candidato] = $this->criarCandidato(ultimaAtividade: now());
+
+        $this->withToken($tokenAdmin)->putJson("/api/candidatos/{$candidato->matricula}", [
+            'status' => false,
+            'motivo_bloqueio_publico' => 'Primeiro bloqueio.',
+        ])->assertOk();
+
+        $this->withToken($tokenAdmin)->putJson("/api/candidatos/{$candidato->matricula}", [
+            'status' => false,
+            'motivo_bloqueio_publico' => 'Clique repetido.',
+        ])->assertOk();
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, 1);
+        $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 1);
+    }
+
+    public function test_rotina_de_inatividade_nao_afeta_bloqueio_manual_existente(): void
+    {
+        Mail::fake();
+        [, $candidato] = $this->criarCandidato(status: false, ultimaAtividade: now()->subSeconds(31));
+
+        app(\App\Services\Candidatos\CandidatoStatusService::class)->registrarBloqueioPorInatividade($candidato->fresh(['pessoa', 'contratacao']));
+
+        Mail::assertNothingSent();
+        $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 0);
+        $this->assertFalse($candidato->refresh()->status);
+    }
+
+    public function test_job_reprocessado_nao_reenvia_notificacao_enviada(): void
+    {
+        Mail::fake();
+        [, $candidato] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $service = app(\App\Services\Candidatos\CandidatoStatusService::class);
+        $service->registrarBloqueioPorInatividade($candidato->fresh(['pessoa', 'contratacao']));
+        $notificacao = CandidatoBloqueioNotificacao::query()->firstOrFail();
+        app(\App\Services\Candidatos\CandidatoBloqueioNotificationService::class)->enviar($notificacao->fresh(), $candidato->fresh(['pessoa']), 'BLOQUEADO_POR_INATIVIDADE');
+
+        Mail::assertSent(CandidatoBloqueadoMail::class, 1);
+        $this->assertDatabaseCount('candidato_bloqueio_notificacoes', 1);
     }
 
     public function test_falha_smtp_nao_desfaz_bloqueio_manual(): void

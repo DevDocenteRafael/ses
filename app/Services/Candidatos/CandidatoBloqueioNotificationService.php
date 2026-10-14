@@ -7,36 +7,61 @@ use App\Models\Candidato;
 use App\Models\CandidatoBloqueioNotificacao;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
 
 class CandidatoBloqueioNotificationService
 {
-    public function registrarBloqueio(Candidato $candidato, string $tipoBloqueio, ?string $motivoPublico = null): ?CandidatoBloqueioNotificacao
+    public function registrarBloqueio(Candidato $candidato, string $tipoBloqueio, ?string $motivoPublico = null, ?int $administradorPessoaId = null): ?CandidatoBloqueioNotificacao
     {
         if ($candidato->estaContratado()) {
             return null;
         }
 
-        $candidato->loadMissing('pessoa');
+        $candidato->loadMissing('pessoa', 'bloqueioNotificacoes');
 
         if (! $candidato->pessoa?->email) {
             return null;
         }
 
-        $bloqueadoEm = now()->startOfSecond();
+        $bloqueadoEm = $tipoBloqueio === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE
+            ? ($candidato->ultima_atividade_em?->copy()->startOfSecond() ?? $candidato->updated_at?->copy()->startOfSecond() ?? now()->startOfSecond())
+            : now()->startOfSecond();
+
+        $dadosCriacao = [
+            'status' => CandidatoBloqueioNotificacao::STATUS_PENDENTE,
+            'origem' => $tipoBloqueio === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE
+                ? CandidatoBloqueioNotificacao::ORIGEM_AUTOMATICO
+                : CandidatoBloqueioNotificacao::ORIGEM_MANUAL_INDIVIDUAL,
+            'motivo_publico' => $this->motivoPublicoSeguro($motivoPublico),
+        ];
+
+        if ($tipoBloqueio === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE
+            && $candidato->bloqueioNotificacoes()
+                ->where('tipo_bloqueio', $tipoBloqueio)
+                ->where('bloqueado_em', $bloqueadoEm)
+                ->whereIn('status', [CandidatoBloqueioNotificacao::STATUS_PENDENTE, CandidatoBloqueioNotificacao::STATUS_PROCESSANDO, CandidatoBloqueioNotificacao::STATUS_ENVIADO])
+                ->exists()) {
+            return $candidato->bloqueioNotificacoes()
+                ->where('tipo_bloqueio', $tipoBloqueio)
+                ->where('bloqueado_em', $bloqueadoEm)
+                ->latest('bloqueado_em')
+                ->first();
+        }
 
         $notificacao = CandidatoBloqueioNotificacao::query()->firstOrCreate([
             'candidato_matricula' => $candidato->matricula,
             'tipo_bloqueio' => $tipoBloqueio,
             'bloqueado_em' => $bloqueadoEm,
-        ], [
-            'status' => CandidatoBloqueioNotificacao::STATUS_PENDENTE,
-            'motivo_publico' => $this->motivoPublicoSeguro($motivoPublico),
-        ]);
+        ], $dadosCriacao);
 
         if (! $notificacao->wasRecentlyCreated) {
             return $notificacao;
+        }
+
+        if ($tipoBloqueio === CandidatoStatusService::BLOQUEADO_MANUALMENTE && Schema::hasColumn('candidato_bloqueio_notificacoes', 'administrador_pessoa_id')) {
+            $notificacao->forceFill(['administrador_pessoa_id' => $administradorPessoaId])->save();
         }
 
         $callback = fn () => $this->enviar($notificacao->fresh(), $candidato->fresh(['pessoa']), $tipoBloqueio);
@@ -52,15 +77,21 @@ class CandidatoBloqueioNotificationService
 
     public function enviar(CandidatoBloqueioNotificacao $notificacao, Candidato $candidato, string $tipoBloqueio): void
     {
-        if ($notificacao->status === CandidatoBloqueioNotificacao::STATUS_ENVIADO) {
+        $bloqueada = CandidatoBloqueioNotificacao::query()
+            ->whereKey($notificacao->getKey())
+            ->whereIn('status', [CandidatoBloqueioNotificacao::STATUS_PENDENTE, CandidatoBloqueioNotificacao::STATUS_FALHOU])
+            ->update([
+                'tentativa_envio_em' => now(),
+                'status' => CandidatoBloqueioNotificacao::STATUS_PROCESSANDO,
+                'erro' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($bloqueada === 0) {
             return;
         }
 
-        $notificacao->forceFill([
-            'tentativa_envio_em' => now(),
-            'status' => CandidatoBloqueioNotificacao::STATUS_PENDENTE,
-            'erro' => null,
-        ])->save();
+        $notificacao->refresh();
 
         try {
             Mail::to($candidato->pessoa->email)->send(new CandidatoBloqueadoMail(

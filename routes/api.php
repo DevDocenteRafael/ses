@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ConviteController;
 use App\Http\Controllers\Api\AdministrativoController;
 use App\Http\Controllers\Api\PerfilCandidatoController;
 use App\Http\Controllers\Api\ContratacaoController;
+use App\Http\Controllers\Api\CandidatoInatividadeNotificacaoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +102,11 @@ Route::middleware('auth.token')->group(function () {
         Route::post('relatorios/dashboard',      [AdministrativoController::class, 'relatorioDashboard']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
+        Route::get('candidatos/inativos/notificacoes/contagem', [CandidatoInatividadeNotificacaoController::class, 'contagem']);
+        Route::post('candidatos/inativos/notificacoes', [CandidatoInatividadeNotificacaoController::class, 'global']);
+        Route::post('candidatos/inativos/notificacoes/teste-smtp', [CandidatoInatividadeNotificacaoController::class, 'testeSmtp']);
+        Route::get('candidatos/inativos/notificacoes/campanhas/{campanha}', [CandidatoInatividadeNotificacaoController::class, 'campanha']);
+        Route::post('candidatos/{matricula}/notificacao-inatividade', [CandidatoInatividadeNotificacaoController::class, 'individual']);
         Route::post('candidatos/curriculos/zip', [CurriculoCandidatoController::class, 'zip']);
         Route::get('candidatos/{matricula}/curriculo', [CurriculoCandidatoController::class, 'show']);
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);

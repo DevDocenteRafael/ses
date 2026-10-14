@@ -73,25 +73,30 @@ class CandidatoStatusService
         $candidato->forceFill(['ultima_atividade_em' => now()])->save();
     }
 
-    public function bloquearManualmente(Candidato $candidato, ?string $motivoPublico = null): bool
+    public function bloquearManualmente(Candidato $candidato, ?string $motivoPublico = null, ?int $administradorPessoaId = null): bool
     {
-        return DB::transaction(function () use ($candidato, $motivoPublico): bool {
+        return DB::transaction(function () use ($candidato, $motivoPublico, $administradorPessoaId): bool {
             $bloqueado = Candidato::query()->lockForUpdate()->findOrFail($candidato->matricula);
-
-            if (! $bloqueado->status) {
-                return false;
-            }
 
             if ($bloqueado->estaContratado()) {
                 return false;
             }
 
-            $bloqueado->forceFill(['status' => false])->save();
+            $estadoAtual = $this->estadoEfetivo($bloqueado);
+
+            if ($estadoAtual === self::BLOQUEADO_MANUALMENTE) {
+                return false;
+            }
+
+            if ($bloqueado->status) {
+                $bloqueado->forceFill(['status' => false])->save();
+            }
 
             $this->bloqueioNotificationService->registrarBloqueio(
                 $bloqueado,
                 self::BLOQUEADO_MANUALMENTE,
-                $motivoPublico
+                $motivoPublico,
+                $administradorPessoaId
             );
 
             return true;
@@ -100,6 +105,10 @@ class CandidatoStatusService
 
     public function registrarBloqueioPorInatividade(Candidato $candidato): void
     {
+        if (! $candidato->status || $candidato->estaContratado()) {
+            return;
+        }
+
         if ($this->estadoEfetivo($candidato) !== self::BLOQUEADO_POR_INATIVIDADE) {
             return;
         }

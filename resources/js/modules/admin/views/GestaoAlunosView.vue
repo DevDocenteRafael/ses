@@ -406,17 +406,19 @@
                                                             <small class="text-secondary d-block">Pretensão salarial</small>
                                                             <span>{{ formatarPretensao(aluno.preferencias_de_trabalho?.pretensao_salarial) }}</span>
                                                         </div>
-                                                        <div class="col-md-6 col-lg-4 d-flex align-items-end justify-content-lg-start">
-                                                            <button
-                                                                class="btn btn-sm btn-outline-primary"
-                                                                :disabled="curriculoGerando === aluno.matricula"
-                                                                @click="baixarCurriculo(aluno)"
-                                                            >
+                                                         <div class="col-md-6 col-lg-4 d-flex align-items-end justify-content-lg-start">
+                                                            <div class="d-flex flex-wrap gap-2">
+                                                             <button
+                                                                 class="btn btn-sm btn-outline-primary"
+                                                                 :disabled="curriculoGerando === aluno.matricula"
+                                                                 @click="baixarCurriculo(aluno)"
+                                                             >
                                                                 <span v-if="curriculoGerando === aluno.matricula" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                                                                <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
-                                                                {{ curriculoGerando === aluno.matricula ? 'Gerando...' : 'Baixar currículo' }}
-                                                            </button>
-                                                        </div>
+                                                                 <i v-else class="bi bi-file-earmark-arrow-down me-1"></i>
+                                                                 {{ curriculoGerando === aluno.matricula ? 'Gerando...' : 'Baixar currículo' }}
+                                                             </button>
+                                                            </div>
+                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -440,6 +442,7 @@
                             @change="mudarPagina"
                         />
                     </template>
+
                 </div>
             </div>
         </div>

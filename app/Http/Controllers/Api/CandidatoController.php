@@ -395,7 +395,7 @@ class CandidatoController extends Controller
         try {
             if (isset($validated['status'])) {
                 if ($validated['status'] === false) {
-                    $this->statusService->bloquearManualmente($candidato, $validated['motivo_bloqueio_publico'] ?? null);
+                    $this->statusService->bloquearManualmente($candidato, $validated['motivo_bloqueio_publico'] ?? null, $solicitante->id_pessoa);
                     $candidato->refresh();
                 } else {
                     $candidato->update(['status' => true]);
