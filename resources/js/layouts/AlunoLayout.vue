@@ -7,6 +7,7 @@
         </main>
 
         <CandidatoContratadoModal v-if="auth.candidatoContratado" @sair="sair" />
+        <CandidatoReativacaoQuestionarioModal v-if="auth.restricoes?.inativo && !auth.candidatoContratado" @sair="sair" @concluido="questionarioConcluido" />
     </div>
 </template>
 
@@ -16,6 +17,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
 import SlideBar from '../components/common/slideBar.vue';
 import CandidatoContratadoModal from '../components/aluno/CandidatoContratadoModal.vue';
+import CandidatoReativacaoQuestionarioModal from '../components/aluno/CandidatoReativacaoQuestionarioModal.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -33,5 +35,11 @@ const menu = [
 async function sair() {
     await auth.logout();
     router.push({ name: 'login' });
+}
+
+function questionarioConcluido(data) {
+    if (data?.reativado) {
+        router.push({ name: 'aluno.perfil' });
+    }
 }
 </script>

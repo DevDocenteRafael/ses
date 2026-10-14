@@ -61,7 +61,7 @@ class AuthController extends Controller
                 $this->statusService->registrarBloqueioPorInatividade($pessoa->candidato);
             }
 
-            if ($estado !== CandidatoStatusService::CONTRATADO) {
+            if ($estado !== CandidatoStatusService::CONTRATADO && $estado !== CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) {
                 $this->statusService->registrarAtividade($pessoa->candidato);
                 $pessoa->candidato->refresh()->load('contratacao');
             }

@@ -33,7 +33,7 @@ class BloqueiaCandidatoContratado
 
         if ($estado === CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) {
             return response()->json([
-                'message' => 'Seu perfil foi bloqueado por inatividade. Faça login novamente para reativá-lo.',
+                'message' => 'Seu perfil foi bloqueado por inatividade. Responda ao questionário de atualização cadastral para solicitar a reativação.',
                 'code' => CandidatoStatusService::INATIVIDADE_CODE,
             ], 403);
         }

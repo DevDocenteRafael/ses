@@ -32,7 +32,7 @@
 
                             @if ($inatividade)
                                 <p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Enquanto seu cadastro estiver inativo, seu perfil não ficará disponível para consulta pelas empresas participantes.</p>
-                                <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Para reativar seu cadastro, basta acessar a plataforma e realizar login com suas credenciais.</p>
+                                <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Para solicitar a reativação do cadastro, acesse a plataforma com suas credenciais e responda ao questionário de atualização cadastral.</p>
                             @else
                                 <p style="font-size:16px;line-height:1.6;margin:0 0 24px;">Para obter informações sobre a situação do seu cadastro e solicitar orientações, entre em contato com {{ $supportContact }}.</p>
                             @endif

@@ -120,6 +120,11 @@ class Candidato extends Model
         return $this->hasMany(CandidatoBloqueioNotificacao::class, 'candidato_matricula', 'matricula');
     }
 
+    public function reativacaoQuestionarios()
+    {
+        return $this->hasMany(CandidatoReativacaoQuestionario::class, 'candidato_matricula', 'matricula');
+    }
+
     public function empresas()
     {
         return $this->belongsToMany(

@@ -103,7 +103,7 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonPath('restricoes.pode_editar_perfil', false);
     }
 
-    public function test_login_reativa_candidato_bloqueado_somente_por_inatividade(): void
+    public function test_login_nao_reativa_candidato_bloqueado_por_inatividade_e_exige_questionario(): void
     {
         Mail::fake();
         Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
@@ -113,11 +113,91 @@ class CandidatoInatividadeTest extends TestCase
             'identificador' => $pessoa->email,
             'senha' => '123456',
         ])->assertOk()
-            ->assertJsonPath('restricoes.estado', 'ATIVO')
-            ->assertJsonPath('restricoes.pode_editar_perfil', true);
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE')
+            ->assertJsonPath('restricoes.inativo', true)
+            ->assertJsonPath('restricoes.pode_editar_perfil', false);
+
+        $this->assertTrue($candidato->refresh()->ultima_atividade_em->equalTo(now()->subSeconds(31)));
+        Mail::assertSent(CandidatoBloqueadoMail::class);
+    }
+
+    public function test_questionario_completo_reativa_candidato_inativo_e_salva_historico(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', $this->respostasQuestionario())
+            ->assertOk()
+            ->assertJsonPath('reativado', true)
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
 
         $this->assertTrue($candidato->refresh()->ultima_atividade_em->equalTo(now()));
-        Mail::assertSent(CandidatoBloqueadoMail::class);
+        $this->assertDatabaseHas('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'resposta_1' => 'manter_ativo',
+            'resultado' => 'REATIVADO',
+        ]);
+    }
+
+    public function test_resposta_negativa_registra_decisao_sem_reativar(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['resposta_1' => 'encerrar_cadastro'])
+            ->assertOk()
+            ->assertJsonPath('reativado', false)
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
+
+        $this->assertTrue($candidato->refresh()->ultima_atividade_em->equalTo(now()->subSeconds(31)));
+        $this->assertDatabaseHas('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'resposta_1' => 'encerrar_cadastro',
+            'resultado' => 'ENCERRAMENTO_SOLICITADO',
+        ]);
+    }
+
+    public function test_questionario_incompleto_ou_manipulado_e_recusado(): void
+    {
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+            'resposta_1' => 'manter_ativo',
+            'resposta_4' => ['valor_invalido'],
+        ])->assertUnprocessable();
+
+        $this->assertDatabaseMissing('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+    }
+
+    public function test_questionario_nao_remove_bloqueio_administrativo_nem_contratacao(): void
+    {
+        [, $manual, $tokenManual] = $this->criarCandidato(status: false, ultimaAtividade: now()->subSeconds(31));
+        [, $contratado, $tokenContratado] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+        $this->registrarContratacao($contratado);
+
+        $this->withToken($tokenManual)->postJson('/api/me/reativacao-questionario', $this->respostasQuestionario())
+            ->assertForbidden();
+
+        $this->withToken($tokenContratado)->postJson('/api/me/reativacao-questionario', $this->respostasQuestionario())
+            ->assertUnprocessable();
+
+        $this->assertFalse($manual->refresh()->status);
+        $this->assertTrue($contratado->refresh()->estaContratado());
+    }
+
+    public function test_requisicoes_duplicadas_registram_apenas_uma_conclusao(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
+        $respostas = $this->respostasQuestionario();
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', $respostas)->assertOk();
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', $respostas)->assertOk();
+
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 1);
     }
 
     public function test_admin_notifica_inatividade_uma_unica_vez_sem_disparo_por_empresa(): void
@@ -535,5 +615,19 @@ class CandidatoInatividadeTest extends TestCase
         Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
 
         return $token;
+    }
+
+    private function respostasQuestionario(array $sobrescrever = []): array
+    {
+        return array_merge([
+            'resposta_1' => 'manter_ativo',
+            'resposta_2' => 'buscando_area_senac',
+            'resposta_3' => 'nao_trabalhando',
+            'resposta_4' => ['estagio', 'emprego_efetivo'],
+            'resposta_5' => 'integral',
+            'resposta_6' => 'presencial_online',
+            'resposta_7' => 'atualizados',
+            'resposta_8' => 'mesmas_informacoes',
+        ], $sobrescrever);
     }
 }

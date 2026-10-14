@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', {
         isEmpresa: (state) => state.tipo === 'empresa',
         isAluno: (state) => state.tipo === 'candidato',
         candidatoContratado: (state) => state.tipo === 'candidato' && state.restricoes?.contratado === true,
+        candidatoInativo: (state) => state.tipo === 'candidato' && state.restricoes?.inativo === true,
     },
 
     actions: {

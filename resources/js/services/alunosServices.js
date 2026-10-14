@@ -26,6 +26,10 @@ export default {
         return api.get('/me/curriculo', { responseType: 'blob' });
     },
 
+    concluirQuestionarioReativacao(dados) {
+        return api.post('/me/reativacao-questionario', dados);
+    },
+
     // Currículo (links, info profissional, preferências, dados acadêmicos)
     salvarLinks(matricula, dados) {
         return api.post(`/candidatos/${matricula}/perfil/links`, dados);

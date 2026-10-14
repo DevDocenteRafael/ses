@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AdministrativoController;
 use App\Http\Controllers\Api\PerfilCandidatoController;
 use App\Http\Controllers\Api\ContratacaoController;
 use App\Http\Controllers\Api\CandidatoInatividadeNotificacaoController;
+use App\Http\Controllers\Api\CandidatoReativacaoQuestionarioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('candidatos', [CandidatoController::class, 'store']);
     Route::post('empresas', [EmpresaController::class, 'store']);
     Route::get('me/curriculo', [CurriculoCandidatoController::class, 'showAluno']);
+    Route::post('me/reativacao-questionario', [CandidatoReativacaoQuestionarioController::class, 'store']);
 
     // Candidatos
     Route::get('candidatos/habilidades', [CandidatoController::class, 'habilidades']);
