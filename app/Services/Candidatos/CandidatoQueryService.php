@@ -91,7 +91,23 @@ class CandidatoQueryService
 
         if ($request->filled('status')) {
             Validator::make($request->input(), [
-                'status' => [Rule::in([true, false, 1, 0, '1', '0', 'ativo', 'liberado', 'bloqueado', 'contratado', 'inativo', CandidatoStatusService::ATIVO, CandidatoStatusService::BLOQUEADO_MANUALMENTE, CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, CandidatoStatusService::CONTRATADO])],
+                'status' => [Rule::in([
+                    true,
+                    false,
+                    1,
+                    0,
+                    '1',
+                    '0',
+                    'ativo',
+                    'liberado',
+                    'bloqueado',
+                    'contratado',
+                    'inativo',
+                    CandidatoStatusService::ATIVO,
+                    CandidatoStatusService::BLOQUEADO_MANUALMENTE,
+                    CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE,
+                    CandidatoStatusService::CONTRATADO,
+                ])],
             ])->validate();
 
             $this->aplicarFiltroEstadoEfetivo($query, (string) $request->input('status'));
@@ -230,6 +246,7 @@ class CandidatoQueryService
         $normalizado = mb_strtolower(trim($status));
 
         match ($normalizado) {
+            '1', 'ativo', 'liberado', mb_strtolower(CandidatoStatusService::ATIVO) => $this->statusService->aplicarEscopoDisponiveis($query),
             'contratado', mb_strtolower(CandidatoStatusService::CONTRATADO) => $query->whereHas('contratacao'),
             'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $this->statusService->inatividadeHabilitada()
                 ? $query

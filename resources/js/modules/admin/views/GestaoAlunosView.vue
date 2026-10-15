@@ -92,17 +92,17 @@
                         </div>
                         <div class="row g-3 admin-filter-grid">
                             <div class="col-md-6 col-xl-3">
-                                <label class="form-label small fw-bold text-secondary text-uppercase">Status administrativo</label>
-                                <select v-model="statusFiltro" class="form-select form-select-sm">
-                                    <option v-for="opcao in statusOpcoes" :key="opcao.value" :value="opcao.value">{{ opcao.label }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 col-xl-3">
                                 <label class="form-label small fw-bold text-secondary text-uppercase">Contratação</label>
                                 <div class="d-flex gap-3 flex-wrap">
                                     <div class="form-check small"><input id="admin-filtro-clt" v-model="filtroClt" class="form-check-input" type="checkbox"><label class="form-check-label" for="admin-filtro-clt">CLT / Efetivo</label></div>
                                     <div class="form-check small"><input id="admin-filtro-estagio" v-model="filtroEstagio" class="form-check-input" type="checkbox"><label class="form-check-label" for="admin-filtro-estagio">Estágio</label></div>
                                 </div>
+                            </div>
+                            <div class="col-md-6 col-xl-3">
+                                <label class="form-label small fw-bold text-secondary text-uppercase">Status administrativo</label>
+                                <select v-model="statusFiltro" class="form-select form-select-sm">
+                                    <option v-for="opcao in statusOpcoes" :key="opcao.value" :value="opcao.value">{{ opcao.label }}</option>
+                                </select>
                             </div>
                             <div class="col-md-6 col-xl-3 position-relative" ref="segmentosDropdownContainer">
                                 <label class="form-label small fw-bold text-secondary text-uppercase">Segmento</label>
@@ -581,10 +581,9 @@ const formularioCurriculos = reactive({
 });
 const statusOpcoes = [
     { value: '', label: 'Todos os status' },
-    { value: '1', label: 'Liberado' },
-    { value: '0', label: 'Bloqueado' },
-    { value: 'inativo', label: 'Bloqueado por inatividade' },
-    { value: 'contratado', label: 'Contratado' },
+    { value: 'ATIVO', label: 'Ativos' },
+    { value: 'BLOQUEADO_POR_INATIVIDADE', label: 'Bloqueados por inatividade' },
+    { value: 'BLOQUEADO_MANUALMENTE', label: 'Bloqueados administrativamente' },
 ];
 const totalFiltrosAtivos = computed(() => [
     statusFiltro.value !== '',
