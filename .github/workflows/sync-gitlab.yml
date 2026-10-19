@@ -1,0 +1,26 @@
+name: Mirror para GitLab SENAC
+
+# A cada push no GitHub, espelha o codigo para o GitLab do Senac.
+# Requer o secret GITLAB_TOKEN configurado em:
+#   Settings > Secrets and variables > Actions > New repository secret
+#   (use um Personal Access Token do GitLab com escopo "write_repository")
+
+on:
+  push:
+    branches: ["**"]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (historia completa)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push para o GitLab SENAC
+        run: |
+          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.edu.df.senac.br/Rafael51555207/ses.git"
+          git push gitlab "refs/heads/${GITHUB_REF_NAME}:refs/heads/${GITHUB_REF_NAME}" --force
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
