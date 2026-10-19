@@ -541,8 +541,14 @@ function formatarCnpj(cnpj) {
     vertical-align: middle;
 }
 
-.ses-empresas-table :is(th, td) {
-    transition-property: background-color, border-color, color, box-shadow;
+.ses-empresas-table th:nth-child(3),
+.ses-empresas-table td:nth-child(3) {
+    padding-right: 30px;
+}
+
+.ses-empresas-table th:nth-child(4),
+.ses-empresas-table td:nth-child(4) {
+    padding-left: 12px;
 }
 
 .ses-col-empresa {
@@ -554,11 +560,13 @@ function formatarCnpj(cnpj) {
 }
 
 .ses-col-cnpj {
-    width: 135px;
+    width: 175px;
+    min-width: 175px;
 }
 
 .ses-col-telefone {
-    width: 130px;
+    width: 155px;
+    min-width: 155px;
 }
 
 .ses-col-atividade {
