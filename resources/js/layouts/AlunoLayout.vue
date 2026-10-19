@@ -8,6 +8,7 @@
 
         <CandidatoContratadoModal v-if="auth.candidatoContratado" @sair="sair" />
         <CandidatoReativacaoQuestionarioModal v-if="auth.restricoes?.inativo && !auth.candidatoContratado" @sair="sair" @concluido="questionarioConcluido" />
+        <CandidatoReativadoSucessoModal v-if="showReativado" @closed="onFechouReativado" />
     </div>
 </template>
 
@@ -18,11 +19,24 @@ import { useAuthStore } from '../store/auth';
 import SlideBar from '../components/common/slideBar.vue';
 import CandidatoContratadoModal from '../components/aluno/CandidatoContratadoModal.vue';
 import CandidatoReativacaoQuestionarioModal from '../components/aluno/CandidatoReativacaoQuestionarioModal.vue';
+import CandidatoReativadoSucessoModal from '../components/aluno/CandidatoReativadoSucessoModal.vue';
 
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
 const rotaPerfil = computed(() => route.name === 'aluno.perfil');
+
+import { ref, onMounted } from 'vue';
+const SHOW_KEY = 'ses_reativacao_sucesso';
+const showReativado = ref(false);
+
+onMounted(() => {
+    try {
+        if (sessionStorage.getItem(SHOW_KEY)) {
+            showReativado.value = true;
+        }
+    } catch (e) {}
+});
 
 // TODO: substituir pelo total real de convites pendentes vindo da API
 // (ex.: auth.convitesPendentes ou uma store dedicada de convites).
@@ -39,7 +53,13 @@ async function sair() {
 
 function questionarioConcluido(data) {
     if (data?.reativado) {
+        try { sessionStorage.setItem(SHOW_KEY, '1'); } catch (e) {}
+        showReativado.value = true;
         router.push({ name: 'aluno.perfil' });
     }
+}
+
+function onFechouReativado() {
+    showReativado.value = false;
 }
 </script>
