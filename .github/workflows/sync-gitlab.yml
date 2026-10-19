@@ -8,6 +8,7 @@ name: Mirror para GitLab SENAC
 on:
   push:
     branches: ["**"]
+  workflow_dispatch:
 
 jobs:
   mirror:
@@ -18,9 +19,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push para o GitLab SENAC
-        run: |
-          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.edu.df.senac.br/Rafael51555207/ses.git"
-          git push gitlab "refs/heads/${GITHUB_REF_NAME}:refs/heads/${GITHUB_REF_NAME}" --force
+      - name: Diagnostico e push para o GitLab SENAC
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          set -e
+          export GIT_TERMINAL_PROMPT=0
+
+          if [ -z "${GITLAB_TOKEN}" ]; then
+            echo "::error::Secret GITLAB_TOKEN nao esta definido ou esta vazio. Crie/edite em Settings > Secrets and variables > Actions (nome exato: GITLAB_TOKEN)."
+            exit 1
+          fi
+          echo "Secret GITLAB_TOKEN presente (tamanho: ${#GITLAB_TOKEN} caracteres)."
+
+          git remote remove gitlab 2>/dev/null || true
+          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.edu.df.senac.br/Rafael51555207/ses.git"
+
+          echo "Testando alcancabilidade e autenticacao do GitLab..."
+          if ! git ls-remote gitlab HEAD; then
+            echo "::error::Nao foi possivel acessar o GitLab (falha de autenticacao ou host inacessivel a partir dos runners do GitHub). Verifique o token (escopo write_repository) e se o GitLab aceita acesso externo."
+            exit 1
+          fi
+
+          git push gitlab "refs/heads/${GITHUB_REF_NAME}:refs/heads/${GITHUB_REF_NAME}" --force
+          echo "::notice::Mirror para o GitLab concluido com sucesso (branch ${GITHUB_REF_NAME})."
