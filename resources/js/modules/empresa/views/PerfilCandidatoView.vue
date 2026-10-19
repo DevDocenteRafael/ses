@@ -31,8 +31,14 @@
             <h2 class="h6 mb-0 fw-bold text-primary">Perfil do Candidato</h2>
         </div>
 
-        <div v-if="carregando" class="text-center text-secondary py-5">
-            <span class="spinner-border spinner-border-sm me-2"></span> Carregando perfil...
+        <div v-if="carregando" class="container-fluid px-4 pb-5">
+            <div class="perfil-loading d-flex align-items-center justify-content-center">
+                <div class="perfil-loading__box text-center">
+                    <div class="perfil-loading__spinner" role="status" aria-hidden="true"></div>
+                    <h3 class="perfil-loading__title mt-3 mb-1">Carregando perfil do candidato...</h3>
+                    <p class="perfil-loading__subtitle small mb-0">Aguarde enquanto preparamos as informações.</p>
+                </div>
+            </div>
         </div>
 
         <div v-else-if="erro" class="container-fluid px-4">
@@ -558,5 +564,66 @@ onMounted(carregar);
     border-bottom: 0 !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
+}
+
+/* Loading state (theme-aware) */
+.perfil-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100dvh - 90px);
+}
+
+.perfil-loading__box {
+    max-width: 520px;
+    width: 100%;
+    padding: 28px 20px;
+    border-radius: 12px;
+    background-color: var(--perfil-loading-bg, transparent);
+    color: var(--perfil-loading-text, #17324F);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.perfil-loading__spinner {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: var(--perfil-spinner, #00529B);
+    margin: 0 auto;
+    animation: perfil-spin 1s linear infinite;
+}
+
+.perfil-loading__title {
+    font-weight: 700;
+    color: inherit;
+}
+
+.perfil-loading__subtitle {
+    color: var(--perfil-loading-muted, #64748B);
+}
+
+@keyframes perfil-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .perfil-loading__spinner { animation: none; }
+}
+
+/* Theme overrides */
+:root {
+    --perfil-loading-bg: #F4F7FB;
+    --perfil-loading-text: #17324F;
+    --perfil-loading-muted: #64748B;
+    --perfil-spinner: #00529B;
+}
+
+:global(html.dark) {
+    --perfil-loading-bg: #0F1728;
+    --perfil-loading-text: #F8FAFC;
+    --perfil-loading-muted: #94A3B8;
+    --perfil-spinner: #48A4FF;
 }
 </style>
