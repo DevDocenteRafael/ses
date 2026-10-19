@@ -256,122 +256,124 @@
     </div>
 
     <teleport to="body">
-        <div
-            v-if="activeDropdown"
-            ref="floatingDropdownRef"
-            class="floating-filter-panel border rounded shadow-lg bg-body"
-            :style="floatingDropdownStyle"
-            @click.stop
-        >
-            <template v-if="activeDropdown === 'segmento'">
-                <div class="p-2 border-bottom">
-                    <label class="form-label small text-secondary mb-1" for="busca-segmento-filtro">
-                        <i class="bi bi-search me-1"></i> Pesquisar segmento...
-                    </label>
-                    <input
-                        id="busca-segmento-filtro"
-                        ref="segmentoBuscaInput"
-                        v-model="buscaSegmento"
-                        type="text"
-                        class="form-control form-control-sm"
-                        placeholder="Digite parte do nome..."
-                        autocomplete="off"
-                    >
-                </div>
-
-                <div class="filtro-multiselect-lista p-2">
-                    <template v-if="segmentosFiltrados.length">
-                        <label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
-                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)">
-                            <span class="form-check-label">{{ segmento.nome }}</span>
+        <Transition name="floating-panel" mode="out-in">
+            <div
+                v-if="activeDropdown"
+                ref="floatingDropdownRef"
+                class="floating-filter-panel border rounded shadow-lg bg-body"
+                :style="floatingDropdownStyle"
+                @click.stop
+            >
+                <template v-if="activeDropdown === 'segmento'">
+                    <div class="p-2 border-bottom">
+                        <label class="form-label small text-secondary mb-1" for="busca-segmento-filtro">
+                            <i class="bi bi-search me-1"></i> Pesquisar segmento...
                         </label>
-                    </template>
-                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p>
-                </div>
-            </template>
-
-            <template v-else-if="activeDropdown === 'regioes'">
-                <div class="p-2 border-bottom">
-                    <label class="form-label small text-secondary mb-1" for="busca-regiao-filtro">
-                        <i class="bi bi-search me-1"></i> Pesquisar região...
-                    </label>
-                    <input
-                        id="busca-regiao-filtro"
-                        ref="regiaoBuscaInput"
-                        v-model="buscaRegiao"
-                        type="text"
-                        class="form-control form-control-sm"
-                        placeholder="Digite parte do nome..."
-                        autocomplete="off"
-                    >
-                </div>
-
-                <div class="filtro-multiselect-lista p-2">
-                    <template v-if="regioesFiltradas.length">
-                        <label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
-                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)">
-                            <span class="form-check-label text-truncate">{{ regiao.label }}</span>
-                        </label>
-                    </template>
-                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p>
-                </div>
-            </template>
-
-            <template v-else-if="activeDropdown === 'disponibilidade'">
-                <div class="filtro-multiselect-lista p-2">
-                    <button
-                        v-for="opcao in disponibilidadeOpcoes"
-                        :key="opcao.value"
-                        type="button"
-                        class="btn btn-sm w-100 text-start rounded mb-1"
-                        :class="filtros.disponibilidade === opcao.value ? 'btn-primary' : 'btn-light text-body'"
-                        @click.stop="selecionarDisponibilidade(opcao)"
-                    >
-                        {{ opcao.label }}
-                    </button>
-                </div>
-            </template>
-
-            <template v-else-if="activeDropdown === 'habilidades'">
-                <div class="p-2 border-bottom">
-                    <label class="form-label small text-secondary mb-1" for="busca-habilidade-filtro">
-                        <i class="bi bi-search me-1"></i> Buscar habilidade...
-                    </label>
-                    <input
-                        id="busca-habilidade-filtro"
-                        ref="habilidadeBuscaInput"
-                        v-model="buscaHabilidade"
-                        type="text"
-                        class="form-control form-control-sm"
-                        placeholder="Digite parte do nome..."
-                        autocomplete="off"
-                    >
-                </div>
-
-                <div class="habilidades-filtro-lista p-2">
-                    <div v-if="carregandoHabilidades" class="small text-secondary py-2 text-center">
-                        <span class="spinner-border spinner-border-sm me-1"></span> Carregando...
+                        <input
+                            id="busca-segmento-filtro"
+                            ref="segmentoBuscaInput"
+                            v-model="buscaSegmento"
+                            type="text"
+                            class="form-control form-control-sm"
+                            placeholder="Digite parte do nome..."
+                            autocomplete="off"
+                        >
                     </div>
-                    <template v-else-if="habilidadesFiltradas.length">
-                        <label v-for="habilidade in habilidadesFiltradas" :key="habilidade" class="habilidade-filtro-opcao form-check rounded px-2 py-1 mb-1">
-                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
-                            <span class="form-check-label text-truncate">{{ habilidade }}</span>
-                        </label>
-                    </template>
-                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma habilidade encontrada.</p>
-                </div>
 
-                <div v-if="filtros.habilidades.length" class="border-top p-2">
-                    <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
-                    <div class="d-flex flex-wrap gap-1">
-                        <span v-for="h in filtros.habilidades" :key="h" class="badge bg-primary-subtle text-primary border habilidade-filtro-badge">
-                            {{ h }}
-                            <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" aria-label="Remover habilidade" @click.stop="removerHabilidade(h)">×</button>
-                        </span>
+                    <div class="filtro-multiselect-lista p-2">
+                        <template v-if="segmentosFiltrados.length">
+                            <label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)">
+                                <span class="form-check-label">{{ segmento.nome }}</span>
+                            </label>
+                        </template>
+                        <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p>
                     </div>
-                </div>
-            </template>
-        </div>
+                </template>
+
+                <template v-else-if="activeDropdown === 'regioes'">
+                    <div class="p-2 border-bottom">
+                        <label class="form-label small text-secondary mb-1" for="busca-regiao-filtro">
+                            <i class="bi bi-search me-1"></i> Pesquisar região...
+                        </label>
+                        <input
+                            id="busca-regiao-filtro"
+                            ref="regiaoBuscaInput"
+                            v-model="buscaRegiao"
+                            type="text"
+                            class="form-control form-control-sm"
+                            placeholder="Digite parte do nome..."
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="filtro-multiselect-lista p-2">
+                        <template v-if="regioesFiltradas.length">
+                            <label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)">
+                                <span class="form-check-label text-truncate">{{ regiao.label }}</span>
+                            </label>
+                        </template>
+                        <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p>
+                    </div>
+                </template>
+
+                <template v-else-if="activeDropdown === 'disponibilidade'">
+                    <div class="filtro-multiselect-lista p-2">
+                        <button
+                            v-for="opcao in disponibilidadeOpcoes"
+                            :key="opcao.value"
+                            type="button"
+                            class="btn btn-sm w-100 text-start rounded mb-1"
+                            :class="filtros.disponibilidade === opcao.value ? 'btn-primary' : 'btn-light text-body'"
+                            @click.stop="selecionarDisponibilidade(opcao)"
+                        >
+                            {{ opcao.label }}
+                        </button>
+                    </div>
+                </template>
+
+                <template v-else-if="activeDropdown === 'habilidades'">
+                    <div class="p-2 border-bottom">
+                        <label class="form-label small text-secondary mb-1" for="busca-habilidade-filtro">
+                            <i class="bi bi-search me-1"></i> Buscar habilidade...
+                        </label>
+                        <input
+                            id="busca-habilidade-filtro"
+                            ref="habilidadeBuscaInput"
+                            v-model="buscaHabilidade"
+                            type="text"
+                            class="form-control form-control-sm"
+                            placeholder="Digite parte do nome..."
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="habilidades-filtro-lista p-2">
+                        <div v-if="carregandoHabilidades" class="small text-secondary py-2 text-center">
+                            <span class="spinner-border spinner-border-sm me-1"></span> Carregando...
+                        </div>
+                        <template v-else-if="habilidadesFiltradas.length">
+                            <label v-for="habilidade in habilidadesFiltradas" :key="habilidade" class="habilidade-filtro-opcao form-check rounded px-2 py-1 mb-1">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
+                                <span class="form-check-label text-truncate">{{ habilidade }}</span>
+                            </label>
+                        </template>
+                        <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma habilidade encontrada.</p>
+                    </div>
+
+                    <div v-if="filtros.habilidades.length" class="border-top p-2">
+                        <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span v-for="h in filtros.habilidades" :key="h" class="badge bg-primary-subtle text-primary border habilidade-filtro-badge">
+                                {{ h }}
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" aria-label="Remover habilidade" @click.stop="removerHabilidade(h)">×</button>
+                            </span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </Transition>
     </teleport>
 </template>
 
@@ -1009,6 +1011,38 @@ onBeforeUnmount(() => {
     overflow: hidden;
 }
 
+.floating-panel-enter-active,
+.floating-panel-leave-active {
+    transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.floating-panel-enter-from,
+.floating-panel-leave-to {
+    opacity: 0;
+    transform: translateX(10px);
+}
+
+.floating-panel-enter-to,
+.floating-panel-leave-from {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .floating-panel-enter-active,
+    .floating-panel-leave-active {
+        transition: none;
+    }
+
+    .floating-panel-enter-from,
+    .floating-panel-leave-to,
+    .floating-panel-enter-to,
+    .floating-panel-leave-from {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 .habilidades-filtro-lista,
 .filtro-multiselect-lista {
     max-height: 230px;
@@ -1038,5 +1072,14 @@ onBeforeUnmount(() => {
     max-width: 100%;
     white-space: normal;
     overflow-wrap: anywhere;
+}
+
+.floating-panel-enter-active, .floating-panel-leave-active {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.floating-panel-enter, .floating-panel-leave-to {
+    opacity: 0;
+    transform: translateY(8px);
 }
 </style>
