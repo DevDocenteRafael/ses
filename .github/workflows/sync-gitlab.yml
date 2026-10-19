@@ -33,24 +33,32 @@ jobs:
           echo "Secret GITLAB_TOKEN presente (tamanho: ${#GITLAB_TOKEN} caracteres)."
 
           echo "::group::Teste 1 - conectividade HTTP (sem autenticacao)"
-          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 "https://gitlab.edu.df.senac.br" || echo "curl-falhou")
-          echo "HTTP status da pagina inicial do GitLab: ${code}"
-          if [ "${code}" = "curl-falhou" ] || [ "${code}" = "000" ]; then
-            echo "::error::O runner do GitHub NAO conseguiu acessar https://gitlab.edu.df.senac.br (rede/firewall). O mirror no servidor nao sera possivel; use apenas o hook local."
+          resp1=$(curl -sS --max-time 20 -w "\nHTTP_CODE:%{http_code}" "https://gitlab.edu.df.senac.br" 2>&1 || true)
+          code1=$(echo "${resp1}" | grep -o "HTTP_CODE:[0-9]*" | cut -d: -f2)
+          echo "HTTP status pagina inicial: ${code1}"
+          if [ -z "${code1}" ] || [ "${code1}" = "000" ]; then
+            echo "::error::O runner do GitHub NAO conseguiu acessar https://gitlab.edu.df.senac.br (rede/firewall). Saida: $(echo "${resp1}" | tail -c 200)"
+            exit 1
+          fi
+          if echo "${resp1}" | grep -qi "azurefd\|Access Denied\|Request blocked"; then
+            echo "::error::WAF/CDN (Azure Front Door) bloqueou o runner do GitHub na pagina inicial (HTTP ${code1}). O mirror pelo GitHub Actions nao sera possivel; o hook local continua funcionando."
             exit 1
           fi
           echo "::endgroup::"
 
           echo "::group::Teste 2 - validade do token via API do GitLab"
-          apicode=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 20 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" "https://gitlab.edu.df.senac.br/api/v4/user" || echo "curl-falhou")
-          echo "HTTP status da API /api/v4/user: ${apicode}"
-          if [ "${apicode}" = "401" ] || [ "${apicode}" = "403" ]; then
-            echo "::error::Token GITLAB_TOKEN INVALIDO ou sem permissao (API retornou ${apicode}). Gere um novo Personal Access Token no GitLab com escopo write_repository e atualize o secret."
+          resp2=$(curl -sS --max-time 20 -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" -w "\nHTTP_CODE:%{http_code}" "https://gitlab.edu.df.senac.br/api/v4/user" 2>&1 || true)
+          code2=$(echo "${resp2}" | grep -o "HTTP_CODE:[0-9]*" | cut -d: -f2)
+          body2=$(echo "${resp2}" | sed '/HTTP_CODE:/d' | head -c 300)
+          echo "HTTP status da API /api/v4/user: ${code2}"
+          if [ "${code2}" != "200" ]; then
+            echo "::error::API /api/v4/user retornou HTTP ${code2}. Resposta: ${body2}"
+            if [ "${code2}" = "403" ] || [ "${code2}" = "401" ]; then
+              echo "::error::Causa provavel: token invalido, revogado ou sem permissao. Gere novo Personal Access Token no GitLab (escopo api + write_repository) e atualize o secret GITLAB_TOKEN."
+            fi
             exit 1
           fi
-          if [ "${apicode}" != "200" ]; then
-            echo "::warning::A API retornou ${apicode} (esperado 200). Tentando mesmo assim o push via git..."
-          fi
+          echo "Token validado com sucesso via API."
           echo "::endgroup::"
 
           git remote remove gitlab 2>/dev/null || true
