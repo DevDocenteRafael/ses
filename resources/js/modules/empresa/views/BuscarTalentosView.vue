@@ -41,153 +41,73 @@
 
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-secondary text-uppercase">Filtros Principais</label>
-                    <div class="mb-2 position-relative" ref="segmentosDropdownContainer">
+
+                    <div class="mb-2">
                         <label class="form-label small text-secondary mb-1">Segmento</label>
                         <button
                             type="button"
                             class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
-                            :aria-expanded="mostrarDropdownSegmentos"
-                            @click.stop="alternarDropdownSegmentos"
+                            data-dropdown-trigger="segmento"
+                            :aria-expanded="activeDropdown === 'segmento'"
+                            :ref="(el) => triggerRefs.segmento = el"
+                            @click.stop="toggleDropdown('segmento', $event)"
                         >
                             <span :class="filtros.segmento.length ? 'text-body' : 'text-secondary'">
                                 {{ rotuloFiltroSegmentos }}
                             </span>
                             <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
                         </button>
-
-                        <div v-if="mostrarDropdownSegmentos" class="filtro-multiselect-dropdown border rounded shadow-sm bg-white mt-1">
-                            <div class="p-2 border-bottom">
-                                <label class="form-label small text-secondary mb-1" for="busca-segmento-filtro">
-                                    <i class="bi bi-search me-1"></i> Pesquisar segmento...
-                                </label>
-                                <input
-                                    id="busca-segmento-filtro"
-                                    ref="segmentoBuscaInput"
-                                    v-model="buscaSegmento"
-                                    type="text"
-                                    class="form-control form-control-sm"
-                                    placeholder="Digite parte do nome..."
-                                    autocomplete="off"
-                                >
-                            </div>
-
-                            <div class="filtro-multiselect-lista p-2">
-                                <template v-if="segmentosFiltrados.length">
-                                    <label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
-                                        <input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)">
-                                        <span class="form-check-label">{{ segmento.nome }}</span>
-                                    </label>
-                                </template>
-                                <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p>
-                            </div>
-                        </div>
                     </div>
-                </div>
 
-                <div class="mb-4 position-relative" ref="regioesDropdownContainer">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Região Administrativa</label>
-                    <button
-                        type="button"
-                        class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
-                        :aria-expanded="mostrarDropdownRegioes"
-                        @click.stop="alternarDropdownRegioes"
-                    >
-                        <span class="text-truncate" :class="filtros.regioes_administrativas.length ? 'text-body' : 'text-secondary'">
-                            {{ rotuloFiltroRegioes }}
-                        </span>
-                        <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
-                    </button>
-
-                    <div v-if="mostrarDropdownRegioes" class="filtro-multiselect-dropdown border rounded shadow-sm bg-white mt-1">
-                        <div class="p-2 border-bottom">
-                            <label class="form-label small text-secondary mb-1" for="busca-regiao-filtro">
-                                <i class="bi bi-search me-1"></i> Pesquisar região...
-                            </label>
-                            <input
-                                id="busca-regiao-filtro"
-                                ref="regiaoBuscaInput"
-                                v-model="buscaRegiao"
-                                type="text"
-                                class="form-control form-control-sm"
-                                placeholder="Digite parte do nome..."
-                                autocomplete="off"
-                            >
-                        </div>
-
-                        <div class="filtro-multiselect-lista p-2">
-                            <template v-if="regioesFiltradas.length">
-                                <label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)">
-                                    <span class="form-check-label text-truncate">{{ regiao.label }}</span>
-                                </label>
-                            </template>
-                            <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p>
-                        </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary text-uppercase">Região Administrativa</label>
+                        <button
+                            type="button"
+                            class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
+                            data-dropdown-trigger="regioes"
+                            :aria-expanded="activeDropdown === 'regioes'"
+                            :ref="(el) => triggerRefs.regioes = el"
+                            @click.stop="toggleDropdown('regioes', $event)"
+                        >
+                            <span class="text-truncate" :class="filtros.regioes_administrativas.length ? 'text-body' : 'text-secondary'">
+                                {{ rotuloFiltroRegioes }}
+                            </span>
+                            <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                        </button>
                     </div>
-                </div>
 
-                <div class="mb-4">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade</label>
-                    <select v-model="filtros.disponibilidade" class="form-select form-select-sm">
-                        <option value="">Qualquer Horário</option>
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Noite">Noite</option>
-                    </select>
-                </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary text-uppercase">Disponibilidade</label>
+                        <button
+                            type="button"
+                            class="form-select form-select-sm filtro-multiselect text-start d-flex align-items-center"
+                            data-dropdown-trigger="disponibilidade"
+                            :aria-expanded="activeDropdown === 'disponibilidade'"
+                            :ref="(el) => triggerRefs.disponibilidade = el"
+                            @click.stop="toggleDropdown('disponibilidade', $event)"
+                        >
+                            <span :class="filtros.disponibilidade ? 'text-body' : 'text-secondary'">
+                                {{ disponibilidadeLabel }}
+                            </span>
+                            <i class="bi bi-chevron-down filtro-multiselect-seta"></i>
+                        </button>
+                    </div>
 
-                <div class="mb-4 position-relative" ref="habilidadesDropdownContainer">
-                    <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas</label>
-                    <button
-                        type="button"
-                        class="form-select form-select-sm habilidades-filtro-select text-start d-flex align-items-center"
-                        :aria-expanded="mostrarDropdownHabilidades"
-                        @click.stop="alternarDropdownHabilidades"
-                    >
-                        <span class="text-truncate" :class="filtros.habilidades.length ? 'text-body' : 'text-secondary'">
-                            {{ rotuloFiltroHabilidades }}
-                        </span>
-                        <i class="bi bi-chevron-down habilidades-filtro-seta"></i>
-                    </button>
-
-                    <div v-if="mostrarDropdownHabilidades" class="habilidades-filtro-dropdown border rounded shadow-sm bg-white mt-1">
-                        <div class="p-2 border-bottom">
-                            <label class="form-label small text-secondary mb-1" for="busca-habilidade-filtro">
-                                <i class="bi bi-search me-1"></i> Buscar habilidade...
-                            </label>
-                            <input
-                                id="busca-habilidade-filtro"
-                                ref="habilidadeBuscaInput"
-                                v-model="buscaHabilidade"
-                                type="text"
-                                class="form-control form-control-sm"
-                                placeholder="Digite parte do nome..."
-                                autocomplete="off"
-                            >
-                        </div>
-
-                        <div class="habilidades-filtro-lista p-2">
-                            <div v-if="carregandoHabilidades" class="small text-secondary py-2 text-center">
-                                <span class="spinner-border spinner-border-sm me-1"></span> Carregando...
-                            </div>
-                            <template v-else-if="habilidadesFiltradas.length">
-                                <label v-for="habilidade in habilidadesFiltradas" :key="habilidade" class="habilidade-filtro-opcao form-check rounded px-2 py-1 mb-1">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
-                                    <span class="form-check-label text-truncate">{{ habilidade }}</span>
-                                </label>
-                            </template>
-                            <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma habilidade encontrada.</p>
-                        </div>
-
-                        <div v-if="filtros.habilidades.length" class="border-top p-2">
-                            <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
-                            <div class="d-flex flex-wrap gap-1">
-                                <span v-for="h in filtros.habilidades" :key="h" class="badge bg-primary-subtle text-primary border habilidade-filtro-badge">
-                                    {{ h }}
-                                    <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" aria-label="Remover habilidade" @click.stop="removerHabilidade(h)">×</button>
-                                </span>
-                            </div>
-                        </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary text-uppercase">Habilidades Técnicas</label>
+                        <button
+                            type="button"
+                            class="form-select form-select-sm habilidades-filtro-select text-start d-flex align-items-center"
+                            data-dropdown-trigger="habilidades"
+                            :aria-expanded="activeDropdown === 'habilidades'"
+                            :ref="(el) => triggerRefs.habilidades = el"
+                            @click.stop="toggleDropdown('habilidades', $event)"
+                        >
+                            <span class="text-truncate" :class="filtros.habilidades.length ? 'text-body' : 'text-secondary'">
+                                {{ rotuloFiltroHabilidades }}
+                            </span>
+                            <i class="bi bi-chevron-down habilidades-filtro-seta"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -282,29 +202,29 @@
                                                     +{{ habilidadesExtras(c) }}
                                                 </span>
                                             </div>
-                                             <div class="d-flex align-items-center flex-wrap gap-2 candidato-metadados-compacto">
-                                                  <small v-if="regioesCard(c).texto" class="text-secondary candidato-regioes-card">
-                                                      <i class="bi bi-geo-alt me-1"></i>{{ regioesCard(c).texto }}
-                                                      <span
-                                                          v-if="regioesCard(c).quantidadeRestante"
-                                                          class="badge bg-light text-secondary border fw-normal ms-1 candidato-regioes-restantes"
-                                                          tabindex="0"
-                                                          :title="regioesCard(c).restantes.map((regiao) => regiao.nome).join('\n')"
-                                                          :aria-label="`${regioesCard(c).quantidadeRestante} outras regiões de interesse: ${regioesCard(c).restantes.map((regiao) => regiao.nome).join(', ')}`"
-                                                      >
-                                                          +{{ regioesCard(c).quantidadeRestante }}
-                                                      </span>
-                                                  </small>
-                                                  <a
-                                                      v-if="telefoneFormatado(c)"
-                                                      class="text-secondary text-decoration-none candidato-contato-link"
-                                                     :href="`tel:${telefoneNormalizado(c)}`"
-                                                     :aria-label="`Telefone: ${telefoneFormatado(c)}`"
-                                                 >
-                                                     <small><i class="bi bi-telephone me-1"></i>{{ telefoneFormatado(c) }}</small>
-                                                 </a>
-                                                 <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</small>
-                                             </div>
+                                            <div class="d-flex align-items-center flex-wrap gap-2 candidato-metadados-compacto">
+                                                <small v-if="regioesCard(c).texto" class="text-secondary candidato-regioes-card">
+                                                    <i class="bi bi-geo-alt me-1"></i>{{ regioesCard(c).texto }}
+                                                    <span
+                                                        v-if="regioesCard(c).quantidadeRestante"
+                                                        class="badge bg-light text-secondary border fw-normal ms-1 candidato-regioes-restantes"
+                                                        tabindex="0"
+                                                        :title="regioesCard(c).restantes.map((regiao) => regiao.nome).join('\n')"
+                                                        :aria-label="`${regioesCard(c).quantidadeRestante} outras regiões de interesse: ${regioesCard(c).restantes.map((regiao) => regiao.nome).join(', ')}`"
+                                                    >
+                                                        +{{ regioesCard(c).quantidadeRestante }}
+                                                    </span>
+                                                </small>
+                                                <a
+                                                    v-if="telefoneFormatado(c)"
+                                                    class="text-secondary text-decoration-none candidato-contato-link"
+                                                    :href="`tel:${telefoneNormalizado(c)}`"
+                                                    :aria-label="`Telefone: ${telefoneFormatado(c)}`"
+                                                >
+                                                    <small><i class="bi bi-telephone me-1"></i>{{ telefoneFormatado(c) }}</small>
+                                                </a>
+                                                <small class="text-secondary"><i class="bi bi-clock me-1"></i>{{ formatarDisponibilidade(c.preferencias_de_trabalho?.disponibilidade_de_horario) }}</small>
+                                            </div>
                                         </div>
                                         <div class="col-12 col-md-auto mt-1 mt-md-0">
                                             <router-link :to="{ name: 'empresa.candidato', params: { matricula: c.matricula } }" class="btn btn-sm btn-primary d-block px-2 py-1">
@@ -334,6 +254,125 @@
             </main>
         </div>
     </div>
+
+    <teleport to="body">
+        <div
+            v-if="activeDropdown"
+            ref="floatingDropdownRef"
+            class="floating-filter-panel border rounded shadow-lg bg-body"
+            :style="floatingDropdownStyle"
+            @click.stop
+        >
+            <template v-if="activeDropdown === 'segmento'">
+                <div class="p-2 border-bottom">
+                    <label class="form-label small text-secondary mb-1" for="busca-segmento-filtro">
+                        <i class="bi bi-search me-1"></i> Pesquisar segmento...
+                    </label>
+                    <input
+                        id="busca-segmento-filtro"
+                        ref="segmentoBuscaInput"
+                        v-model="buscaSegmento"
+                        type="text"
+                        class="form-control form-control-sm"
+                        placeholder="Digite parte do nome..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="filtro-multiselect-lista p-2">
+                    <template v-if="segmentosFiltrados.length">
+                        <label v-for="segmento in segmentosFiltrados" :key="segmento.id" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="segmentoSelecionado(segmento.id)" @change="alternarSegmento(segmento.id)">
+                            <span class="form-check-label">{{ segmento.nome }}</span>
+                        </label>
+                    </template>
+                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhum segmento encontrado.</p>
+                </div>
+            </template>
+
+            <template v-else-if="activeDropdown === 'regioes'">
+                <div class="p-2 border-bottom">
+                    <label class="form-label small text-secondary mb-1" for="busca-regiao-filtro">
+                        <i class="bi bi-search me-1"></i> Pesquisar região...
+                    </label>
+                    <input
+                        id="busca-regiao-filtro"
+                        ref="regiaoBuscaInput"
+                        v-model="buscaRegiao"
+                        type="text"
+                        class="form-control form-control-sm"
+                        placeholder="Digite parte do nome..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="filtro-multiselect-lista p-2">
+                    <template v-if="regioesFiltradas.length">
+                        <label v-for="regiao in regioesFiltradas" :key="regiao.codigo" class="filtro-multiselect-opcao form-check rounded px-2 py-1 mb-1">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="regiaoSelecionada(regiao.codigo)" @change="alternarRegiao(regiao.codigo)">
+                            <span class="form-check-label text-truncate">{{ regiao.label }}</span>
+                        </label>
+                    </template>
+                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma região encontrada.</p>
+                </div>
+            </template>
+
+            <template v-else-if="activeDropdown === 'disponibilidade'">
+                <div class="filtro-multiselect-lista p-2">
+                    <button
+                        v-for="opcao in disponibilidadeOpcoes"
+                        :key="opcao.value"
+                        type="button"
+                        class="btn btn-sm w-100 text-start rounded mb-1"
+                        :class="filtros.disponibilidade === opcao.value ? 'btn-primary' : 'btn-light text-body'"
+                        @click.stop="selecionarDisponibilidade(opcao)"
+                    >
+                        {{ opcao.label }}
+                    </button>
+                </div>
+            </template>
+
+            <template v-else-if="activeDropdown === 'habilidades'">
+                <div class="p-2 border-bottom">
+                    <label class="form-label small text-secondary mb-1" for="busca-habilidade-filtro">
+                        <i class="bi bi-search me-1"></i> Buscar habilidade...
+                    </label>
+                    <input
+                        id="busca-habilidade-filtro"
+                        ref="habilidadeBuscaInput"
+                        v-model="buscaHabilidade"
+                        type="text"
+                        class="form-control form-control-sm"
+                        placeholder="Digite parte do nome..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="habilidades-filtro-lista p-2">
+                    <div v-if="carregandoHabilidades" class="small text-secondary py-2 text-center">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Carregando...
+                    </div>
+                    <template v-else-if="habilidadesFiltradas.length">
+                        <label v-for="habilidade in habilidadesFiltradas" :key="habilidade" class="habilidade-filtro-opcao form-check rounded px-2 py-1 mb-1">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" :checked="habilidadeSelecionada(habilidade)" @change="alternarHabilidade(habilidade)">
+                            <span class="form-check-label text-truncate">{{ habilidade }}</span>
+                        </label>
+                    </template>
+                    <p v-else class="small text-secondary mb-0 py-2 text-center">Nenhuma habilidade encontrada.</p>
+                </div>
+
+                <div v-if="filtros.habilidades.length" class="border-top p-2">
+                    <p class="small text-secondary fw-bold text-uppercase mb-2">Selecionadas</p>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span v-for="h in filtros.habilidades" :key="h" class="badge bg-primary-subtle text-primary border habilidade-filtro-badge">
+                            {{ h }}
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-primary" aria-label="Remover habilidade" @click.stop="removerHabilidade(h)">×</button>
+                        </span>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </teleport>
 </template>
 
 <script setup>
@@ -358,15 +397,28 @@ import {
 } from '../../../utils/downloadCurriculosZip';
 
 const logoSenacSrc = '/img/senac-logo.png';
-
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToast();
 
 const segmentosAcademicos = ref(areasAtuacao.map((area) => ({ id: area, nome: area })));
 const buscaSegmento = ref('');
-const mostrarDropdownSegmentos = ref(false);
-const segmentosDropdownContainer = ref(null);
+const buscaHabilidade = ref('');
+const buscaRegiao = ref('');
+const activeDropdown = ref(null);
+const floatingDropdownRef = ref(null);
+const triggerRefs = reactive({
+    segmento: null,
+    regioes: null,
+    disponibilidade: null,
+    habilidades: null,
+});
+const floatingDropdownStyle = reactive({
+    left: '0px',
+    top: '0px',
+    width: '320px',
+    maxHeight: '320px',
+});
 
 const filtros = reactive({
     segmento: [],
@@ -387,15 +439,6 @@ const limitePaginasZip = LIMITE_PAGINAS_CURRICULOS_ZIP;
 const carregandoHabilidades = ref(false);
 const candidatos = ref([]);
 const habilidadesDisponiveis = ref([]);
-const buscaHabilidade = ref('');
-const buscaRegiao = ref('');
-const mostrarDropdownHabilidades = ref(false);
-const mostrarDropdownRegioes = ref(false);
-const habilidadeBuscaInput = ref(null);
-const regiaoBuscaInput = ref(null);
-const segmentoBuscaInput = ref(null);
-const habilidadesDropdownContainer = ref(null);
-const regioesDropdownContainer = ref(null);
 const paginacao = reactive({
     current_page: 1,
     last_page: 1,
@@ -408,41 +451,35 @@ const formularioCurriculos = reactive({
     paginaInicial: 1,
     paginaFinal: 1,
 });
+const disponibilidadeOpcoes = [
+    { value: '', label: 'Qualquer Horário' },
+    { value: 'Manhã', label: 'Manhã' },
+    { value: 'Tarde', label: 'Tarde' },
+    { value: 'Noite', label: 'Noite' },
+];
 
 const iniciais = computed(() => iniciaisDe(auth.pessoa?.nome || 'Empresa'));
+const disponibilidadeLabel = computed(() => {
+    const opcao = disponibilidadeOpcoes.find((item) => item.value === filtros.disponibilidade);
+    return opcao ? opcao.label : 'Qualquer Horário';
+});
 const rotuloFiltroHabilidades = computed(() => {
     const total = filtros.habilidades.length;
-
-    if (!total) {
-        return 'Selecione habilidades...';
-    }
-
+    if (!total) return 'Selecione habilidades...';
     return total === 1 ? '1 habilidade selecionada' : `${total} habilidades selecionadas`;
 });
 const rotuloFiltroRegioes = computed(() => {
     const total = filtros.regioes_administrativas.length;
-
-    if (!total) {
-        return 'Selecione regiões...';
-    }
-
+    if (!total) return 'Selecione regiões...';
     if (total === 1) {
         return regioesAdministrativasDf.find((regiao) => regiao.codigo === filtros.regioes_administrativas[0])?.label || '1 região selecionada';
     }
-
     return `${total} regiões selecionadas`;
 });
 const rotuloFiltroSegmentos = computed(() => {
     const total = filtros.segmento.length;
-
-    if (!total) {
-        return 'Selecione segmentos...';
-    }
-
-    if (total === 1) {
-        return filtros.segmento[0];
-    }
-
+    if (!total) return 'Selecione segmentos...';
+    if (total === 1) return filtros.segmento[0];
     return `${total} segmentos selecionados`;
 });
 const segmentosFiltrados = computed(() => {
@@ -451,20 +488,14 @@ const segmentosFiltrados = computed(() => {
 });
 const habilidadesFiltradas = computed(() => {
     const termo = normalizarTexto(buscaHabilidade.value);
-
-    if (!termo) {
-        return habilidadesDisponiveis.value;
-    }
-
+    if (!termo) return habilidadesDisponiveis.value;
     return habilidadesDisponiveis.value.filter((habilidade) => normalizarTexto(habilidade).includes(termo));
 });
 const regioesFiltradas = computed(() => {
     const termo = normalizarTexto(buscaRegiao.value);
     const termoSemEspacos = termo.replace(/\s+/g, '');
 
-    if (!termo) {
-        return regioesAdministrativasDf;
-    }
+    if (!termo) return regioesAdministrativasDf;
 
     return regioesAdministrativasDf.filter((regiao) => {
         const texto = normalizarTexto(`${regiao.label} ${regiao.nome}`);
@@ -472,17 +503,9 @@ const regioesFiltradas = computed(() => {
     });
 });
 
-watch(() => [...filtros.habilidades], () => {
-    paginacao.current_page = 1;
-});
-
-watch(() => [...filtros.regioes_administrativas], () => {
-    paginacao.current_page = 1;
-});
-
-watch(() => [...filtros.segmento], () => {
-    paginacao.current_page = 1;
-});
+watch(() => [...filtros.habilidades], () => { paginacao.current_page = 1; });
+watch(() => [...filtros.regioes_administrativas], () => { paginacao.current_page = 1; });
+watch(() => [...filtros.segmento], () => { paginacao.current_page = 1; });
 
 function iniciaisDe(nome) {
     return (nome || '')
@@ -590,44 +613,88 @@ function removerHabilidade(habilidade) {
     }
 }
 
-function alternarDropdownHabilidades() {
-    mostrarDropdownHabilidades.value = !mostrarDropdownHabilidades.value;
+function atualizarPosicaoPainelFlutuante(trigger = null) {
+    const origem = trigger || (activeDropdown.value ? triggerRefs[activeDropdown.value] : null);
 
-    if (mostrarDropdownHabilidades.value) {
-        nextTick(() => habilidadeBuscaInput.value?.focus());
+    if (!origem) {
+        return;
     }
-}
 
-function fecharDropdownHabilidades() {
-    mostrarDropdownHabilidades.value = false;
-    buscaHabilidade.value = '';
-}
+    const rect = origem.getBoundingClientRect();
+    const larguraPainel = Math.min(Math.max(rect.width, 240), 360);
+    const alturaMaxima = Math.min(320, window.innerHeight - 48);
 
-function alternarDropdownRegioes() {
-    mostrarDropdownRegioes.value = !mostrarDropdownRegioes.value;
-
-    if (mostrarDropdownRegioes.value) {
-        nextTick(() => regiaoBuscaInput.value?.focus());
+    if (window.innerWidth <= 991) {
+        floatingDropdownStyle.left = `${Math.max(12, rect.left)}px`;
+        floatingDropdownStyle.top = `${Math.min(window.innerHeight - alturaMaxima - 12, Math.max(12, rect.bottom + 8))}px`;
+        floatingDropdownStyle.width = `${Math.min(larguraPainel, window.innerWidth - 24)}px`;
+        floatingDropdownStyle.maxHeight = `${alturaMaxima}px`;
+        return;
     }
+
+    let left = rect.right + 8;
+    let top = rect.top;
+
+    if (left + larguraPainel > window.innerWidth - 12) {
+        left = rect.left - larguraPainel - 8;
+        if (left < 12) {
+            left = Math.max(12, rect.left + 8);
+        }
+    }
+
+    if (top + alturaMaxima > window.innerHeight - 12) {
+        top = Math.max(12, window.innerHeight - alturaMaxima - 12);
+    }
+
+    floatingDropdownStyle.left = `${Math.max(12, left)}px`;
+    floatingDropdownStyle.top = `${Math.max(12, top)}px`;
+    floatingDropdownStyle.width = `${larguraPainel}px`;
+    floatingDropdownStyle.maxHeight = `${alturaMaxima}px`;
 }
 
-function fecharDropdownRegioes() {
-    mostrarDropdownRegioes.value = false;
-    buscaRegiao.value = '';
+function abrirDropdown(chave, evento) {
+    const trigger = evento?.currentTarget || triggerRefs[chave];
+    if (!trigger) return;
+
+    activeDropdown.value = chave;
+    atualizarPosicaoPainelFlutuante(trigger);
+
+    nextTick(() => {
+        if (chave === 'segmento') segmentoBuscaInput.value?.focus();
+        if (chave === 'regioes') regiaoBuscaInput.value?.focus();
+        if (chave === 'habilidades') habilidadeBuscaInput.value?.focus();
+    });
+}
+
+function toggleDropdown(chave, evento) {
+    if (activeDropdown.value === chave) {
+        activeDropdown.value = null;
+        return;
+    }
+
+    abrirDropdown(chave, evento);
+}
+
+function fecharDropdown() {
+    activeDropdown.value = null;
 }
 
 function aoClicarForaDosDropdowns(evento) {
-    if (segmentosDropdownContainer.value && !segmentosDropdownContainer.value.contains(evento.target)) {
-        fecharDropdownSegmentos();
-    }
+    if (!activeDropdown.value) return;
 
-    if (habilidadesDropdownContainer.value && !habilidadesDropdownContainer.value.contains(evento.target)) {
-        fecharDropdownHabilidades();
-    }
+    const alvo = evento.target;
+    const triggerAtual = triggerRefs[activeDropdown.value];
+    const dentroDoPainel = floatingDropdownRef.value?.contains(alvo);
+    const dentroDoTrigger = !!(triggerAtual && triggerAtual.contains(alvo));
 
-    if (regioesDropdownContainer.value && !regioesDropdownContainer.value.contains(evento.target)) {
-        fecharDropdownRegioes();
+    if (!dentroDoPainel && !dentroDoTrigger) {
+        fecharDropdown();
     }
+}
+
+function selecionarDisponibilidade(opcao) {
+    filtros.disponibilidade = opcao.value;
+    fecharDropdown();
 }
 
 function segmentoSelecionado(segmento) {
@@ -636,26 +703,11 @@ function segmentoSelecionado(segmento) {
 
 function alternarSegmento(segmento) {
     const indice = filtros.segmento.indexOf(segmento);
-
     if (indice >= 0) {
         filtros.segmento.splice(indice, 1);
         return;
     }
-
     filtros.segmento.push(segmento);
-}
-
-function alternarDropdownSegmentos() {
-    mostrarDropdownSegmentos.value = !mostrarDropdownSegmentos.value;
-
-    if (mostrarDropdownSegmentos.value) {
-        nextTick(() => segmentoBuscaInput.value?.focus());
-    }
-}
-
-function fecharDropdownSegmentos() {
-    mostrarDropdownSegmentos.value = false;
-    buscaSegmento.value = '';
 }
 
 async function carregarHabilidadesDisponiveis() {
@@ -688,7 +740,6 @@ function parametrosBusca(pagina = 1) {
 
 function parametrosCurriculos(paginaInicial, paginaFinal) {
     const { page, per_page, ...filtrosAtuais } = parametrosBusca(paginacao.current_page || 1);
-
     return {
         ...filtrosAtuais,
         pagina_inicial: paginaInicial,
@@ -818,7 +869,6 @@ function mudarPagina(pagina) {
 function limparFiltros() {
     filtros.segmento = [];
     buscaSegmento.value = '';
-    fecharDropdownSegmentos();
     filtros.clt = false;
     filtros.estagio = false;
     filtros.regioes_administrativas = [];
@@ -826,8 +876,7 @@ function limparFiltros() {
     filtros.habilidades = [];
     buscaHabilidade.value = '';
     buscaRegiao.value = '';
-    fecharDropdownHabilidades();
-    fecharDropdownRegioes();
+    fecharDropdown();
     buscar(1);
 }
 
@@ -836,14 +885,32 @@ async function sair() {
     router.push({ name: 'login' });
 }
 
+function aoScrollOuResize() {
+    if (activeDropdown.value) {
+        atualizarPosicaoPainelFlutuante();
+    }
+}
+
+function tratarTeclaEsc(evento) {
+    if (evento.key === 'Escape' && activeDropdown.value) {
+        fecharDropdown();
+    }
+}
+
 onMounted(() => {
     buscar();
     carregarHabilidadesDisponiveis();
     document.addEventListener('click', aoClicarForaDosDropdowns);
+    document.addEventListener('keydown', tratarTeclaEsc);
+    window.addEventListener('scroll', aoScrollOuResize, true);
+    window.addEventListener('resize', aoScrollOuResize);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', aoClicarForaDosDropdowns);
+    document.removeEventListener('keydown', tratarTeclaEsc);
+    window.removeEventListener('scroll', aoScrollOuResize, true);
+    window.removeEventListener('resize', aoScrollOuResize);
 });
 </script>
 
@@ -934,20 +1001,12 @@ onBeforeUnmount(() => {
     pointer-events: none;
 }
 
-.habilidades-filtro-dropdown,
-.filtro-multiselect-dropdown {
-    position: absolute;
-    left: 0;
-    top: 100%;
-    z-index: 1050;
-    width: 100%;
-    max-width: 100%;
-}
-
-.habilidades-filtro-dropdown {
-    top: auto;
-    bottom: calc(100% + 0.25rem);
-    margin-top: 0 !important;
+.floating-filter-panel {
+    position: fixed;
+    z-index: 2000;
+    background: var(--bs-body-bg, #fff);
+    border-color: var(--bs-border-color, rgba(0, 0, 0, 0.08));
+    overflow: hidden;
 }
 
 .habilidades-filtro-lista,
