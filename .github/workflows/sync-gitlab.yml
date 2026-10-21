@@ -1,0 +1,51 @@
+name: Mirror para GitLab SENAC
+
+# A cada push no GitHub, tenta espelhar o codigo para o GitLab do Senac.
+# ATENCAO: o WAF (Azure Front Door) do GitLab do Senac bloqueia os runners do
+# GitHub Actions ("AFD - WAF Block"). Nesse caso o job apenas avisa e conclui.
+# A sincronizacao real esta garantida pelo hook local .git/hooks/pre-push.
+# Requer o secret GITLAB_TOKEN em Settings > Secrets and variables > Actions.
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (historia completa)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror para o GitLab SENAC
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          set -e
+          export GIT_TERMINAL_PROMPT=0
+
+          echo "Verificando alcancabilidade do GitLab a partir do GitHub Actions..."
+          resp=$(curl -sS --max-time 20 "https://gitlab.edu.df.senac.br" 2>&1 || true)
+          if echo "${resp}" | grep -qi "WAF Block\|AFD -"; then
+            echo "::warning::O WAF (Azure Front Door) do GitLab do Senac bloqueia os runners do GitHub Actions. Mirror no servidor IGNORADO - a sincronizacao local (hook pre-push) continua funcionando. Para liberar, solicite ao TI do Senac a liberacao dos IPs do GitHub Actions no WAF."
+            exit 0
+          fi
+
+          if [ -z "${GITLAB_TOKEN}" ]; then
+            echo "::error::Secret GITLAB_TOKEN ausente ou vazio. Configure em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          git remote remove gitlab 2>/dev/null || true
+          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.edu.df.senac.br/Rafael51555207/ses.git"
+
+          if ! out=$(git ls-remote gitlab HEAD 2>&1); then
+            echo "::error::git ls-remote falhou. Saida do git: ${out}"
+            exit 1
+          fi
+
+          git push gitlab "refs/heads/${GITHUB_REF_NAME}:refs/heads/${GITHUB_REF_NAME}" --force
+          echo "::notice::Mirror para o GitLab concluido com sucesso (branch ${GITHUB_REF_NAME})."
