@@ -12,10 +12,13 @@ use App\Models\Empresa;
 use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
 use App\Models\ResponsavelContratual;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\GeneratesMatricula;
@@ -1539,6 +1542,75 @@ class CandidatoInatividadeTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('confirmar_encerramento');
         $this->assertDatabaseCount('candidato_reativacao_questionarios', 0);
+    }
+
+    public function test_todas_as_alternativas_validas_das_8_perguntas_sao_aceitas_e_invalidas_recusadas(): void
+    {
+        $aceitas = 0;
+        foreach (range(1, 8) as $numero) {
+            [, , $tokenLeitura] = $this->candidatoComPerguntaPendente($numero);
+            $pergunta = $this->withToken($tokenLeitura)->getJson('/api/me/reativacao-questionario')->assertOk()->json('pergunta');
+            $this->withToken($tokenLeitura)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => $numero, 'resposta_' . $numero => $pergunta['multipla'] ? ['invalida'] : 'invalida'])
+                ->assertUnprocessable();
+
+            $envios = $pergunta['multipla']
+                ? [array_column($pergunta['opcoes'], 'valor')]
+                : array_column($pergunta['opcoes'], 'valor');
+
+            foreach ($envios as $valor) {
+                $saida = is_string($valor) ? collect($pergunta['opcoes'])->firstWhere('valor', $valor)['saida'] : null;
+                // Condicional (autônomo): testa os dois caminhos, continuar e sair.
+                foreach ($saida === 'perguntar' ? [false, true] : [false] as $sairNaCondicional) {
+                    [, $candidato, $token] = $this->candidatoComPerguntaPendente($numero);
+                    $resposta = $this->responderPerguntaPendente($token, $numero, $valor, $sairNaCondicional);
+
+                    $encerra = $saida === 'confirmar' || $sairNaCondicional;
+                    $this->assertSame($encerra ? 'ENCERRAMENTO_SOLICITADO' : 'REATIVADO', $resposta->json('resultado'), "P{$numero} = " . json_encode($valor));
+                    $salvo = CandidatoReativacaoQuestionario::query()->where('candidato_matricula', $candidato->matricula)->where('pergunta_numero', $numero)->sole();
+                    $this->assertSame($valor, $salvo->{'resposta_' . $numero});
+                    $aceitas++;
+                }
+            }
+        }
+
+        // 2 + 3 + (4 + 1 do autônomo) + 1 (P4 múltipla) + 5 + 4 + 3 + 2
+        $this->assertSame(25, $aceitas);
+    }
+
+    public function test_banco_sem_ultima_atualizacao_real_em_falha_ao_reativar_e_migration_corrige(): void
+    {
+        if (DB::connection()->getDriverName() === 'mysql') {
+            $this->markTestSkipped('No MySQL o DROP COLUMN faz commit implícito e quebra a transação do RefreshDatabase; cenário validado no servidor isolado.');
+        }
+
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        // Banco que executou a 2026_10_06 original: a coluna nunca foi criada.
+        Schema::table('candidato', function (Blueprint $table) {
+            $table->dropIndex(['ultima_atualizacao_real_em']);
+            $table->dropColumn('ultima_atualizacao_real_em');
+        });
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1);
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertStatus(500);
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 0);
+
+        $migration = database_path('migrations/2026_10_21_000003_ensure_ultima_atualizacao_real_em_on_candidato_table.php');
+        (require $migration)->up();
+        (require $migration)->up(); // idempotente: rodar de novo não falha
+        $this->assertTrue(Schema::hasColumn('candidato', 'ultima_atualizacao_real_em'));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertOk()
+            ->assertJsonPath('resultado', 'REATIVADO');
+        // Sem dado prévio, o marco do ciclo é congelado a partir de ultima_atividade_em (prazo não reinicia).
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
     }
 
     /**

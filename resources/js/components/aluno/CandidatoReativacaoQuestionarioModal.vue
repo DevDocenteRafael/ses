@@ -117,7 +117,8 @@ const form = reactive({ resposta_1: '', resposta_2: '', resposta_3: '', resposta
 let pollTimer = null;
 
 const mensagemClasse = computed(() => mensagemTipo.value === 'sucesso' ? 'alert-success' : 'alert-danger');
-const deveExibirModal = computed(() => !carregando.value && !erro.value && !!pergunta.value);
+// Também exibe o modal quando o carregamento falha, para o candidato ver o motivo e poder tentar de novo.
+const deveExibirModal = computed(() => !carregando.value && (!!erro.value || !!pergunta.value));
 const deveExibirAcoes = computed(() => !!pergunta.value && !carregando.value && !erro.value);
 const podeConfirmar = computed(() => {
     if (!pergunta.value || carregando.value || salvando.value) {
@@ -198,21 +199,47 @@ async function carregarPergunta() {
             form[chave] = chave === 'resposta_4' ? [] : '';
         });
     } catch (error) {
-        erro.value = mensagemErroSegura(error, 'Não foi possível carregar a pergunta. Tente novamente.');
+        erro.value = mensagemErroSegura(error, 'carregar a pergunta', { manterSelecao: false });
     } finally {
         carregando.value = false;
     }
 }
 
-function mensagemErroSegura(error, padrao) {
+/**
+ * Mensagem específica por tipo de falha, sem expor SQL, stack trace ou nomes internos
+ * (esses detalhes ficam no log do Laravel). A seleção do candidato nunca é descartada.
+ * 401 não chega aqui: o interceptor de api.js já redireciona para o login.
+ */
+function mensagemErroSegura(error, acao, { manterSelecao = true } = {}) {
     const status = error?.response?.status;
     const mensagemBackend = error?.response?.data?.message;
+    const selecao = manterSelecao ? ' Sua seleção foi mantida.' : '';
+
+    if (!error?.response) {
+        return `Não foi possível ${acao}: sem conexão com o servidor. Verifique sua internet e tente novamente.${selecao}`;
+    }
 
     if (status === 422 && typeof mensagemBackend === 'string' && mensagemBackend) {
         return mensagemBackend;
     }
 
-    return padrao;
+    if (status === 419) {
+        return `Sua sessão expirou. Atualize a página (tecla F5) e entre novamente para ${acao}.`;
+    }
+
+    if (status === 403) {
+        return `Não foi possível ${acao}: seu acesso não está liberado no momento. Saia e entre novamente; se continuar, procure o suporte.`;
+    }
+
+    if (status === 404 || status === 405) {
+        return `O portal foi atualizado e esta página está desatualizada. Atualize a página (tecla F5) para ${acao}.`;
+    }
+
+    if (status >= 500) {
+        return `Não foi possível ${acao} por uma falha no servidor (código ${status}).${selecao} Tente novamente em instantes; se o erro continuar, informe o suporte.`;
+    }
+
+    return `Não foi possível ${acao}. Tente novamente.${selecao}`;
 }
 
 function validar() {
@@ -315,7 +342,7 @@ async function confirmarSaida() {
         // Decisão salva: o layout encerra a sessão e leva ao login. "salvando" segue true para bloquear novos cliques.
         emit('encerrado', data);
     } catch (error) {
-        erroSaida.value = mensagemErroSegura(error, 'Não foi possível registrar sua decisão. Tente novamente.');
+        erroSaida.value = mensagemErroSegura(error, 'registrar sua decisão');
         salvando.value = false;
     }
 }
@@ -339,7 +366,7 @@ async function enviarResposta() {
     } catch (error) {
         // Detalhes técnicos (SQL, stack trace) ficam no log do Laravel; só erros de validação chegam ao candidato.
         mensagemTipo.value = 'erro';
-        mensagem.value = mensagemErroSegura(error, 'Não foi possível salvar sua resposta. Tente novamente.');
+        mensagem.value = mensagemErroSegura(error, 'salvar sua resposta');
         const backend = error?.response?.status === 422 ? (error.response.data?.errors || {}) : {};
         Object.keys(backend).forEach((campo) => { erros[campo] = backend[campo][0]; });
     } finally {
