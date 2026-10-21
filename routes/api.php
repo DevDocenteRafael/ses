@@ -36,6 +36,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('candidatos', [CandidatoController::class, 'store']);
     Route::post('empresas', [EmpresaController::class, 'store']);
     Route::get('me/curriculo', [CurriculoCandidatoController::class, 'showAluno']);
+    Route::get('me/reativacao-questionario', [CandidatoReativacaoQuestionarioController::class, 'show']);
     Route::post('me/reativacao-questionario', [CandidatoReativacaoQuestionarioController::class, 'store']);
 
     // Candidatos

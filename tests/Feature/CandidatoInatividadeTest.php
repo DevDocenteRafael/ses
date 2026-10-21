@@ -17,9 +17,11 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\GeneratesMatricula;
 use Tests\TestCase;
 use App\Services\Candidatos\CandidatoStatusService;
+use App\Models\CandidatoReativacaoQuestionario;
 
 class CandidatoInatividadeTest extends TestCase
 {
@@ -32,6 +34,8 @@ class CandidatoInatividadeTest extends TestCase
         config([
             'candidato.inatividade_habilitada' => true,
             'candidato.inatividade_segundos' => 30,
+            // Não herdar PERGUNTAS_MODO_TESTE do .env local; testes do modo 30 s ativam explicitamente.
+            'candidato.perguntas_modo_teste' => false,
         ]);
     }
 
@@ -146,7 +150,7 @@ class CandidatoInatividadeTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
         [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(31));
 
-        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['resposta_1' => 'encerrar_cadastro'])
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['resposta_1' => 'encerrar_cadastro', 'confirmar_encerramento' => true])
             ->assertOk()
             ->assertJsonPath('reativado', false)
             ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
@@ -528,7 +532,7 @@ class CandidatoInatividadeTest extends TestCase
             ->assertJsonPath('data.0.candidato.matricula', (string) $contratadoInativo->matricula);
     }
 
-    private function criarCandidato(bool $status = true, ?Carbon $ultimaAtividade = null): array
+    private function criarCandidato(bool $status = true, ?Carbon $ultimaAtividade = null, ?Carbon $ultimaAtualizacaoReal = null): array
     {
         $pessoa = Pessoa::query()->create([
             'nome' => 'Aluno Teste',
@@ -543,6 +547,7 @@ class CandidatoInatividadeTest extends TestCase
             'cpf' => (string) random_int(10000000000, 99999999999),
             'status' => $status,
             'ultima_atividade_em' => $ultimaAtividade ?? now(),
+            'ultima_atualizacao_real_em' => $ultimaAtualizacaoReal ?? ($ultimaAtividade ?? now()),
             'pessoa_id_pessoa' => $pessoa->id_pessoa,
         ]);
 
@@ -675,5 +680,934 @@ class CandidatoInatividadeTest extends TestCase
 
             return true;
         });
+    }
+
+    public function test_get_pergunta_trimestral_retorna_estrutura_esperada_para_frontend(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, , $token] = $this->criarCandidato(ultimaAtividade: now()->subMonths(3)->subDay());
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.campo', 'resposta_1')
+            ->assertJsonPath('pergunta.titulo', 'Você deseja manter seu cadastro ativo no Sistema de Empregabilidade do Senac?')
+            ->assertJsonCount(2, 'pergunta.opcoes');
+    }
+
+    public function test_get_pergunta_trimestral_sem_pendencia_retorna_estado_explicito(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, , $token] = $this->criarCandidato(ultimaAtividade: now()->subMonths(2));
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false)
+            ->assertJsonPath('pergunta', null);
+    }
+
+    public function test_pergunta_trimestral_primeira_aparece_apos_3_meses_e_nao_reaparece_apos_resposta(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [$pessoa, $candidato, $token] = $this->criarCandidato(
+            ultimaAtividade: now()->subMonths(3)->subDay(),
+            ultimaAtualizacaoReal: now()->subMonths(3)->subDay(),
+        );
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.titulo', 'Você deseja manter seu cadastro ativo no Sistema de Empregabilidade do Senac?')
+            ->assertJsonPath('pergunta.opcoes.0.valor', 'manter_ativo')
+            ->assertJsonPath('pergunta.opcoes.1.valor', 'encerrar_cadastro');
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+            'pergunta_numero' => 1,
+            'resposta_1' => 'manter_ativo',
+        ])->assertOk()
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.inativo', false)
+            ->assertJsonPath('message', 'Cadastro reativado com sucesso.');
+
+        $this->assertDatabaseHas('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'pergunta_numero' => 1,
+            'resposta_1' => 'manter_ativo',
+        ]);
+
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo(now()->subMonths(3)->subDay()));
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false)
+            ->assertJsonPath('pergunta', null);
+    }
+
+    public function test_pergunta_2_aparece_apos_6_meses_sem_reapresentar_pergunta_1(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $ultimaAtualizacaoReal = now()->subMonths(6);
+        [, $candidato, $token] = $this->criarCandidato(
+            ultimaAtividade: $ultimaAtualizacaoReal,
+            ultimaAtualizacaoReal: $ultimaAtualizacaoReal,
+        );
+
+        CandidatoReativacaoQuestionario::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'bloqueado_em' => $ultimaAtualizacaoReal->copy()->startOfSecond(),
+            'ciclo_inicio_em' => $ultimaAtualizacaoReal->copy()->startOfSecond(),
+            'pergunta_numero' => 1,
+            'resultado' => 'RESPONDIDA',
+            'concluido_em' => now(),
+            'resposta_1' => 'manter_ativo',
+        ]);
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', 2)
+            ->assertJsonPath('pergunta.titulo', 'Atualmente, você está buscando uma oportunidade de emprego ou estágio na área em que se formou no Senac?');
+    }
+
+    public function test_modo_teste_30_segundos_apresenta_pergunta_1_e_2_respeitando_historico(): void
+    {
+        config([
+            'candidato.perguntas_modo_teste' => true,
+            'candidato.perguntas_intervalo_teste_segundos' => 30,
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, $candidato, $token] = $this->criarCandidato(
+            ultimaAtividade: now()->subSeconds(31),
+            ultimaAtualizacaoReal: now()->subSeconds(31),
+        );
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', 1);
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+            'pergunta_numero' => 1,
+            'resposta_1' => 'manter_ativo',
+        ])->assertOk();
+
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:30'));
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', 2)
+            ->assertJsonPath('pergunta.titulo', 'Atualmente, você está buscando uma oportunidade de emprego ou estágio na área em que se formou no Senac?');
+
+        $this->assertDatabaseHas('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'pergunta_numero' => 1,
+            'resposta_1' => 'manter_ativo',
+        ]);
+    }
+
+    public static function respostasPorPergunta(): array
+    {
+        return [
+            'pergunta 1' => [1, 'encerrar_cadastro'],
+            'pergunta 2' => [2, 'buscando_area_senac'],
+            'pergunta 3' => [3, 'trabalhando_busco'],
+            'pergunta 4' => [4, ['estagio', 'temporario']],
+            'pergunta 5' => [5, 'manha'],
+            'pergunta 6' => [6, 'apenas_online'],
+            'pergunta 7' => [7, 'atualizar_contato'],
+            'pergunta 8' => [8, 'desejo_atualizar'],
+        ];
+    }
+
+    #[DataProvider('respostasPorPergunta')]
+    public function test_cada_pergunta_e_salva_individualmente_preservando_historico(int $numero, string|array $valor): void
+    {
+        $this->ativarModoTestePerguntas();
+        $agora = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($agora);
+        $marco = $agora->copy()->subSeconds($numero * 30 + 1);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        $cicloAnterior = $this->registrarRespostaHistorica($candidato, $marco->copy()->subDay(), $numero, $valor);
+        foreach ($numero > 1 ? range(1, $numero - 1) : [] as $anterior) {
+            $this->registrarRespostaHistorica($candidato, $marco, $anterior, $anterior === 1 ? 'manter_ativo' : self::respostasPorPergunta()['pergunta ' . $anterior][1]);
+        }
+        $historicoAntes = CandidatoReativacaoQuestionario::query()->orderBy('id')->get()->map->getAttributes()->all();
+
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', $numero)
+            ->assertJsonPath('pergunta.campo', 'resposta_' . $numero);
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+            'pergunta_numero' => $numero,
+            'resposta_' . $numero => $valor,
+            ...($valor === 'encerrar_cadastro' ? ['confirmar_encerramento' => true] : []),
+        ])->assertOk()
+            ->assertJsonPath('pergunta.numero', $numero);
+
+        $salvo = CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)
+            ->where('ciclo_inicio_em', $marco->copy()->startOfSecond())
+            ->where('pergunta_numero', $numero)
+            ->sole();
+
+        $this->assertSame($valor, $salvo->{'resposta_' . $numero});
+        $this->assertTrue($salvo->concluido_em->equalTo($agora));
+        foreach (range(1, 8) as $outra) {
+            if ($outra !== $numero) {
+                $this->assertNull($salvo->{'resposta_' . $outra}, "resposta_{$outra} deveria ficar NULL");
+            }
+        }
+
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', count($historicoAntes) + 1);
+        $historicoDepois = CandidatoReativacaoQuestionario::query()
+            ->whereKey(array_column($historicoAntes, 'id'))
+            ->orderBy('id')
+            ->get()->map->getAttributes()->all();
+        $this->assertSame($historicoAntes, $historicoDepois);
+        $this->assertNotNull($cicloAnterior->fresh());
+
+        $seguinte = $this->withToken($token)->getJson('/api/me/reativacao-questionario')->assertOk();
+        if ($valor === 'encerrar_cadastro') {
+            // Encerramento vigente: só a P1 de reconsideração pode reaparecer.
+            $seguinte->assertJsonPath('pergunta.numero', 1)->assertJsonPath('pergunta.reconsideracao', true);
+        } else {
+            $seguinte->assertJsonPath('tem_pergunta', false);
+        }
+    }
+
+    public function test_modo_teste_apresenta_as_8_perguntas_a_cada_30_segundos_sem_reiniciar_contagem(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $marco = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($marco);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        Carbon::setTestNow($marco->copy()->addSeconds(29));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false);
+
+        foreach (self::respostasPorPergunta() as [$numero, $valor]) {
+            Carbon::setTestNow($marco->copy()->addSeconds($numero * 30));
+
+            $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+                ->assertOk()
+                ->assertJsonPath('tem_pergunta', true)
+                ->assertJsonPath('pergunta.numero', $numero);
+
+            $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+                'pergunta_numero' => $numero,
+                'resposta_' . $numero => $numero === 1 ? 'manter_ativo' : $valor,
+            ])->assertOk();
+
+            $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+                ->assertOk()
+                ->assertJsonPath('tem_pergunta', false);
+
+            $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+        }
+
+        $registros = CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)
+            ->orderBy('pergunta_numero')
+            ->get();
+
+        $this->assertSame(range(1, 8), $registros->pluck('pergunta_numero')->all());
+        $this->assertSame('manter_ativo', $registros[0]->resposta_1);
+        $this->assertSame(['estagio', 'temporario'], $registros[3]->resposta_4);
+        $this->assertSame('manha', $registros[4]->resposta_5);
+        $this->assertSame('desejo_atualizar', $registros[7]->resposta_8);
+
+        Carbon::setTestNow($marco->copy()->addSeconds(600));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false);
+    }
+
+    public function test_modo_teste_libera_no_maximo_uma_resposta_por_intervalo_vencido(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $marco = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($marco->copy()->addSeconds(61));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $this->registrarRespostaHistorica($candidato, $marco, 1, 'manter_ativo');
+        $this->registrarRespostaHistorica($candidato, $marco, 2, 'buscando_area_senac');
+
+        // 2 intervalos vencidos e 2 respostas: nada pendente até o 3º intervalo.
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false);
+
+        Carbon::setTestNow($marco->copy()->addSeconds(90));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 3);
+    }
+
+    public function test_modo_teste_atrasado_confirmando_cadastro_segue_p1_p2_p3_e_para(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $marco = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($marco->copy()->addSeconds(91));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        $this->responderPerguntaPendente($token, 1, 'manter_ativo')->assertJsonPath('reativado', true);
+        $this->assertSame(CandidatoStatusService::ATIVO, app(CandidatoStatusService::class)->estadoEfetivo($candidato->fresh()));
+
+        // Volta a ficar inativo (30 s sem atividade) aos 121 s: 4 intervalos vencidos, 1 respondido → P2.
+        Carbon::setTestNow($marco->copy()->addSeconds(121));
+        $this->responderPerguntaPendente($token, 2, 'buscando_area_senac')->assertJsonPath('reativado', true);
+
+        Carbon::setTestNow($marco->copy()->addSeconds(151));
+        $this->responderPerguntaPendente($token, 3, 'nao_trabalhando');
+
+        $this->assertSame([1, 2, 3], CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)->orderBy('pergunta_numero')->pluck('pergunta_numero')->all());
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+    }
+
+    public function test_dois_candidatos_com_mesmo_marco_tem_historico_e_sequencia_independentes(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $marco = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($marco);
+        [, $candidatoA, $tokenA] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        [, $candidatoB, $tokenB] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        // A responde P1 (30 s) e P2 (60 s).
+        Carbon::setTestNow($marco->copy()->addSeconds(30));
+        $this->responderPerguntaPendente($tokenA, 1, 'manter_ativo');
+        Carbon::setTestNow($marco->copy()->addSeconds(60));
+        $this->responderPerguntaPendente($tokenA, 2, 'buscando_area_senac');
+
+        // B acessa aos 90 s, quando o relógio dele permitiria até a P3: continua na P1.
+        Carbon::setTestNow($marco->copy()->addSeconds(90));
+        $historicoA = $this->historico($candidatoA);
+        $this->withToken($tokenB)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1);
+        $this->assertSame([], $this->historico($candidatoB));
+
+        // Alternância A -> B -> A -> B.
+        $this->responderPerguntaPendente($tokenA, 3, 'nao_trabalhando');
+        $this->responderPerguntaPendente($tokenB, 1, 'encerrar_cadastro');
+        $this->withToken($tokenA)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', false);
+        $this->withToken($tokenB)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true);
+
+        $this->assertSame(array_merge($historicoA, [[3, 'nao_trabalhando']]), $this->historico($candidatoA));
+        $this->assertSame([[1, 'encerrar_cadastro']], $this->historico($candidatoB));
+        $this->assertSame(CandidatoStatusService::ATIVO, app(CandidatoStatusService::class)->estadoEfetivo($candidatoA->fresh()));
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, app(CandidatoStatusService::class)->estadoEfetivo($candidatoB->fresh()));
+    }
+
+    public function test_cenario_a_candidato_ativo_responde_e_permanece_ativo_sem_reativacao(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(5), ultimaAtualizacaoReal: now()->subSeconds(31));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertOk()
+            ->assertJsonPath('reativado', false)
+            ->assertJsonPath('resultado', 'RESPONDIDA')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+
+        $this->assertTrue($candidato->fresh()->ultima_atividade_em->equalTo(now()->subSeconds(5)));
+    }
+
+    public function test_cenario_b_pergunta_comum_sem_confirmacao_nao_reativa_e_confirmacao_reativa(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(241);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        // Caso real observado: P8 respondida sem P1 no ciclo.
+        $this->registrarRespostaHistorica($candidato, $marco, 8, 'mesmas_informacoes');
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 2, 'resposta_2' => 'buscando_area_senac'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('pergunta_numero');
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, app(CandidatoStatusService::class)->estadoEfetivo($candidato->fresh()));
+
+        $this->responderPerguntaPendente($token, 1, 'manter_ativo')
+            ->assertJsonPath('reativado', true)
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+        $this->assertTrue((bool) $candidato->fresh()->status);
+    }
+
+    public function test_cenario_c_bloqueio_administrativo_nao_e_removido_pelo_questionario(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(status: false, ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        $resposta = $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo']);
+        $this->assertContains($resposta->status(), [403, 422]);
+
+        $this->assertFalse((bool) $candidato->fresh()->status);
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_MANUALMENTE, app(CandidatoStatusService::class)->estadoEfetivo($candidato->fresh()));
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 0);
+    }
+
+    public function test_cenario_d_encerrar_cadastro_mantem_inativo_e_so_reapresenta_p1(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro')
+            ->assertJsonPath('reativado', false)
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+
+        // Mesmo com mais intervalos vencidos, nunca avança para a P2 enquanto o encerramento vigorar.
+        Carbon::setTestNow(now()->addSeconds(120));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true);
+        $this->assertTrue($candidato->fresh()->ultima_atividade_em->equalTo($marco));
+    }
+
+    public function test_marco_nulo_e_congelado_na_reativacao_e_ciclo_nao_reinicia(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $marco = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($marco->copy()->addSeconds(31));
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco);
+        // Mesmo estado dos candidatos semeados no banco local (insert direto, sem o hook do model).
+        Candidato::query()->whereKey($candidato->matricula)->update(['ultima_atualizacao_real_em' => null]);
+
+        $this->responderPerguntaPendente($token, 1, 'manter_ativo')->assertJsonPath('reativado', true);
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+
+        Carbon::setTestNow($marco->copy()->addSeconds(61));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 2);
+    }
+
+    public function test_resposta_recente_de_ciclo_anterior_nao_impede_gravacao_no_novo_ciclo(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $agora = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($agora);
+        $marco = $agora->copy()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $anterior = $this->registrarRespostaHistorica($candidato, $marco->copy()->subMinutes(2), 1, 'manter_ativo');
+        $anterior->forceFill(['concluido_em' => $agora->copy()->subMinute()])->save();
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', [
+            'pergunta_numero' => 1,
+            'resposta_1' => 'encerrar_cadastro',
+            'confirmar_encerramento' => true,
+        ])->assertOk()
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
+
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 2);
+        $this->assertSame('manter_ativo', $anterior->fresh()->resposta_1);
+    }
+
+    public function test_encerrar_participacao_registra_decisao_mantem_indisponivel_e_logout_invalida_sessao(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        [, $outro] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $historicoOutro = $this->registrarRespostaHistorica($outro, $marco, 1, 'manter_ativo')->fresh()->getAttributes();
+        $outroAntes = $outro->fresh()->getAttributes();
+
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro')
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('reativado', false)
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+
+        $this->assertDatabaseHas('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'pergunta_numero' => 1,
+            'resposta_1' => 'encerrar_cadastro',
+            'resultado' => 'ENCERRAMENTO_SOLICITADO',
+        ]);
+        $this->assertNotNull($candidato->fresh(), 'Os dados do candidato não podem ser excluídos.');
+        $this->assertFalse(app(CandidatoStatusService::class)->estaDisponivel($candidato->fresh()));
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+        $this->assertSame($outroAntes, $outro->fresh()->getAttributes());
+        $this->assertSame($historicoOutro, CandidatoReativacaoQuestionario::query()->findOrFail($historicoOutro['id'])->getAttributes());
+
+        $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')->assertUnauthorized();
+    }
+
+    public function test_falha_ao_registrar_saida_nao_grava_decisao_e_permite_nova_tentativa(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'valor_manipulado'])
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 0);
+
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro')
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
+    }
+
+    public function test_teste_i_empregado_buscando_oportunidades_nao_encerra_participacao(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(91);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $this->registrarRespostaHistorica($candidato, $marco, 1, 'manter_ativo');
+        $this->registrarRespostaHistorica($candidato, $marco, 2, 'nao_busco_mas_manter');
+
+        $this->responderPerguntaPendente($token, 3, 'trabalhando_busco')
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+
+        $this->assertDatabaseMissing('candidato_reativacao_questionarios', [
+            'candidato_matricula' => $candidato->matricula,
+            'resultado' => 'ENCERRAMENTO_SOLICITADO',
+        ]);
+    }
+
+    public function test_encerramento_relogin_reapresenta_p1_e_retorno_positivo_reativa_preservando_historico(): void
+    {
+        Mail::fake();
+        $this->ativarModoTestePerguntas();
+        $agora = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($agora);
+        $marco = $agora->copy()->subSeconds(31);
+        [$pessoa, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        // Teste A: encerrar mantém inativo.
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro')
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+        $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
+
+        // Teste B + H: novo login autentica, mas não reativa nem mexe nas datas.
+        Carbon::setTestNow($agora->copy()->addSeconds(20));
+        $novoToken = $this->postJson('/api/auth/login', ['identificador' => $pessoa->email, 'senha' => '123456'])
+            ->assertOk()
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE')
+            ->assertJsonPath('restricoes.inativo', true)
+            ->assertJsonPath('restricoes.pode_editar_perfil', false)
+            ->json('token');
+
+        $this->withToken($novoToken)->getJson('/api/auth/me')->assertOk()->assertJsonPath('restricoes.inativo', true);
+        $this->withToken($novoToken)->getJson('/api/me/curriculo');
+        $this->withToken($novoToken)->getJson('/api/candidatos/' . $candidato->matricula . '/dashboard');
+        $this->withToken($novoToken)->postJson('/api/candidatos/' . $candidato->matricula . '/perfil/links', ['linkedin' => 'https://linkedin.com/in/teste'])
+            ->assertForbidden();
+        $this->assertTrue($candidato->fresh()->ultima_atividade_em->equalTo($marco));
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+
+        $this->withToken($novoToken)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true)
+            ->assertJsonPath('pergunta.opcoes.0.label', 'Sim, desejo continuar recebendo oportunidades.')
+            ->assertJsonPath('pergunta.opcoes.1.label', 'Não, desejo encerrar meu cadastro.');
+
+        // Teste C: decisão positiva reativa sem reiniciar o prazo trimestral.
+        $this->withToken($novoToken)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertOk()
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('reativado', true)
+            ->assertJsonPath('restricoes.estado', 'ATIVO')
+            ->assertJsonPath('restricoes.pode_editar_perfil', true);
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+
+        // Teste G: as duas decisões continuam registradas, em ordem.
+        $decisoes = CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)
+            ->orderBy('sequencia')
+            ->get(['pergunta_numero', 'sequencia', 'resposta_1', 'resultado', 'ciclo_inicio_em', 'concluido_em']);
+        $this->assertSame(
+            [[1, 1, 'encerrar_cadastro', 'ENCERRAMENTO_SOLICITADO'], [1, 2, 'manter_ativo', 'REATIVADO']],
+            $decisoes->map(fn ($d) => [$d->pergunta_numero, $d->sequencia, $d->resposta_1, $d->resultado])->all()
+        );
+        $this->assertTrue($decisoes[0]->concluido_em->equalTo($agora));
+        $this->assertTrue($decisoes[1]->ciclo_inicio_em->equalTo($marco));
+
+        // Depois da reativação, segue a sequência trimestral individual (P2), não a P1.
+        Carbon::setTestNow($agora->copy()->addSeconds(50));
+        $this->withToken($novoToken)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 2)
+            ->assertJsonPath('pergunta.reconsideracao', false);
+    }
+
+    public function test_encerramento_reconfirmado_mantem_inativo_sem_duplicar_por_clique_duplo(): void
+    {
+        $this->ativarModoTestePerguntas();
+        $agora = Carbon::parse('2026-10-06 14:00:00');
+        Carbon::setTestNow($agora);
+        $marco = $agora->copy()->subSeconds(31);
+        [, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro');
+
+        // Teste D: volta depois e encerra de novo (duas requisições = clique duplo).
+        Carbon::setTestNow($agora->copy()->addMinute());
+        $payload = ['pergunta_numero' => 1, 'resposta_1' => 'encerrar_cadastro', 'confirmar_encerramento' => true];
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', $payload)
+            ->assertOk()
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', $payload)
+            ->assertOk()
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
+
+        $this->assertSame([1, 2], CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)->orderBy('sequencia')->pluck('sequencia')->all());
+        $this->assertTrue($candidato->fresh()->ultima_atividade_em->equalTo($marco));
+
+        Carbon::setTestNow($agora->copy()->addMinutes(5));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true);
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 2, 'resposta_2' => 'buscando_area_senac'])
+            ->assertUnprocessable();
+    }
+
+    public function test_bloqueio_administrativo_apos_encerramento_nao_e_removido_pela_reconsideracao(): void
+    {
+        Mail::fake();
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [$pessoa, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro');
+        $candidato->forceFill(['status' => false])->save();
+
+        // Teste E.
+        $this->postJson('/api/auth/login', ['identificador' => $pessoa->email, 'senha' => '123456'])->assertForbidden();
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertForbidden();
+
+        $this->assertFalse((bool) $candidato->fresh()->status);
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_MANUALMENTE, app(CandidatoStatusService::class)->estadoEfetivo($candidato->fresh()));
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 1);
+    }
+
+    public function test_candidato_com_encerramento_nao_aparece_na_busca_de_talentos(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $encerrado, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        [, $ativo] = $this->criarCandidato();
+        [, , $tokenEmpresa] = $this->criarEmpresaAutenticada();
+
+        // Teste F.
+        $this->responderPerguntaPendente($token, 1, 'encerrar_cadastro');
+        $this->withToken($tokenEmpresa)->getJson('/api/candidatos?per_page=10')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('data.0.matricula', (string) $ativo->matricula);
+        $this->assertFalse(app(CandidatoStatusService::class)->estaDisponivel($encerrado->fresh()));
+    }
+
+    public function test_outro_candidato_nao_herda_estado_de_encerramento(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds(31);
+        [, $candidatoA, $tokenA] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        [, $candidatoB, $tokenB] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+
+        // Teste I.
+        $this->responderPerguntaPendente($tokenA, 1, 'encerrar_cadastro');
+        $this->withToken($tokenB)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', false);
+        $this->withToken($tokenB)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])
+            ->assertOk()
+            ->assertJsonPath('resultado', 'REATIVADO');
+
+        $this->assertSame([[1, 'manter_ativo']], $this->historico($candidatoB));
+        $this->assertSame([[1, 'encerrar_cadastro']], $this->historico($candidatoA));
+        $this->withToken($tokenA)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.reconsideracao', true);
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, app(CandidatoStatusService::class)->estadoEfetivo($candidatoA->fresh()));
+    }
+
+    public static function respostasQueDesativam(): array
+    {
+        return [
+            'teste B: P2 qualquer área' => [2, 'buscando_qualquer_area'],
+            'teste C: P3 trabalhando sem buscar mudança' => [3, 'trabalhando_nao_busco'],
+            'teste G: P6 sem disponibilidade' => [6, 'sem_disponibilidade'],
+        ];
+    }
+
+    #[DataProvider('respostasQueDesativam')]
+    public function test_resposta_de_saida_exige_confirmacao_e_encerra_preservando_resposta_original(int $numero, string $valor): void
+    {
+        Mail::fake();
+        [$pessoa, $candidato, $token, $marco] = $this->candidatoComPerguntaPendente($numero);
+        $historicoAntes = CandidatoReativacaoQuestionario::query()->orderBy('id')->get()->map(fn ($r) => $r->fresh()->getAttributes())->all();
+
+        $opcao = collect($this->withToken($token)->getJson('/api/me/reativacao-questionario')->json('pergunta.opcoes'))->firstWhere('valor', $valor);
+        $this->assertSame('confirmar', $opcao['saida']);
+
+        // Teste O (backend): sem a confirmação do candidato, nada é gravado.
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => $numero, 'resposta_' . $numero => $valor])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('confirmar_encerramento');
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', count($historicoAntes));
+
+        $this->responderPerguntaPendente($token, $numero, $valor)
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('reativado', false)
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+
+        $registro = CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)->where('pergunta_numero', $numero)->sole();
+        $this->assertSame($valor, $registro->{'resposta_' . $numero}, 'A resposta original deve ser preservada.');
+        $this->assertSame('ENCERRAMENTO_SOLICITADO', $registro->resultado);
+        $this->assertFalse(app(CandidatoStatusService::class)->estaDisponivel($candidato->fresh()));
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+        $this->assertSame($historicoAntes, CandidatoReativacaoQuestionario::query()->whereKey(array_column($historicoAntes, 'id'))->orderBy('id')->get()->map->getAttributes()->all());
+
+        // Logout e novo login (teste K): continua inativo e recebe a P1 para reconsiderar, nunca a próxima pergunta.
+        $this->withToken($token)->postJson('/api/auth/logout')->assertOk();
+        $novoToken = $this->postJson('/api/auth/login', ['identificador' => $pessoa->email, 'senha' => '123456'])
+            ->assertOk()
+            ->assertJsonPath('restricoes.inativo', true)
+            ->json('token');
+        $this->withToken($novoToken)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true);
+    }
+
+    public function test_teste_d_e_autonomo_e_perguntado_e_ao_continuar_nao_encerra(): void
+    {
+        [, $candidato, $token] = $this->candidatoComPerguntaPendente(3);
+
+        $opcao = collect($this->withToken($token)->getJson('/api/me/reativacao-questionario')->json('pergunta.opcoes'))->firstWhere('valor', 'autonomo_empreendedor');
+        $this->assertSame('perguntar', $opcao['saida']);
+
+        $this->responderPerguntaPendente($token, 3, 'autonomo_empreendedor', sairNaCondicional: false)
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+
+        $this->assertSame('autonomo_empreendedor', CandidatoReativacaoQuestionario::query()->where('candidato_matricula', $candidato->matricula)->where('pergunta_numero', 3)->sole()->resposta_3);
+        $this->assertDatabaseMissing('candidato_reativacao_questionarios', ['candidato_matricula' => $candidato->matricula, 'resultado' => 'ENCERRAMENTO_SOLICITADO']);
+    }
+
+    public function test_teste_f_autonomo_que_escolhe_sair_e_encerrado(): void
+    {
+        [, $candidato, $token] = $this->candidatoComPerguntaPendente(3);
+
+        $this->responderPerguntaPendente($token, 3, 'autonomo_empreendedor', sairNaCondicional: true)
+            ->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO')
+            ->assertJsonPath('restricoes.estado', 'BLOQUEADO_POR_INATIVIDADE');
+
+        $registro = CandidatoReativacaoQuestionario::query()->where('candidato_matricula', $candidato->matricula)->where('pergunta_numero', 3)->sole();
+        $this->assertSame('autonomo_empreendedor', $registro->resposta_3);
+        $this->assertFalse(app(CandidatoStatusService::class)->estaDisponivel($candidato->fresh()));
+    }
+
+    public static function respostasQueNaoDesativam(): array
+    {
+        return [
+            'teste H: P2 não procuro agora mas quero manter' => [2, 'nao_busco_mas_manter'],
+            'teste I: P3 trabalhando buscando oportunidades' => [3, 'trabalhando_busco'],
+            'P6 apenas on-line' => [6, 'apenas_online'],
+            'P7 atualizar informações profissionais' => [7, 'atualizar_profissionais'],
+            'P8 desejo atualizar' => [8, 'desejo_atualizar'],
+        ];
+    }
+
+    #[DataProvider('respostasQueNaoDesativam')]
+    public function test_respostas_comuns_nao_encerram_e_recusam_confirmacao_de_saida(int $numero, string $valor): void
+    {
+        [, $candidato, $token, $marco] = $this->candidatoComPerguntaPendente($numero);
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => $numero, 'resposta_' . $numero => $valor, 'confirmar_encerramento' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('confirmar_encerramento');
+
+        $this->responderPerguntaPendente($token, $numero, $valor)
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+
+        $this->assertDatabaseMissing('candidato_reativacao_questionarios', ['candidato_matricula' => $candidato->matricula, 'resultado' => 'ENCERRAMENTO_SOLICITADO']);
+        // Responder (inclusive "preciso atualizar"/"desejo atualizar") não é atualização real do perfil.
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+    }
+
+    public function test_teste_j_p4_salva_todas_as_opcoes_selecionadas_sem_encerrar(): void
+    {
+        [, $candidato, $token] = $this->candidatoComPerguntaPendente(4);
+        $todas = ['jovem_aprendiz', 'estagio', 'emprego_efetivo', 'temporario', 'autonomo_servicos', 'outras'];
+
+        $opcoes = $this->withToken($token)->getJson('/api/me/reativacao-questionario')->assertJsonPath('pergunta.multipla', true)->json('pergunta.opcoes');
+        $this->assertSame([null], array_values(array_unique(array_column($opcoes, 'saida'))));
+
+        $this->responderPerguntaPendente($token, 4, $todas)->assertJsonPath('resultado', 'REATIVADO');
+        $this->assertSame($todas, CandidatoReativacaoQuestionario::query()->where('candidato_matricula', $candidato->matricula)->where('pergunta_numero', 4)->sole()->resposta_4);
+    }
+
+    public function test_teste_k_l_saida_pela_p2_reconsiderada_reativa_preserva_historico_e_segue_para_p3(): void
+    {
+        [, $candidato, $token, $marco] = $this->candidatoComPerguntaPendente(2);
+        $agora = now()->copy();
+
+        $this->responderPerguntaPendente($token, 2, 'buscando_qualquer_area')->assertJsonPath('resultado', 'ENCERRAMENTO_SOLICITADO');
+
+        Carbon::setTestNow($agora->copy()->addSeconds(15));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertJsonPath('pergunta.numero', 1)
+            ->assertJsonPath('pergunta.reconsideracao', true);
+        $this->responderPerguntaPendente($token, 1, 'manter_ativo')
+            ->assertJsonPath('resultado', 'REATIVADO')
+            ->assertJsonPath('restricoes.estado', 'ATIVO');
+
+        $this->assertSame(
+            [[1, 1, 'manter_ativo', 'RESPONDIDA'], [2, 1, 'buscando_qualquer_area', 'ENCERRAMENTO_SOLICITADO'], [1, 2, 'manter_ativo', 'REATIVADO']],
+            CandidatoReativacaoQuestionario::query()->where('candidato_matricula', $candidato->matricula)->orderBy('id')->get()
+                ->map(fn ($r) => [$r->pergunta_numero, $r->sequencia, $r->{'resposta_' . $r->pergunta_numero}, $r->resultado])->all()
+        );
+        $this->assertTrue($candidato->fresh()->ultima_atualizacao_real_em->equalTo($marco));
+
+        // Volta a ficar inativo: segue a sequência individual (P3), sem repetir P2 nem P1.
+        Carbon::setTestNow($agora->copy()->addSeconds(45));
+        $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertJsonPath('pergunta.numero', 3)
+            ->assertJsonPath('pergunta.reconsideracao', false);
+    }
+
+    public function test_teste_m_bloqueio_administrativo_apos_saida_pela_p6_nao_e_removido(): void
+    {
+        Mail::fake();
+        [$pessoa, $candidato, $token] = $this->candidatoComPerguntaPendente(6);
+        $this->responderPerguntaPendente($token, 6, 'sem_disponibilidade');
+        $candidato->forceFill(['status' => false])->save();
+
+        $this->postJson('/api/auth/login', ['identificador' => $pessoa->email, 'senha' => '123456'])->assertForbidden();
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'manter_ativo'])->assertForbidden();
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_MANUALMENTE, app(CandidatoStatusService::class)->estadoEfetivo($candidato->fresh()));
+    }
+
+    public function test_teste_n_saida_de_um_candidato_nao_afeta_historico_do_outro(): void
+    {
+        [, $candidatoA, $tokenA, $marco] = $this->candidatoComPerguntaPendente(2);
+        [, $candidatoB, $tokenB] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        $this->registrarRespostaHistorica($candidatoB, $marco, 1, 'manter_ativo');
+
+        $this->responderPerguntaPendente($tokenA, 2, 'buscando_qualquer_area');
+
+        $this->withToken($tokenB)->getJson('/api/me/reativacao-questionario')
+            ->assertJsonPath('pergunta.numero', 2)
+            ->assertJsonPath('pergunta.reconsideracao', false);
+        $this->responderPerguntaPendente($tokenB, 2, 'buscando_area_senac')->assertJsonPath('resultado', 'REATIVADO');
+
+        $this->assertSame([[1, 'manter_ativo'], [2, 'buscando_area_senac']], $this->historico($candidatoB));
+        $this->assertSame([[1, 'manter_ativo'], [2, 'buscando_qualquer_area']], $this->historico($candidatoA));
+        $this->assertSame(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE, app(CandidatoStatusService::class)->estadoEfetivo($candidatoA->fresh()));
+    }
+
+    public function test_candidato_ativo_nao_registra_encerramento_e_permanece_consistente(): void
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        [, , $token] = $this->criarCandidato(ultimaAtividade: now()->subSeconds(5), ultimaAtualizacaoReal: now()->subSeconds(31));
+
+        $this->withToken($token)->postJson('/api/me/reativacao-questionario', ['pergunta_numero' => 1, 'resposta_1' => 'encerrar_cadastro', 'confirmar_encerramento' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('confirmar_encerramento');
+        $this->assertDatabaseCount('candidato_reativacao_questionarios', 0);
+    }
+
+    /**
+     * Candidato bloqueado por inatividade com a pergunta $numero pendente:
+     * P1 = manter_ativo e as anteriores respondidas com alternativas comuns.
+     */
+    private function candidatoComPerguntaPendente(int $numero): array
+    {
+        $this->ativarModoTestePerguntas();
+        Carbon::setTestNow(Carbon::parse('2026-10-06 14:00:00'));
+        $marco = now()->subSeconds($numero * 30 + 1);
+        [$pessoa, $candidato, $token] = $this->criarCandidato(ultimaAtividade: $marco, ultimaAtualizacaoReal: $marco);
+        foreach ($numero > 1 ? range(1, $numero - 1) : [] as $anterior) {
+            $this->registrarRespostaHistorica($candidato, $marco, $anterior, $anterior === 1 ? 'manter_ativo' : self::respostasPorPergunta()['pergunta ' . $anterior][1]);
+        }
+
+        return [$pessoa, $candidato, $token, $marco];
+    }
+
+    /**
+     * Responde como o frontend: lê a classificação "saida" da opção na API e envia a
+     * confirmação de encerramento quando ela é exigida (ou, na condicional, quando $sairNaCondicional).
+     */
+    private function responderPerguntaPendente(string $token, int $numero, string|array $valor, bool $sairNaCondicional = false): \Illuminate\Testing\TestResponse
+    {
+        $opcoes = $this->withToken($token)->getJson('/api/me/reativacao-questionario')
+            ->assertOk()
+            ->assertJsonPath('tem_pergunta', true)
+            ->assertJsonPath('pergunta.numero', $numero)
+            ->json('pergunta.opcoes');
+
+        $saida = is_string($valor) ? (collect($opcoes)->firstWhere('valor', $valor)['saida'] ?? null) : null;
+        $confirmar = $saida === 'confirmar' || ($saida === 'perguntar' && $sairNaCondicional);
+
+        return $this->withToken($token)->postJson('/api/me/reativacao-questionario', array_filter([
+            'pergunta_numero' => $numero,
+            'resposta_' . $numero => $valor,
+            'confirmar_encerramento' => $confirmar ?: null,
+        ], fn ($v) => $v !== null))->assertOk();
+    }
+
+    private function historico(Candidato $candidato): array
+    {
+        return CandidatoReativacaoQuestionario::query()
+            ->where('candidato_matricula', $candidato->matricula)
+            ->orderBy('pergunta_numero')
+            ->get()
+            ->map(fn (CandidatoReativacaoQuestionario $r) => [$r->pergunta_numero, $r->{'resposta_' . $r->pergunta_numero}])
+            ->all();
+    }
+
+    private function ativarModoTestePerguntas(): void
+    {
+        config([
+            'candidato.perguntas_modo_teste' => true,
+            'candidato.perguntas_intervalo_teste_segundos' => 30,
+        ]);
+    }
+
+    private function registrarRespostaHistorica(Candidato $candidato, Carbon $cicloInicio, int $numero, string|array $valor): CandidatoReativacaoQuestionario
+    {
+        return CandidatoReativacaoQuestionario::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'bloqueado_em' => $cicloInicio->copy()->startOfSecond(),
+            'ciclo_inicio_em' => $cicloInicio->copy()->startOfSecond(),
+            'pergunta_numero' => $numero,
+            'resultado' => CandidatoReativacaoQuestionario::RESULTADO_RESPONDIDA,
+            'concluido_em' => $cicloInicio->copy()->addSecond(),
+            'resposta_' . $numero => $valor,
+        ]);
     }
 }

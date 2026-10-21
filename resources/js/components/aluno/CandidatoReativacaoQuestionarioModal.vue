@@ -1,104 +1,346 @@
 <template>
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal fade show d-block candidato-reativacao-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="reativacao-titulo" @keydown.esc.prevent.stop>
+    <div v-if="deveExibirModal" class="modal-backdrop fade show"></div>
+    <div v-if="deveExibirModal" class="modal fade show d-block candidato-reativacao-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="reativacao-titulo" @keydown.esc.prevent.stop>
         <div class="modal-dialog modal-dialog-centered candidato-reativacao-modal__dialog">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header">
-                    <h2 id="reativacao-titulo" class="modal-title h5 mb-0">ATUALIZAÇÃO DO CADASTRO</h2>
+                    <h2 id="reativacao-titulo" class="modal-title h5 mb-0">Atualização periódica do cadastro</h2>
                 </div>
                 <form @submit.prevent="confirmar">
                     <div class="modal-body candidato-reativacao-modal__body">
-                        <p class="text-secondary">Para manter seu cadastro ativo no Sistema de Empregabilidade do Senac DF, precisamos confirmar algumas informações sobre sua situação profissional e seu interesse em novas oportunidades.</p>
-                        <p class="text-secondary">Responda às perguntas abaixo para continuar.</p>
+                        <p class="text-secondary">Identificamos que seu perfil está há algum tempo sem atualizações. Responda à pergunta abaixo para nos ajudar a acompanhar sua situação.</p>
                         <div v-if="mensagem" class="alert" :class="mensagemClasse" role="alert">{{ mensagem }}</div>
 
-                        <fieldset v-for="pergunta in perguntas" :key="pergunta.campo" class="mb-4">
-                            <legend class="h6 fw-semibold">{{ pergunta.titulo }}</legend>
-                            <p v-if="pergunta.instrucao" class="small text-secondary mb-2">{{ pergunta.instrucao }}</p>
-                            <div v-for="opcao in pergunta.opcoes" :key="opcao.valor" class="form-check mb-2">
-                                <input
-                                    :id="`${pergunta.campo}-${opcao.valor}`"
-                                    v-model="form[pergunta.campo]"
-                                    class="form-check-input"
-                                    :type="pergunta.multipla ? 'checkbox' : 'radio'"
-                                    :value="opcao.valor"
-                                    :name="pergunta.campo"
-                                    :aria-invalid="Boolean(erros[pergunta.campo])"
-                                >
-                                <label class="form-check-label" :for="`${pergunta.campo}-${opcao.valor}`">{{ opcao.label }}</label>
+                        <div v-if="carregando" class="d-flex align-items-center justify-content-center py-4 text-secondary" aria-live="polite">
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                            Carregando pergunta...
+                        </div>
+
+                        <div v-else-if="erro" class="alert alert-danger" role="alert">
+                            {{ erro }}
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm" @click="carregarPergunta">Tentar novamente</button>
                             </div>
-                            <p v-if="erros[pergunta.campo]" class="text-danger small mb-0">{{ erros[pergunta.campo] }}</p>
-                        </fieldset>
+                        </div>
+
+                        <div v-else-if="pergunta" class="mb-4">
+                            <div v-if="pergunta.reconsideracao" class="alert alert-info small d-flex gap-2 align-items-start" role="status" data-testid="aviso-reconsideracao">
+                                <i class="bi bi-info-circle mt-1" aria-hidden="true"></i>
+                                <span>Você solicitou anteriormente o encerramento do seu cadastro, e seu perfil continua indisponível para as empresas. Se mudou de ideia, você pode reconsiderar sua decisão abaixo.</span>
+                            </div>
+                            <div class="text-muted small mb-2">Pergunta {{ pergunta.numero }} de 8</div>
+                            <fieldset>
+                                <legend class="h6 fw-semibold">{{ pergunta.titulo }}</legend>
+                                <p v-if="pergunta.instrucao" class="small text-secondary mb-2">{{ pergunta.instrucao }}</p>
+                                <div v-for="opcao in pergunta.opcoes" :key="opcao.valor" class="form-check mb-2">
+                                    <input
+                                        :id="`${pergunta.campo}-${opcao.valor}`"
+                                        v-model="form[pergunta.campo]"
+                                        class="form-check-input"
+                                        :type="pergunta.multipla ? 'checkbox' : 'radio'"
+                                        :value="opcao.valor"
+                                        :name="pergunta.campo"
+                                        :aria-invalid="Boolean(erros[pergunta.campo])"
+                                    >
+                                    <label class="form-check-label" :for="`${pergunta.campo}-${opcao.valor}`">{{ opcao.label }}</label>
+                                </div>
+                                <p v-if="erros[pergunta.campo]" class="text-danger small mb-0">{{ erros[pergunta.campo] }}</p>
+                            </fieldset>
+                        </div>
+
+                        <div v-else class="alert alert-warning" role="alert">
+                            Não há pergunta trimestral pendente no momento.
+                        </div>
                     </div>
-                    <div class="modal-footer flex-column flex-sm-row align-items-stretch align-items-sm-center">
+                    <div v-if="deveExibirAcoes" class="modal-footer flex-column flex-sm-row align-items-stretch align-items-sm-center">
                         <button type="button" class="btn btn-outline-secondary" :disabled="salvando" @click="$emit('sair')">Sair</button>
-                        <button type="submit" class="btn btn-primary" :disabled="salvando">
+                        <button type="submit" class="btn btn-primary" :disabled="salvando || carregando || !pergunta || !podeConfirmar">
                             <span v-if="salvando" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                            {{ salvando ? 'Confirmando...' : 'Confirmar respostas' }}
+                            {{ salvando ? 'Confirmando...' : 'Confirmar resposta' }}
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    <!-- Uma única instância (um único overlay); a etapa define o conteúdo exibido. -->
+    <CandidatoEncerrarParticipacaoModal
+        :aberto="etapaSaida !== null"
+        v-bind="etapaSaida === ETAPA_CONTINUIDADE ? MODAL_CONTINUIDADE_AUTONOMO : {}"
+        :processando="salvando"
+        :erro="etapaSaida === ETAPA_CONFIRMACAO ? erroSaida : ''"
+        @voltar="etapaSaida === ETAPA_CONTINUIDADE ? continuarParticipando() : voltarAoQuestionario()"
+        @confirmar="etapaSaida === ETAPA_CONTINUIDADE ? pedirConfirmacaoDeSaida() : confirmarSaida()"
+        @fechar="voltarAoQuestionario"
+    />
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import alunosService from '../../services/alunosServices';
 import { useAuthStore } from '../../store/auth';
+import CandidatoEncerrarParticipacaoModal from './CandidatoEncerrarParticipacaoModal.vue';
 
-const emit = defineEmits(['concluido', 'sair']);
+// Classificação de saída definida no backend (campo "saida" de cada opção).
+const SAIDA_CONFIRMAR = 'confirmar';
+const SAIDA_PERGUNTAR = 'perguntar';
+
+const emit = defineEmits(['concluido', 'encerrado', 'sair']);
 const auth = useAuthStore();
 const salvando = ref(false);
+const carregando = ref(true);
+const erro = ref('');
 const mensagem = ref('');
 const mensagemTipo = ref('erro');
 const erros = reactive({});
+const pergunta = ref(null);
+const ETAPA_CONTINUIDADE = 'continuidade';
+const ETAPA_CONFIRMACAO = 'confirmacao';
+const MODAL_CONTINUIDADE_AUTONOMO = {
+    titulo: 'Deseja continuar participando?',
+    paragrafos: [
+        'Você informou que trabalha como autônomo(a) ou empreendedor(a).',
+        'Deseja continuar recebendo oportunidades de emprego e estágio pelo Portal de Empregabilidade do Senac?',
+    ],
+    textoVoltar: 'Sim, manter meu cadastro ativo',
+    textoConfirmar: 'Não, desejo encerrar meu cadastro',
+    classeVoltar: 'btn-primary',
+    classeConfirmar: 'btn-outline-danger',
+    icone: 'bi-briefcase',
+    tom: 'info',
+    testid: 'modal-continuidade-autonomo',
+};
+// null (fechado) | ETAPA_CONTINUIDADE (pergunta do autônomo) | ETAPA_CONFIRMACAO (confirmar saída)
+const etapaSaida = ref(null);
+const erroSaida = ref('');
 const form = reactive({ resposta_1: '', resposta_2: '', resposta_3: '', resposta_4: [], resposta_5: '', resposta_6: '', resposta_7: '', resposta_8: '' });
-
-const perguntas = [
-    { campo: 'resposta_1', titulo: 'Você deseja manter seu cadastro ativo no Sistema de Empregabilidade do Senac?', opcoes: [{ valor: 'manter_ativo', label: 'Sim, desejo continuar recebendo oportunidades.' }, { valor: 'encerrar_cadastro', label: 'Não, desejo encerrar meu cadastro.' }] },
-    { campo: 'resposta_2', titulo: 'Atualmente, você está buscando uma oportunidade de emprego ou estágio na área em que se formou no Senac?', opcoes: [{ valor: 'buscando_area_senac', label: 'Sim, estou procurando emprego ou estágio na minha área de formação no Senac.' }, { valor: 'buscando_qualquer_area', label: 'Não, estou procurando emprego ou estágio em qualquer área.' }, { valor: 'nao_busco_mas_manter', label: 'Não estou procurando emprego ou estágio no momento, mas desejo manter meu cadastro ativo.' }] },
-    { campo: 'resposta_3', titulo: 'Qual é sua situação profissional atual?', opcoes: [{ valor: 'nao_trabalhando', label: 'Não estou trabalhando.' }, { valor: 'trabalhando_busco', label: 'Estou trabalhando, mas busco novas oportunidades.' }, { valor: 'trabalhando_nao_busco', label: 'Estou trabalhando e não busco mudança no momento.' }, { valor: 'autonomo_empreendedor', label: 'Estou trabalhando como autônomo(a) ou empreendedor(a).' }] },
-    { campo: 'resposta_4', titulo: 'Que tipo de oportunidade profissional você procura?', instrucao: 'Marque todas as alternativas que se aplicam.', multipla: true, opcoes: [{ valor: 'jovem_aprendiz', label: 'Jovem Aprendiz.' }, { valor: 'estagio', label: 'Estágio.' }, { valor: 'emprego_efetivo', label: 'Emprego efetivo.' }, { valor: 'temporario', label: 'Trabalho temporário.' }, { valor: 'autonomo_servicos', label: 'Trabalho autônomo ou prestação de serviços.' }, { valor: 'outras', label: 'Outras oportunidades.' }] },
-    { campo: 'resposta_5', titulo: 'Qual é sua disponibilidade de horário para trabalhar?', opcoes: [{ valor: 'manha', label: 'Manhã.' }, { valor: 'tarde', label: 'Tarde.' }, { valor: 'noite', label: 'Noite.' }, { valor: 'integral', label: 'Integral.' }, { valor: 'escala_flexivel', label: 'Escala ou horários flexíveis.' }] },
-    { campo: 'resposta_6', titulo: 'Você tem disponibilidade para participar de processos seletivos e entrevistas?', opcoes: [{ valor: 'presencial_online', label: 'Sim, presencialmente e/ou on-line.' }, { valor: 'apenas_online', label: 'Sim, apenas on-line.' }, { valor: 'apenas_presencial', label: 'Sim, apenas presencialmente.' }, { valor: 'sem_disponibilidade', label: 'Não tenho disponibilidade no momento.' }] },
-    { campo: 'resposta_7', titulo: 'Seus dados de contato e suas informações profissionais continuam atualizados?', opcoes: [{ valor: 'atualizados', label: 'Sim, estão atualizados.' }, { valor: 'atualizar_contato', label: 'Preciso atualizar meus dados de contato.' }, { valor: 'atualizar_profissionais', label: 'Preciso atualizar minhas informações profissionais, como curso, currículo ou experiências profissionais.' }] },
-    { campo: 'resposta_8', titulo: 'Você deseja informar alguma atualização sobre seus objetivos profissionais ou sua disponibilidade para novas oportunidades?', opcoes: [{ valor: 'mesmas_informacoes', label: 'Não, minhas informações permanecem as mesmas.' }, { valor: 'desejo_atualizar', label: 'Sim, desejo atualizar minhas informações.' }] },
-];
+let pollTimer = null;
 
 const mensagemClasse = computed(() => mensagemTipo.value === 'sucesso' ? 'alert-success' : 'alert-danger');
+const deveExibirModal = computed(() => !carregando.value && !erro.value && !!pergunta.value);
+const deveExibirAcoes = computed(() => !!pergunta.value && !carregando.value && !erro.value);
+const podeConfirmar = computed(() => {
+    if (!pergunta.value || carregando.value || salvando.value) {
+        return false;
+    }
+
+    const campo = pergunta.value.campo;
+    if (pergunta.value.multipla) {
+        return Array.isArray(form[campo]) && form[campo].length > 0;
+    }
+
+    return Boolean(form[campo]);
+});
+
+onMounted(async () => {
+    await carregarPergunta();
+    iniciarVerificacaoLocal();
+});
+
+onBeforeUnmount(() => {
+    if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+});
+
+function iniciarVerificacaoLocal() {
+    if (!import.meta.env.DEV || import.meta.env.PROD || !auth.restricoes?.inativo) {
+        return;
+    }
+
+    if (pollTimer) {
+        return;
+    }
+
+    pollTimer = window.setInterval(async () => {
+        if (salvando.value || carregando.value || pergunta.value) {
+            return;
+        }
+
+        if (!auth.restricoes?.inativo) {
+            return;
+        }
+
+        await carregarPergunta();
+    }, 5000);
+}
+
+async function carregarPergunta() {
+    carregando.value = true;
+    erro.value = '';
+    mensagem.value = '';
+    pergunta.value = null;
+
+    try {
+        const { data } = await alunosService.obterPerguntaInatividade();
+        const proximaPergunta = data?.pergunta ?? null;
+
+        if (data?.tem_pergunta === false || !proximaPergunta) {
+            pergunta.value = null;
+            return;
+        }
+
+        if (typeof proximaPergunta.titulo !== 'string' || !Array.isArray(proximaPergunta.opcoes)) {
+            erro.value = 'Não foi possível carregar a pergunta trimestral no momento.';
+            return;
+        }
+
+        pergunta.value = proximaPergunta;
+        const campo = pergunta.value.campo;
+
+        Object.keys(form).forEach((chave) => {
+            if (chave === campo) {
+                form[chave] = pergunta.value.multipla ? (Array.isArray(form[chave]) ? form[chave] : []) : '';
+                return;
+            }
+
+            form[chave] = chave === 'resposta_4' ? [] : '';
+        });
+    } catch (error) {
+        erro.value = mensagemErroSegura(error, 'Não foi possível carregar a pergunta. Tente novamente.');
+    } finally {
+        carregando.value = false;
+    }
+}
+
+function mensagemErroSegura(error, padrao) {
+    const status = error?.response?.status;
+    const mensagemBackend = error?.response?.data?.message;
+
+    if (status === 422 && typeof mensagemBackend === 'string' && mensagemBackend) {
+        return mensagemBackend;
+    }
+
+    return padrao;
+}
 
 function validar() {
     Object.keys(erros).forEach((campo) => { erros[campo] = ''; });
-    if (!form.resposta_1) erros.resposta_1 = 'Escolha uma opção.';
-    if (form.resposta_1 === 'encerrar_cadastro') return !Object.values(erros).some(Boolean);
-    perguntas.forEach((pergunta) => {
-        if (pergunta.campo === 'resposta_4' && !form.resposta_4.length) erros.resposta_4 = 'Selecione pelo menos uma alternativa.';
-        else if (!pergunta.multipla && !form[pergunta.campo]) erros[pergunta.campo] = 'Esta pergunta é obrigatória.';
-    });
+    if (!pergunta.value) return false;
+
+    const campo = pergunta.value.campo;
+    if (pergunta.value.multipla) {
+        if (!Array.isArray(form[campo]) || !form[campo].length) {
+            erros[campo] = 'Selecione pelo menos uma alternativa.';
+        }
+        return !Object.values(erros).some(Boolean);
+    }
+
+    if (!form[campo]) {
+        erros[campo] = 'Escolha uma opção.';
+    }
     return !Object.values(erros).some(Boolean);
 }
 
+function tipoSaidaSelecionada() {
+    if (!pergunta.value || pergunta.value.multipla) return null;
+    const valor = form[pergunta.value.campo];
+    return pergunta.value.opcoes.find((opcao) => opcao.valor === valor)?.saida ?? null;
+}
+
+function montarPayload(confirmarEncerramento = false) {
+    const campo = pergunta.value.campo;
+
+    return {
+        pergunta_numero: pergunta.value.numero,
+        [campo]: pergunta.value.multipla ? [...form[campo]] : form[campo],
+        ...(confirmarEncerramento ? { confirmar_encerramento: true } : {}),
+    };
+}
+
 async function confirmar() {
+    if (salvando.value) return;
     mensagem.value = '';
-    if (!validar()) {
-        mensagem.value = 'Responda as perguntas obrigatórias para continuar.';
+
+    if (!pergunta.value) {
+        mensagemTipo.value = 'erro';
+        mensagem.value = 'A pergunta ainda não foi carregada. Tente novamente.';
         return;
     }
-    if (form.resposta_1 === 'encerrar_cadastro' && !window.confirm('Você informou que não deseja manter seu cadastro ativo.\n\nSeu perfil continuará indisponível para novas oportunidades.\n\nDeseja confirmar essa decisão?')) return;
+
+    if (!validar()) {
+        mensagemTipo.value = 'erro';
+        mensagem.value = 'Responda a pergunta obrigatória para continuar.';
+        return;
+    }
+
+    const tipoSaida = tipoSaidaSelecionada();
+    if (tipoSaida === SAIDA_CONFIRMAR) {
+        pedirConfirmacaoDeSaida();
+        return;
+    }
+
+    if (tipoSaida === SAIDA_PERGUNTAR) {
+        etapaSaida.value = ETAPA_CONTINUIDADE;
+        return;
+    }
+
+    await enviarResposta();
+}
+
+function pedirConfirmacaoDeSaida() {
+    // Troca de etapa no mesmo overlay: nunca existem dois backdrops ao mesmo tempo.
+    erroSaida.value = '';
+    etapaSaida.value = ETAPA_CONFIRMACAO;
+}
+
+async function continuarParticipando() {
+    // Autônomo(a) que quer continuar: grava a resposta original como resposta normal, sem encerramento.
+    etapaSaida.value = null;
+    await enviarResposta();
+}
+
+function voltarAoQuestionario() {
+    // Fecha o modal (qualquer etapa); a alternativa marcada continua selecionada e nada é enviado.
+    if (salvando.value) return;
+    etapaSaida.value = null;
+    erroSaida.value = '';
+}
+
+async function confirmarSaida() {
+    if (salvando.value || !pergunta.value) return;
+
+    salvando.value = true;
+    erroSaida.value = '';
+    try {
+        const { data } = await alunosService.concluirQuestionarioReativacao(montarPayload(true));
+
+        if (data?.resultado !== 'ENCERRAMENTO_SOLICITADO') {
+            erroSaida.value = 'Não foi possível registrar sua decisão. Tente novamente.';
+            salvando.value = false;
+            return;
+        }
+
+        // Decisão salva: o layout encerra a sessão e leva ao login. "salvando" segue true para bloquear novos cliques.
+        emit('encerrado', data);
+    } catch (error) {
+        erroSaida.value = mensagemErroSegura(error, 'Não foi possível registrar sua decisão. Tente novamente.');
+        salvando.value = false;
+    }
+}
+
+async function enviarResposta() {
+    if (salvando.value) return;
     salvando.value = true;
     try {
-        const { data } = await alunosService.concluirQuestionarioReativacao({ ...form, resposta_4: [...form.resposta_4] });
+        const { data } = await alunosService.concluirQuestionarioReativacao(montarPayload());
         auth.restricoes = data.restricoes || auth.restricoes;
         localStorage.setItem('ses_restricoes', JSON.stringify(auth.restricoes));
-        mensagemTipo.value = 'sucesso';
-        mensagem.value = [data.message, ...(data.orientacoes || [])].join(' ');
         emit('concluido', data);
+
+        // Sem reativação, a pergunta respondida não pode continuar na tela: busca a próxima pendente.
+        if (!data.reativado && auth.restricoes?.inativo) {
+            await carregarPergunta();
+        }
+
+        mensagemTipo.value = 'sucesso';
+        mensagem.value = data.message || 'Resposta registrada com sucesso.';
     } catch (error) {
+        // Detalhes técnicos (SQL, stack trace) ficam no log do Laravel; só erros de validação chegam ao candidato.
         mensagemTipo.value = 'erro';
-        mensagem.value = error?.response?.data?.message || 'Não foi possível concluir o questionário.';
-        const backend = error?.response?.data?.errors || {};
+        mensagem.value = mensagemErroSegura(error, 'Não foi possível salvar sua resposta. Tente novamente.');
+        const backend = error?.response?.status === 422 ? (error.response.data?.errors || {}) : {};
         Object.keys(backend).forEach((campo) => { erros[campo] = backend[campo][0]; });
     } finally {
         salvando.value = false;

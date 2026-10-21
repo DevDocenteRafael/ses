@@ -16,6 +16,7 @@ class Candidato extends Model
         'cpf',
         'status',
         'ultima_atividade_em',
+        'ultima_atualizacao_real_em',
         'pessoa_id_pessoa',
     ];
 
@@ -23,6 +24,7 @@ class Candidato extends Model
         'matricula' => 'string',
         'status' => 'boolean',
         'ultima_atividade_em' => 'datetime',
+        'ultima_atualizacao_real_em' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -30,6 +32,10 @@ class Candidato extends Model
         static::creating(function (Candidato $candidato): void {
             if ($candidato->ultima_atividade_em === null) {
                 $candidato->ultima_atividade_em = now();
+            }
+
+            if ($candidato->ultima_atualizacao_real_em === null) {
+                $candidato->ultima_atualizacao_real_em = $candidato->ultima_atividade_em ?? now();
             }
         });
     }

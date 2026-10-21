@@ -69,7 +69,7 @@ onBeforeUnmount(() => { clearTimer(); window.removeEventListener('keydown', onKe
 </script>
 
 <style scoped>
-:root { --reativado-bg: var(--bs-body-bg, #fff); --reativado-text: var(--bs-body-color, #111); }
+:global(:root) { --reativado-bg: var(--bs-body-bg, #fff); --reativado-text: var(--bs-body-color, #111); }
 :global(html.dark) { --reativado-bg: #1f2937; --reativado-text: #f8fafc; }
 .ses-reativado-overlay {
   position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.36); z-index: 1080;

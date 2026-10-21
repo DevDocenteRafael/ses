@@ -7,13 +7,13 @@
         </main>
 
         <CandidatoContratadoModal v-if="auth.candidatoContratado" @sair="sair" />
-        <CandidatoReativacaoQuestionarioModal v-if="auth.restricoes?.inativo && !auth.candidatoContratado" @sair="sair" @concluido="questionarioConcluido" />
+        <CandidatoReativacaoQuestionarioModal v-if="auth.restricoes?.inativo && !auth.candidatoContratado" @sair="sair" @concluido="questionarioConcluido" @encerrado="sair" />
         <CandidatoReativadoSucessoModal v-if="showReativado" @closed="onFechouReativado" />
     </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
 import SlideBar from '../components/common/slideBar.vue';
@@ -26,7 +26,6 @@ const route = useRoute();
 const auth = useAuthStore();
 const rotaPerfil = computed(() => route.name === 'aluno.perfil');
 
-import { ref, onMounted } from 'vue';
 const SHOW_KEY = 'ses_reativacao_sucesso';
 const showReativado = ref(false);
 
@@ -47,7 +46,11 @@ const menu = [
 ];
 
 async function sair() {
-    await auth.logout();
+    try {
+        await auth.logout();
+    } catch {
+        // A sessão local já foi limpa em auth.logout(); mesmo se a API de logout falhar, o candidato sai.
+    }
     router.push({ name: 'login' });
 }
 

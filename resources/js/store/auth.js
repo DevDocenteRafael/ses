@@ -78,6 +78,8 @@ export const useAuthStore = defineStore('auth', {
             localStorage.removeItem('ses_pessoa');
             localStorage.removeItem('ses_tipo');
             localStorage.removeItem('ses_restricoes');
+            // Aviso de reativação pertence ao candidato que saiu; não pode aparecer para o próximo login na aba.
+            try { sessionStorage.removeItem('ses_reativacao_sucesso'); } catch (e) {}
         },
     },
 });

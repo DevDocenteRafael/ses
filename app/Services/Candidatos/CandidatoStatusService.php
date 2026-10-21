@@ -70,7 +70,10 @@ class CandidatoStatusService
 
     public function registrarAtividade(Candidato $candidato): void
     {
-        $candidato->forceFill(['ultima_atividade_em' => now()])->save();
+        $candidato->forceFill([
+            'ultima_atividade_em' => now(),
+            'ultima_atualizacao_real_em' => now(),
+        ])->save();
     }
 
     public function bloquearManualmente(Candidato $candidato, ?string $motivoPublico = null, ?int $administradorPessoaId = null): bool

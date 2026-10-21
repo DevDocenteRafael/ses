@@ -14,9 +14,13 @@ return new class extends Migration
     {
         Schema::table('candidato', function (Blueprint $table) {
             $table->timestamp('ultima_atividade_em')->nullable()->after('status')->index();
+            $table->timestamp('ultima_atualizacao_real_em')->nullable()->after('ultima_atividade_em')->index();
         });
 
-        DB::table('candidato')->update(['ultima_atividade_em' => now()]);
+        DB::table('candidato')->update([
+            'ultima_atividade_em' => now(),
+            'ultima_atualizacao_real_em' => now(),
+        ]);
     }
 
     /**
@@ -26,7 +30,8 @@ return new class extends Migration
     {
         Schema::table('candidato', function (Blueprint $table) {
             $table->dropIndex(['ultima_atividade_em']);
-            $table->dropColumn('ultima_atividade_em');
+            $table->dropIndex(['ultima_atualizacao_real_em']);
+            $table->dropColumn(['ultima_atividade_em', 'ultima_atualizacao_real_em']);
         });
     }
 };

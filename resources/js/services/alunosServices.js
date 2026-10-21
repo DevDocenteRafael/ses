@@ -30,6 +30,10 @@ export default {
         return api.post('/me/reativacao-questionario', dados);
     },
 
+    obterPerguntaInatividade() {
+        return api.get('/me/reativacao-questionario');
+    },
+
     // Currículo (links, info profissional, preferências, dados acadêmicos)
     salvarLinks(matricula, dados) {
         return api.post(`/candidatos/${matricula}/perfil/links`, dados);

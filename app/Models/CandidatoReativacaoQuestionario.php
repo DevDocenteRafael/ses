@@ -8,12 +8,16 @@ class CandidatoReativacaoQuestionario extends Model
 {
     public const RESULTADO_REATIVADO = 'REATIVADO';
     public const RESULTADO_ENCERRAMENTO_SOLICITADO = 'ENCERRAMENTO_SOLICITADO';
+    public const RESULTADO_RESPONDIDA = 'RESPONDIDA';
 
     protected $table = 'candidato_reativacao_questionarios';
 
     protected $fillable = [
         'candidato_matricula',
         'bloqueado_em',
+        'ciclo_inicio_em',
+        'pergunta_numero',
+        'sequencia',
         'bloqueio_notificacao_id',
         'resposta_1',
         'resposta_2',
@@ -30,6 +34,9 @@ class CandidatoReativacaoQuestionario extends Model
 
     protected $casts = [
         'bloqueado_em' => 'datetime',
+        'ciclo_inicio_em' => 'datetime',
+        'pergunta_numero' => 'integer',
+        'sequencia' => 'integer',
         'resposta_4' => 'array',
         'orientacoes' => 'array',
         'concluido_em' => 'datetime',
