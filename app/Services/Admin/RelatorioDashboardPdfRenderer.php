@@ -30,6 +30,7 @@ class RelatorioDashboardPdfRenderer
             match ($secao) {
                 'perfis_ativos' => $this->perfisAtivos($dashboard['perfisAtivos'] ?? []),
                 'contratados' => $this->contratados($dashboard['contratados'] ?? []),
+                'contratacoes_unidade' => $this->contratacoesPorUnidade($dashboard['contratacoesPorUnidade'] ?? []),
                 'acessos_candidatos' => $this->acessosCandidatos($dashboard['acessosCandidatos'] ?? []),
                 'empresas_ativas' => $this->empresasAtivas($dashboard['empresasAtivas'] ?? []),
                 default => null,
@@ -58,6 +59,7 @@ class RelatorioDashboardPdfRenderer
         $linhas = [
             'perfis_ativos' => ['Perfis Ativos', $dashboard['perfisAtivos']['total'] ?? 0],
             'contratados' => ['Contratados', $dashboard['contratados']['ultimos30Dias'] ?? 0],
+            'contratacoes_unidade' => ['Unidades Senac com contratações', $dashboard['contratacoesPorUnidade']['totalUnidades'] ?? 0],
             'acessos_candidatos' => ['Acessos de Candidatos', $dashboard['acessosCandidatos']['ultimos30Dias'] ?? 0],
             'empresas_ativas' => ['Empresas Ativas', $dashboard['empresasAtivas']['total'] ?? 0],
         ];
@@ -90,6 +92,37 @@ class RelatorioDashboardPdfRenderer
         $this->linhaTexto('Total: ' . $this->numero((int) ($dados['total'] ?? $dados['ultimos30Dias'] ?? 0)));
         $this->linhaTexto('Período: ' . ($dados['periodo'] ?? 'Período do relatório'), 10.5, 'F1', self::CINZA);
         $this->linhaTexto('Coluna temporal: contratado_em', 10.5, 'F1', self::CINZA);
+    }
+
+    private function contratacoesPorUnidade(array $dados): void
+    {
+        $this->tituloSecao('CONTRATAÇÕES POR UNIDADE SENAC');
+        $this->linhaTexto(
+            'Alunos contratados: ' . $this->numero((int) ($dados['totalAlunos'] ?? 0))
+            . '  ·  Contratações: ' . $this->numero((int) ($dados['totalContratacoes'] ?? 0))
+            . '  ·  Unidades: ' . $this->numero((int) ($dados['totalUnidades'] ?? 0))
+        );
+        $this->linhaTexto('Período: ' . ($dados['periodo']['rotulo'] ?? 'Período do relatório'), 10.5, 'F1', self::CINZA);
+
+        $unidades = $dados['unidades'] ?? [];
+        if ($unidades === []) {
+            $this->linhaTexto('Nenhuma contratação vigente no período.', 10.5, 'F1', self::CINZA);
+        } else {
+            $maior = max(1, ...array_column($unidades, 'alunos'));
+            $this->y -= 4;
+            foreach ($unidades as $item) {
+                $this->garantirEspaco(22);
+                $nome = mb_strimwidth((string) $item['unidade'], 0, 30, '…');
+                $this->texto($item['posicao'] . 'º  ' . $nome, 72, $this->y, 10.5, 'F1', self::TEXTO);
+                $largura = max(2, round(150 * $item['alunos'] / $maior, 1));
+                $this->retangulo(290, $this->y - 1, $largura, 9, self::AZUL, self::AZUL);
+                $percentual = number_format((float) $item['percentual'], 1, ',', '.');
+                $this->texto($this->numero((int) $item['alunos']) . '  (' . $percentual . '%)', 450, $this->y, 10.5, 'F2', self::TEXTO);
+                $this->y -= 18;
+            }
+        }
+
+        $this->linhaTexto('Critério: alunos distintos com contratação vigente (contratado_em no período); unidade do primeiro registro acadêmico do aluno.', 9.5, 'F1', self::CINZA);
     }
 
     private function acessosCandidatos(array $dados): void

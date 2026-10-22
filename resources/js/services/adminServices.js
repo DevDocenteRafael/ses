@@ -9,6 +9,10 @@ export default {
         return api.get('/administrativo/dashboard');
     },
 
+    getContratacoesPorUnidade(params = {}) {
+        return api.get('/administrativo/relatorios/contratacoes-por-unidade', { params });
+    },
+
     gerarRelatorioDashboard(payload) {
         return api.post('/administrativo/relatorios/dashboard', payload, {
             responseType: 'blob',

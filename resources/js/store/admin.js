@@ -42,7 +42,9 @@ export const useAdminStore = defineStore('admin', {
                 return data;
             } catch (e) {
                 if (!preservarErro) {
-                    this.erro = e.response?.data?.message || 'Erro ao carregar indicadores.';
+                    // Erro de servidor/rede: mensagem própria em vez do texto técnico ("Server Error").
+                    const falhaServidor = !e.response || e.response.status >= 500;
+                    this.erro = (!falhaServidor && e.response?.data?.message) || 'Erro ao carregar indicadores.';
                 }
                 throw e;
             } finally {

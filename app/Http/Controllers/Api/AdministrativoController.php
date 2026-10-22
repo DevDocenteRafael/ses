@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AdministrativoController extends Controller
@@ -53,6 +54,31 @@ class AdministrativoController extends Controller
         return response()->json($indicadores->obter());
     }
 
+    /**
+     * Ranking "Contratações por Unidade Senac" da tela Relatórios Geral.
+     * Agregado no banco; não expõe dados pessoais de candidatos.
+     */
+    public function contratacoesPorUnidade(Request $request, DashboardIndicadoresService $indicadores): JsonResponse
+    {
+        $this->garantirAdministrativo($request);
+
+        $validated = $request->validate([
+            'periodo' => ['nullable', Rule::in(DashboardIndicadoresService::PERIODOS_CONTRATACOES_UNIDADE)],
+            'data_inicial' => 'required_if:periodo,personalizado|nullable|date_format:Y-m-d',
+            'data_final' => 'required_if:periodo,personalizado|nullable|date_format:Y-m-d|after_or_equal:data_inicial',
+        ], [
+            'data_final.after_or_equal' => 'A data inicial não pode ser posterior à data final.',
+        ]);
+
+        $periodo = $indicadores->resolverPeriodoContratacoesUnidade(
+            $validated['periodo'] ?? 'ultimos_30_dias',
+            $validated['data_inicial'] ?? null,
+            $validated['data_final'] ?? null,
+        );
+
+        return response()->json($indicadores->contratacoesPorUnidade($periodo));
+    }
+
     public function relatorioDashboard(
         Request $request,
         DashboardIndicadoresService $indicadores,
@@ -63,7 +89,7 @@ class AdministrativoController extends Controller
         $validated = $request->validate([
             'modo' => 'required|in:todos,especificos',
             'secoes' => 'required_if:modo,especificos|array|min:1',
-            'secoes.*' => 'in:perfis_ativos,contratados,acessos_candidatos,empresas_ativas',
+            'secoes.*' => 'in:perfis_ativos,contratados,contratacoes_unidade,acessos_candidatos,empresas_ativas',
             'data_inicial' => 'nullable|date_format:Y-m-d',
             'data_final' => 'nullable|date_format:Y-m-d',
         ]);
@@ -76,7 +102,7 @@ class AdministrativoController extends Controller
         }
 
         $secoes = ($validated['modo'] ?? null) === 'todos'
-            ? ['perfis_ativos', 'contratados', 'acessos_candidatos', 'empresas_ativas']
+            ? ['perfis_ativos', 'contratados', 'contratacoes_unidade', 'acessos_candidatos', 'empresas_ativas']
             : array_values(array_unique($validated['secoes'] ?? []));
 
         $periodo = $indicadores->resolverPeriodoRelatorio($validated['data_inicial'] ?? null, $validated['data_final'] ?? null);

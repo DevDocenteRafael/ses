@@ -8,7 +8,26 @@
         <div class="container-fluid p-4">
             <loading v-if="admin.carregando && !carregouUmaVez" mensagem="Carregando indicadores..." />
 
+            <div v-else-if="!dash && carregouUmaVez" class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert" data-testid="indicadores-indisponiveis">
+                <span>
+                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                    Indicadores indisponíveis no momento. {{ admin.erro || 'Não foi possível carregar os indicadores.' }}
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-danger" :disabled="atualizandoIndicadores" @click="carregarInicial">Tentar novamente</button>
+            </div>
+
             <template v-else-if="dash">
+                <div v-if="falhaAtualizacao" class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="status" data-testid="indicadores-desatualizados">
+                    <span>
+                        <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>
+                        Não foi possível atualizar os indicadores. Os valores abaixo são os últimos obtidos{{ ultimaAtualizacaoLabel ? ` às ${ultimaAtualizacaoLabel}` : '' }}.
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-dark" :disabled="atualizandoIndicadores" @click="atualizarIndicadoresManual">Tentar novamente</button>
+                </div>
+                <div v-if="avisoPrazoInatividade" class="alert alert-warning small" role="note" data-testid="aviso-prazo-inatividade">
+                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ avisoPrazoInatividade }}
+                </div>
+
                 <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
                     <div>
                         <h1 class="h5 fw-bold mb-1">Resumo dos indicadores</h1>
@@ -203,6 +222,12 @@
                     </div>
                 </div>
 
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <ContratacoesPorUnidade ref="contratacoesPorUnidadeRef" />
+                    </div>
+                </div>
+
                 <p class="text-secondary small mt-3 mb-0">
                     "Buscas Realizadas" e "Filtros Mais Acessados pelas Empresas" dependem de um registro de
                     buscas em Buscar Talentos que ainda não existe no sistema — por isso não aparecem aqui.
@@ -220,7 +245,7 @@
                     <input v-model="modoRelatorio" class="form-check-input" type="radio" value="todos">
                     <span>
                         <strong>Todos os dados</strong>
-                        <small>Inclui Perfis Ativos, Contratados, Acessos de Candidatos e Empresas Ativas.</small>
+                        <small>Inclui Perfis Ativos, Contratados, Contratações por Unidade Senac, Acessos de Candidatos e Empresas Ativas.</small>
                     </span>
                 </label>
 
@@ -330,6 +355,7 @@ import topbar from '../../../components/common/header.vue';
 import cardIndicador from '../../../components/common/cardIndicador.vue';
 import loading from '../../../components/common/loading.vue';
 import modal from '../../../components/common/modal.vue';
+import ContratacoesPorUnidade from '../components/ContratacoesPorUnidade.vue';
 import { useAdminStore } from '../../../store/admin';
 import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
@@ -340,6 +366,7 @@ const carregouUmaVez = ref(false);
 const graficoCursosRef = ref(null);
 const graficoCandidatosCursoRef = ref(null);
 const botaoRelatorioRef = ref(null);
+const contratacoesPorUnidadeRef = ref(null);
 const modalRelatorioAberto = ref(false);
 const modoRelatorio = ref('todos');
 const secoesRelatorio = ref([]);
@@ -354,6 +381,7 @@ let timeoutLimparAnimacoes = null;
 const DASHBOARD_REFRESH_INTERVAL_MS = 3600000;
 const intervaloAtualizacaoMs = DASHBOARD_REFRESH_INTERVAL_MS;
 const atualizandoIndicadores = ref(false);
+const falhaAtualizacao = ref(false);
 const ultimaAtualizacao = ref(null);
 const indicadoresAlterados = ref(new Set());
 const pollingSuspensoPorAutenticacao = ref(false);
@@ -368,16 +396,28 @@ const indicadoresMonitorados = [
 const opcoesRelatorio = [
     { valor: 'perfis_ativos', label: 'Perfis Ativos' },
     { valor: 'contratados', label: 'Contratados' },
+    { valor: 'contratacoes_unidade', label: 'Contratações por Unidade Senac' },
     { valor: 'acessos_candidatos', label: 'Acessos de Candidatos' },
     { valor: 'empresas_ativas', label: 'Empresas Ativas' },
 ];
 
 onMounted(async () => {
+    await carregarInicial();
+    document.addEventListener('visibilitychange', tratarMudancaVisibilidade);
+    iniciarPollingIndicadores();
+});
+
+// Também usada por "Tentar novamente" quando a primeira carga falha (403, 500, rede).
+async function carregarInicial() {
+    pollingSuspensoPorAutenticacao.value = false;
     await atualizarIndicadores({ inicial: true });
     carregouUmaVez.value = true;
     await nextTick();
+    criarGraficos();
+}
 
-    if (admin.dashboard?.cursosMaisContratados?.length && graficoCursosRef.value) {
+function criarGraficos() {
+    if (!graficoCursos && admin.dashboard?.cursosMaisContratados?.length && graficoCursosRef.value) {
         graficoCursos = new Chart(graficoCursosRef.value, {
             type: 'bar',
             data: {
@@ -427,7 +467,7 @@ onMounted(async () => {
         });
     }
 
-    if (admin.dashboard?.candidatosPorCurso?.length && graficoCandidatosCursoRef.value) {
+    if (!graficoCandidatosCurso && admin.dashboard?.candidatosPorCurso?.length && graficoCandidatosCursoRef.value) {
         const cursos = admin.dashboard.candidatosPorCurso;
         const maiorQuantidade = Math.max(1, ...cursos.map((item) => Number(item.total)));
         graficoCandidatosCurso = new Chart(graficoCandidatosCursoRef.value, {
@@ -483,10 +523,7 @@ onMounted(async () => {
             }],
         });
     }
-
-    document.addEventListener('visibilitychange', tratarMudancaVisibilidade);
-    iniciarPollingIndicadores();
-});
+}
 
 onBeforeUnmount(() => {
     pararPollingIndicadores();
@@ -653,6 +690,8 @@ function tratarMudancaVisibilidade() {
 }
 
 async function atualizarIndicadoresManual() {
+    // Pedido explícito do usuário: tenta de novo mesmo após um 403 ter suspendido o polling.
+    pollingSuspensoPorAutenticacao.value = false;
     await atualizarIndicadores({ manual: true });
 }
 
@@ -665,12 +704,17 @@ async function atualizarIndicadores({ inicial = false, manual = false, automatic
 
     try {
         await admin.carregarDashboard({ mostrarLoading: inicial, preservarErro: !inicial });
+        falhaAtualizacao.value = false;
         ultimaAtualizacao.value = new Date();
+        // A seção carrega sozinha ao aparecer; nas atualizações seguintes acompanha o restante da tela.
+        if (!inicial) contratacoesPorUnidadeRef.value?.recarregar();
         if (anterior && admin.dashboard) {
             marcarIndicadoresAlterados(anterior, admin.dashboard);
         }
     } catch (error) {
         const status = error?.response?.status;
+        // Falha nunca vira zero: sem dados mostra o erro; com dados, avisa que são os últimos válidos.
+        falhaAtualizacao.value = true;
         if (status === 401 || status === 403) {
             pollingSuspensoPorAutenticacao.value = true;
             pararPollingIndicadores();
@@ -743,6 +787,23 @@ function atualizarGraficoCandidatosPorCurso() {
 }
 
 // ── Card "Perfis Ativos" ────────────────────────────────────────
+// Prazo de inatividade curto (ex.: CANDIDATO_INATIVIDADE_SEGUNDOS=30, valor de teste) zera o
+// indicador mesmo com candidatos ativos no banco: avisa para não ser lido como dado real.
+const avisoPrazoInatividade = computed(() => {
+    const perfis = dash.value?.perfisAtivos;
+    const prazo = Number(perfis?.prazoInatividadeSegundos);
+    if (!perfis?.inatividadeHabilitada || !prazo || prazo >= 86400) return '';
+    return `Neste servidor, o candidato fica inativo após ${formatarDuracao(prazo)} sem atividade `
+        + '(CANDIDATO_INATIVIDADE_SEGUNDOS). Com esse prazo de teste, "Perfis Ativos" tende a zero. O padrão do sistema é 3 meses.';
+});
+
+function formatarDuracao(segundos) {
+    const unidades = [[86400, 'dia', 'dias'], [3600, 'hora', 'horas'], [60, 'minuto', 'minutos'], [1, 'segundo', 'segundos']];
+    const [tamanho, singular, plural] = unidades.find(([t]) => segundos >= t) || unidades.at(-1);
+    const valor = Math.floor(segundos / tamanho);
+    return `${valor} ${valor === 1 ? singular : plural}`;
+}
+
 const variacaoPerfisLabel = computed(() => {
     const v = dash.value?.perfisAtivos?.variacaoPercentualVsMesAnterior;
     if (v === null || v === undefined) return dash.value?.perfisAtivos?.subtitulo || 'Candidatos com status ativo';

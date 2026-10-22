@@ -110,6 +110,7 @@ Route::middleware('auth.token')->group(function () {
     Route::prefix('administrativo')->group(function () {
         Route::get('dashboard',                  [AdministrativoController::class, 'dashboard']);
         Route::post('relatorios/dashboard',      [AdministrativoController::class, 'relatorioDashboard']);
+        Route::get('relatorios/contratacoes-por-unidade', [AdministrativoController::class, 'contratacoesPorUnidade']);
         Route::get('/',                          [AdministrativoController::class, 'index']);
         Route::post('sincronizar-alunos',        [AdministrativoController::class, 'sincronizarAlunos']);
         Route::get('candidatos/inativos/notificacoes/contagem', [CandidatoInatividadeNotificacaoController::class, 'contagem']);
