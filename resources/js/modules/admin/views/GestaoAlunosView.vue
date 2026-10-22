@@ -61,7 +61,7 @@
                             </button>
                             <div class="d-flex flex-nowrap align-items-stretch gap-2">
                                 <button
-                                    class="btn btn-outline-secondary text-nowrap flex-shrink-0"
+                                    class="btn btn-outline-secondary ses-btn-relatorio text-nowrap flex-shrink-0"
                                     type="button"
                                     :disabled="admin.carregando || gerandoZip || gerandoRelatorioPdf || !admin.alunos.length"
                                     @click="baixarCandidatosFiltradosPdf"
@@ -86,7 +86,7 @@
                     <div v-if="bandejaFiltrosAberta" id="admin-candidatos-bandeja-filtros" class="admin-filter-tray rounded-3 p-3 mb-3">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <div>
-                                <h3 class="h6 fw-bold mb-1 text-white">Bandeja de filtros</h3>
+                                <h3 class="h6 fw-bold mb-1 admin-filter-tray__titulo">Bandeja de filtros</h3>
                                 <p class="small text-white-50 mb-0">Filtros compartilhados com a Pesquisa de Talentos, preservando o escopo administrativo.</p>
                             </div>
                         </div>
@@ -1289,6 +1289,15 @@ html.dark .admin-filter-tray {
 
 .admin-filter-tray .form-label {
     color: var(--ses-admin-filter-heading) !important;
+}
+
+/* Título "Bandeja de filtros": azul-marinho no tema claro; no escuro mantém o branco original. */
+.admin-filter-tray__titulo {
+    color: var(--ses-admin-filter-heading);
+}
+
+html.dark .admin-filter-tray__titulo {
+    color: #ffffff;
 }
 
 .admin-filter-tray .form-control,

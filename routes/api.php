@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\PerfilCandidatoController;
 use App\Http\Controllers\Api\ContratacaoController;
 use App\Http\Controllers\Api\CandidatoInatividadeNotificacaoController;
 use App\Http\Controllers\Api\CandidatoReativacaoQuestionarioController;
+use App\Http\Controllers\Api\IndicacaoSenacAdminController;
+use App\Http\Controllers\Api\IndicacaoSenacEmpresaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,6 +86,10 @@ Route::middleware('auth.token')->group(function () {
         ->except(['store'])
         ->parameters(['empresas' => 'cnpj']);
 
+    // Indicações Senac recebidas pela empresa autenticada
+    Route::get('empresa/indicacoes', [IndicacaoSenacEmpresaController::class, 'index']);
+    Route::patch('empresa/indicacoes/{indicacao}', [IndicacaoSenacEmpresaController::class, 'update'])->whereNumber('indicacao');
+
     // Vagas
     Route::apiResource('vagas', VagaController::class);
 
@@ -116,6 +122,12 @@ Route::middleware('auth.token')->group(function () {
         Route::get('engajamento',                [AdministrativoController::class, 'listarEngajamento']);
         Route::post('engajamento',               [AdministrativoController::class, 'storeEngajamento']);
         Route::put('engajamento/{unidade}',      [AdministrativoController::class, 'updateEngajamento']);
+
+        // Indicações Senac (administrativo indica candidatos para empresas)
+        Route::get('indicacoes',                 [IndicacaoSenacAdminController::class, 'index']);
+        Route::post('indicacoes',                [IndicacaoSenacAdminController::class, 'store']);
+        Route::get('indicacoes/diagnostico-candidatos', [IndicacaoSenacAdminController::class, 'diagnosticoCandidatos']);
+        Route::get('indicacoes/{indicacao}',     [IndicacaoSenacAdminController::class, 'show'])->whereNumber('indicacao');
 
         // Rotas da Central de E-mails removidas (funcionalidade descartada).
         // Precisa ficar por último: sendo um curinga, {pessoaId} casaria com

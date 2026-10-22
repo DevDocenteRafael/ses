@@ -1,6 +1,6 @@
 <template>
     <div v-if="deveExibir" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 flex-wrap">
-        <small v-if="mostrarContador" class="text-secondary text-center text-sm-start">
+        <small v-if="mostrarContador" class="ses-texto-paginacao text-center text-sm-start">
             Mostrando {{ inicio }}–{{ fim }} de {{ total }} {{ rotuloResultados }}
         </small>
 

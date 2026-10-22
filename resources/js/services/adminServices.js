@@ -32,6 +32,27 @@ export default {
         return api.get('/candidatos/habilidades');
     },
 
+    listarSegmentosAcademicos() {
+        return api.get('/candidatos/segmentos-academicos');
+    },
+
+    // Indicações Senac
+    listarIndicacoes(params = {}) {
+        return api.get('/administrativo/indicacoes', { params });
+    },
+
+    diagnosticarBuscaCandidatos(busca) {
+        return api.get('/administrativo/indicacoes/diagnostico-candidatos', { params: { busca } });
+    },
+
+    verIndicacao(id) {
+        return api.get(`/administrativo/indicacoes/${encodeURIComponent(id)}`);
+    },
+
+    criarIndicacoes(dados) {
+        return api.post('/administrativo/indicacoes', dados);
+    },
+
     verAluno(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

@@ -51,6 +51,15 @@ export default {
         return api.get('/candidatos/segmentos-academicos');
     },
 
+    // Indicações Senac recebidas pela empresa autenticada
+    listarIndicacoes(params = {}) {
+        return api.get('/empresa/indicacoes', { params });
+    },
+
+    atualizarStatusIndicacao(id, status) {
+        return api.patch(`/empresa/indicacoes/${encodeURIComponent(id)}`, { status });
+    },
+
     verTalento(matricula) {
         return api.get(`/candidatos/${matricula}`);
     },

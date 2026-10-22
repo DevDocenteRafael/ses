@@ -67,26 +67,69 @@ class CandidatoQueryService
         ]);
     }
 
+    /**
+     * Busca textual de candidatos com critérios explícitos:
+     * - Termo com letras (ex.: "Ana 1"): pesquisa somente no nome. Nunca vira CPF/matrícula.
+     * - Termo só com dígitos e pontuação de documento/telefone: compara apenas os dígitos com
+     *   matrícula exata, CPF exato (11 dígitos), telefone exato (10–11 dígitos) e, de
+     *   4 a 9 dígitos, início da matrícula ou do CPF (digitação progressiva). Correspondências
+     *   exatas vêm primeiro.
+     */
+    public function aplicarBusca(Builder $query, string $termo): void
+    {
+        $termo = trim($termo);
+
+        if ($termo === '') {
+            return;
+        }
+
+        if (! self::ehTermoDocumento($termo)) {
+            $query->whereHas('pessoa', fn ($pessoa) => $pessoa->where('nome', 'like', '%' . $termo . '%'));
+
+            return;
+        }
+
+        $digitos = preg_replace('/\D+/', '', $termo) ?? '';
+        $tamanho = strlen($digitos);
+
+        $query->where(function ($q) use ($digitos, $tamanho) {
+            $q->where('matricula', $digitos);
+
+            if ($tamanho === 11) {
+                $q->orWhere('cpf', $digitos);
+            }
+
+            if ($tamanho >= 10 && $tamanho <= 11) {
+                $q->orWhereHas('pessoa', fn ($pessoa) => $pessoa->where('telefone', $digitos));
+            }
+
+            if ($tamanho >= 4 && $tamanho <= 9) {
+                $q->orWhere('matricula', 'like', $digitos . '%')
+                    ->orWhere('cpf', 'like', $digitos . '%');
+            }
+        });
+
+        $query->orderByRaw(
+            'CASE WHEN candidato.matricula = ? OR candidato.cpf = ? THEN 0 ELSE 1 END',
+            [$digitos, $digitos]
+        );
+    }
+
+    /**
+     * Verdadeiro quando o termo tem dígitos e nenhum caractere além de pontuação usual de
+     * CPF, matrícula ou telefone. Qualquer letra faz o termo ser tratado como nome.
+     */
+    public static function ehTermoDocumento(string $termo): bool
+    {
+        return preg_match('/\d/', $termo) === 1
+            && preg_match('/^[\d\s.\-\/()+]+$/', $termo) === 1;
+    }
+
     private function aplicarFiltros(Builder $query, Request $request): void
     {
         if ($request->filled('busca')) {
-            $termo = trim((string) $request->input('busca'));
-            $termoNumerico = preg_replace('/\D+/', '', $termo) ?? '';
-
-            $query->where(function ($q) use ($termo, $termoNumerico) {
-                $q->whereHas('pessoa', function ($pessoa) use ($termo) {
-                    $pessoa->where('nome', 'like', '%' . $termo . '%');
-                });
-
-                if ($termoNumerico !== '') {
-                    $q->orWhere('cpf', 'like', '%' . $termoNumerico . '%')
-                        ->orWhereHas('pessoa', function ($pessoa) use ($termoNumerico) {
-                            $pessoa->where('telefone', 'like', '%' . $termoNumerico . '%');
-                        });
-                } else {
-                    $q->orWhere('cpf', 'like', '%' . $termo . '%');
-                }
-            });
+            Validator::make($request->input(), ['busca' => ['string', 'max:100']])->validate();
+            $this->aplicarBusca($query, (string) $request->input('busca'));
         }
 
         if ($request->filled('status')) {

@@ -21,6 +21,7 @@ const menuItems = [
     { label: 'Gestão de Empresas', icon: 'bi-building-fill', to: 'admin.empresas' },
     { label: 'Gestão dos Candidatos', icon: 'bi-people-fill', to: 'admin.alunos' },
     { label: 'Candidatos Contratados', icon: 'bi-person-check-fill', to: 'admin.contratados' },
+    { label: 'Indicações de Candidatos', icon: 'bi-send-check-fill', to: 'admin.indicacoes' },
 ];
 
 async function handleSair() {

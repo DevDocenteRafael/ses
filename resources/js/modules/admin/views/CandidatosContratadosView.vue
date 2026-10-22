@@ -41,7 +41,7 @@
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
-                                <button class="btn btn-outline-secondary" type="button" :disabled="carregando || baixandoPdf || !paginacao.total" @click="baixarContratacoesPdf">
+                                <button class="btn btn-outline-secondary ses-btn-relatorio" type="button" :disabled="carregando || baixandoPdf || !paginacao.total" @click="baixarContratacoesPdf">
                                     <span v-if="baixandoPdf" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                     <i v-else class="bi bi-file-earmark-pdf me-1"></i>
                                     {{ baixandoPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}

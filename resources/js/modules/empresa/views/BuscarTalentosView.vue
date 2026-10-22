@@ -8,6 +8,10 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
+                <router-link :to="{ name: 'empresa.indicacoes' }" class="btn btn-sm btn-outline-light text-nowrap" data-testid="link-indicacoes-senac">
+                    <i class="bi bi-person-check me-1" aria-hidden="true"></i>Indicações Senac
+                    <span v-if="indicacoesNovas" class="badge rounded-pill bg-warning text-dark ms-1" :aria-label="`${indicacoesNovas} novas`">{{ indicacoesNovas }}</span>
+                </router-link>
                 <AccessibilityMenu />
                 <div class="text-end d-none d-sm-block">
                     <p class="fw-semibold mb-0">{{ auth.pessoa?.nome || 'Empresa' }}</p>
@@ -127,10 +131,10 @@
                         <span class="badge bg-secondary ms-2">{{ paginacao.total }} candidato{{ paginacao.total === 1 ? '' : 's' }}</span>
                     </h2>
                     <div class="d-flex align-items-center flex-wrap gap-2 ms-auto">
-                        <small v-if="paginacao.total" class="text-secondary">
+                        <small v-if="paginacao.total" class="ses-texto-paginacao">
                             Página {{ paginacao.current_page }} de {{ paginacao.last_page }} · até {{ paginacao.per_page }} por página
                         </small>
-                        <button type="button" class="btn btn-outline-secondary text-nowrap" :disabled="carregando || gerandoPdf || !paginacao.total" @click="baixarListaFiltrada">
+                        <button type="button" class="btn btn-outline-secondary ses-btn-relatorio text-nowrap" :disabled="carregando || gerandoPdf || !paginacao.total" @click="baixarListaFiltrada">
                             <span v-if="gerandoPdf" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                             <i v-else class="bi bi-file-earmark-pdf me-1"></i>
                             {{ gerandoPdf ? 'Preparando PDF...' : 'Relatório de Busca' }}
@@ -402,6 +406,17 @@ const logoSenacSrc = '/img/senac-logo.png';
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToast();
+
+// Contador do link "Indicações Senac" no cabeçalho; falha aqui não afeta a busca.
+const indicacoesNovas = ref(0);
+onMounted(async () => {
+    try {
+        const { data } = await empresaService.listarIndicacoes({ per_page: 1 });
+        indicacoesNovas.value = Number(data.novas || 0);
+    } catch {
+        indicacoesNovas.value = 0;
+    }
+});
 
 const segmentosAcademicos = ref(areasAtuacao.map((area) => ({ id: area, nome: area })));
 const buscaSegmento = ref('');

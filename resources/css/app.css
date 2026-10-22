@@ -272,3 +272,29 @@ html.dark .btn-light {
         transition: none !important;
     }
 }
+
+/*
+ * Relatório de Busca e textos de paginação.
+ * No tema claro, o cinza #6c757d do Bootstrap (btn-outline-secondary / text-secondary) ficava
+ * apagado (4,69:1). Só o tema claro muda; no escuro as cores continuam as mesmas de antes.
+ */
+html:not(.dark) .ses-btn-relatorio {
+    --bs-btn-color: #334155;
+    --bs-btn-border-color: #334155;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #334155;
+    --bs-btn-hover-border-color: #334155;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: #1e293b;
+    --bs-btn-active-border-color: #1e293b;
+    --bs-btn-disabled-color: #334155;
+    --bs-btn-disabled-border-color: #334155;
+}
+
+.ses-texto-paginacao {
+    color: var(--ses-muted);
+}
+
+html:not(.dark) .ses-texto-paginacao {
+    color: #475569;
+}

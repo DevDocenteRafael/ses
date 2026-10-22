@@ -23,6 +23,11 @@ export default [
                 component: () => import('../modules/admin/views/CandidatosContratadosView.vue'),
             },
             {
+                path: 'indicacoes',
+                name: 'admin.indicacoes',
+                component: () => import('../modules/admin/views/IndicacoesView.vue'),
+            },
+            {
                 path: 'empresas',
                 name: 'admin.empresas',
                 component: () => import('../modules/admin/views/GestaoEmpresasView.vue'),

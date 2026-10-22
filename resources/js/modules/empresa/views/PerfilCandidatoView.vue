@@ -24,7 +24,7 @@
         </header>
 
         <div class="bg-white border-bottom p-3 d-flex align-items-center px-4 mb-4">
-            <router-link :to="{ name: 'empresa.buscar-talentos' }" class="text-decoration-none text-secondary small d-flex align-items-center">
+            <router-link :to="{ name: veioDasIndicacoes ? 'empresa.indicacoes' : 'empresa.buscar-talentos' }" class="text-decoration-none text-secondary small d-flex align-items-center">
                 <i class="bi bi-arrow-left me-1"></i> Voltar
             </router-link>
             <span class="text-secondary mx-2">/</span>
@@ -286,6 +286,8 @@ const props = defineProps({
 
 const auth = useAuthStore();
 const router = useRouter();
+// Perfil aberto a partir de "Indicações Senac": o "Voltar" retorna para lá.
+const veioDasIndicacoes = computed(() => router.currentRoute.value.query.de === 'indicacoes');
 const toast = useToast();
 
 const carregando = ref(true);
