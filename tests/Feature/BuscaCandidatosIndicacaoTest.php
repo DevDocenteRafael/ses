@@ -35,7 +35,7 @@ class BuscaCandidatosIndicacaoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['candidato.inatividade_habilitada' => true, 'candidato.inatividade_segundos' => 30, 'candidato.perguntas_modo_teste' => false]);
+        config(['candidato.inatividade_habilitada' => true, 'candidato.inatividade_modo_teste' => true, 'candidato.inatividade_segundos' => 30, 'candidato.perguntas_modo_teste' => false]);
         Carbon::setTestNow(Carbon::parse('2026-10-22 10:00:00'));
         Mail::fake();
 

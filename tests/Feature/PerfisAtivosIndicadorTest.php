@@ -28,7 +28,8 @@ class PerfisAtivosIndicadorTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-10-22 12:00:00'));
-        config(['candidato.inatividade_habilitada' => true, 'candidato.inatividade_segundos' => 7889400]);
+        // Simula o .env antigo das máquinas da equipe: CANDIDATO_INATIVIDADE_SEGUNDOS=30 sem modo de teste.
+        config(['candidato.inatividade_habilitada' => true, 'candidato.inatividade_modo_teste' => false, 'candidato.inatividade_segundos' => 30]);
     }
 
     public function test_k_l_m_n_conta_somente_candidatos_efetivamente_ativos(): void
@@ -46,7 +47,9 @@ class PerfisAtivosIndicadorTest extends TestCase
         $this->withToken($token)->getJson(self::API)->assertOk()
             ->assertJsonPath('perfisAtivos.total', 3)
             ->assertJsonPath('perfisAtivos.inatividadeHabilitada', true)
-            ->assertJsonPath('perfisAtivos.prazoInatividadeSegundos', 7889400);
+            ->assertJsonPath('perfisAtivos.inatividadeModoTeste', false)
+            ->assertJsonPath('perfisAtivos.prazoInatividadeMeses', 3)
+            ->assertJsonPath('perfisAtivos.prazoInatividadeSegundos', null);
     }
 
     public function test_a_b_o_administradores_e_computadores_diferentes_veem_o_mesmo_numero(): void
@@ -77,10 +80,15 @@ class PerfisAtivosIndicadorTest extends TestCase
 
         $this->withToken($token)->getJson(self::API)->assertOk()->assertJsonPath('perfisAtivos.total', 4);
 
-        // Mesmo banco, servidor configurado com CANDIDATO_INATIVIDADE_SEGUNDOS=30 (valor antigo do .env.example).
-        config(['candidato.inatividade_segundos' => 30]);
+        // CANDIDATO_INATIVIDADE_SEGUNDOS=30 (valor antigo do .env.example) sozinho não zera mais o indicador.
+        $this->assertSame(30, config('candidato.inatividade_segundos'));
+        $this->withToken($token)->getJson(self::API)->assertOk()->assertJsonPath('perfisAtivos.total', 4);
+
+        // Só o modo de teste explícito aplica o prazo de 30 s.
+        config(['candidato.inatividade_modo_teste' => true]);
         $this->withToken($token)->getJson(self::API)->assertOk()
             ->assertJsonPath('perfisAtivos.total', 0)
+            ->assertJsonPath('perfisAtivos.inatividadeModoTeste', true)
             ->assertJsonPath('perfisAtivos.prazoInatividadeSegundos', 30);
 
         // Nenhum dado de candidato foi alterado pela consulta.

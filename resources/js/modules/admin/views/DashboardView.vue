@@ -787,14 +787,14 @@ function atualizarGraficoCandidatosPorCurso() {
 }
 
 // ── Card "Perfis Ativos" ────────────────────────────────────────
-// Prazo de inatividade curto (ex.: CANDIDATO_INATIVIDADE_SEGUNDOS=30, valor de teste) zera o
-// indicador mesmo com candidatos ativos no banco: avisa para não ser lido como dado real.
+// Só o modo de teste de inatividade (CANDIDATO_INATIVIDADE_MODO_TESTE, local/testing) usa prazo
+// em segundos e pode zerar o indicador: avisa para não ser lido como dado real.
 const avisoPrazoInatividade = computed(() => {
     const perfis = dash.value?.perfisAtivos;
     const prazo = Number(perfis?.prazoInatividadeSegundos);
-    if (!perfis?.inatividadeHabilitada || !prazo || prazo >= 86400) return '';
-    return `Neste servidor, o candidato fica inativo após ${formatarDuracao(prazo)} sem atividade `
-        + '(CANDIDATO_INATIVIDADE_SEGUNDOS). Com esse prazo de teste, "Perfis Ativos" tende a zero. O padrão do sistema é 3 meses.';
+    if (!perfis?.inatividadeHabilitada || !perfis?.inatividadeModoTeste || !prazo) return '';
+    return `Modo de teste de inatividade ativo neste servidor: o candidato fica inativo após ${formatarDuracao(prazo)} sem atividade `
+        + '(CANDIDATO_INATIVIDADE_MODO_TESTE). Com esse prazo, "Perfis Ativos" tende a zero. A regra normal é 3 meses.';
 });
 
 function formatarDuracao(segundos) {

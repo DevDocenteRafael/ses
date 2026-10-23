@@ -36,6 +36,8 @@ class CandidatoInatividadeTest extends TestCase
         parent::setUp();
         config([
             'candidato.inatividade_habilitada' => true,
+            // Prazo de 30 s exige o modo de teste explícito (APP_ENV=testing).
+            'candidato.inatividade_modo_teste' => true,
             'candidato.inatividade_segundos' => 30,
             // Não herdar PERGUNTAS_MODO_TESTE do .env local; testes do modo 30 s ativam explicitamente.
             'candidato.perguntas_modo_teste' => false,

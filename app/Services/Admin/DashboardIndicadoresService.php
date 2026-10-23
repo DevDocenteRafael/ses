@@ -158,10 +158,14 @@ class DashboardIndicadoresService
                 'variacaoPercentualVsMesAnterior' => $variacaoPerfis,
                 'periodoComparado' => null,
                 'subtitulo' => 'Candidatos disponíveis pelo estado efetivo',
-                // Critério do ambiente (CANDIDATO_INATIVIDADE_*): o mesmo banco dá contagens
-                // diferentes conforme o prazo configurado em cada instalação.
+                // Critério do ambiente: o prazo em segundos só é informado quando o modo de teste
+                // (CANDIDATO_INATIVIDADE_MODO_TESTE, local/testing) está ativo; senão vale 3 meses.
                 'inatividadeHabilitada' => $this->statusService->inatividadeHabilitada(),
-                'prazoInatividadeSegundos' => $this->statusService->prazoSegundos(),
+                'inatividadeModoTeste' => $this->statusService->modoTesteInatividade(),
+                'prazoInatividadeMeses' => $this->statusService->prazoMeses(),
+                'prazoInatividadeSegundos' => $this->statusService->modoTesteInatividade()
+                    ? $this->statusService->prazoTesteSegundos()
+                    : null,
             ],
             'contratados' => [
                 'ultimos30Dias' => $contratadosUltimos30Dias,

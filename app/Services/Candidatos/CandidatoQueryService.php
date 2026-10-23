@@ -291,15 +291,7 @@ class CandidatoQueryService
         match ($normalizado) {
             '1', 'ativo', 'liberado', mb_strtolower(CandidatoStatusService::ATIVO) => $this->statusService->aplicarEscopoDisponiveis($query),
             'contratado', mb_strtolower(CandidatoStatusService::CONTRATADO) => $query->whereHas('contratacao'),
-            'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $this->statusService->inatividadeHabilitada()
-                ? $query
-                    ->where('status', true)
-                    ->whereDoesntHave('contratacao')
-                    ->where(function (Builder $inativo) {
-                        $inativo->whereNull('ultima_atividade_em')
-                            ->orWhere('ultima_atividade_em', '<=', $this->statusService->limiteAtividade());
-                    })
-                : $query->whereRaw('1 = 0'),
+            'inativo', mb_strtolower(CandidatoStatusService::BLOQUEADO_POR_INATIVIDADE) => $this->statusService->aplicarEscopoBloqueadosPorInatividade($query),
             '0', 'bloqueado', mb_strtolower(CandidatoStatusService::BLOQUEADO_MANUALMENTE) => $query
                 ->where('status', false)
                 ->whereDoesntHave('contratacao'),
