@@ -331,6 +331,17 @@
                         <div v-if="modalCadastroAberto" class="modal-backdrop fade show"></div>
                     </transition>
 
+                    <candidato-bloqueio-modal
+                        v-model:motivo="motivoBloqueio"
+                        :aberto="Boolean(candidatoBloqueio)"
+                        :nome-candidato="candidatoBloqueio?.pessoa?.nome || 'este candidato'"
+                        :processando="bloqueando"
+                        :erro="erroBloqueio"
+                        :erro-motivo="erroMotivoBloqueio"
+                        @fechar="fecharModalBloqueio"
+                        @confirmar="confirmarBloqueio"
+                    />
+
                     <download-curriculos-modal
                         v-model:pagina-inicial-model="formularioCurriculos.paginaInicial"
                         v-model:pagina-final-model="formularioCurriculos.paginaFinal"
@@ -407,7 +418,8 @@
                                                     class="btn btn-sm admin-candidates-action-button admin-candidates-action-button--access"
                                                     :class="aluno.status ? 'btn-outline-danger' : 'btn-success'"
                                                     :disabled="alterando === aluno.matricula"
-                                                    @click="alternarStatus(aluno)"
+                                                    :data-bloqueio-matricula="aluno.matricula"
+                                                    @click="alternarStatus(aluno, $event)"
                                                 >
                                                     {{ aluno.status ? 'Bloquear Acesso' : 'Liberar Acesso' }}
                                                 </button>
@@ -491,6 +503,7 @@ import topbar from '../../../components/common/header.vue';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import DownloadCurriculosModal from '../../../components/common/DownloadCurriculosModal.vue';
+import CandidatoBloqueioModal from '../components/CandidatoBloqueioModal.vue';
 import { useAdminStore } from '../../../store/admin';
 import adminService from '../../../services/adminServices';
 import { useToast } from '../../../composables/useToast';
@@ -543,6 +556,12 @@ const habilidadesDropdownContainer = ref(null);
 const habilidadesDisponiveis = ref([]);
 const carregandoHabilidades = ref(false);
 const alterando = ref(null);
+const candidatoBloqueio = ref(null);
+const motivoBloqueio = ref('');
+const bloqueando = ref(false);
+const erroBloqueio = ref('');
+const erroMotivoBloqueio = ref('');
+let matriculaOrigemBloqueio = null;
 const curriculoGerando = ref(null);
 const alunoExpandido = ref(null);
 const modalContratacaoAberto = ref(false);
@@ -1044,19 +1063,98 @@ async function salvarNovoCandidato() {
     }
 }
 
-async function alternarStatus(aluno) {
+// Bloquear abre o modal de confirmação; liberar continua direto, como antes.
+async function alternarStatus(aluno, evento) {
+    if (aluno.status) {
+        abrirModalBloqueio(aluno, evento?.currentTarget);
+        return;
+    }
+
     alterando.value = aluno.matricula;
-    const novoStatus = !aluno.status;
-    const motivoBloqueioPublico = novoStatus ? null : window.prompt('Informe um motivo público para o candidato (opcional):') || null;
     try {
-        await admin.atualizarStatusAluno(aluno.matricula, novoStatus, motivoBloqueioPublico);
+        await admin.atualizarStatusAluno(aluno.matricula, true);
         await carregarAlunosFiltrados();
-        toast.info(`Acesso do candidato ${novoStatus ? 'liberado' : 'bloqueado'} com sucesso.`);
+        toast.info('Acesso do candidato liberado com sucesso.');
     } catch (error) {
         toast.error('Não foi possível alterar o status do candidato.');
     } finally {
         alterando.value = null;
     }
+}
+
+function abrirModalBloqueio(aluno, botaoOrigem) {
+    matriculaOrigemBloqueio = botaoOrigem?.dataset?.bloqueioMatricula ?? aluno.matricula;
+    motivoBloqueio.value = '';
+    erroBloqueio.value = '';
+    erroMotivoBloqueio.value = '';
+    candidatoBloqueio.value = aluno;
+}
+
+function fecharModalBloqueio() {
+    if (bloqueando.value) return;
+
+    candidatoBloqueio.value = null;
+    devolverFocoAoBotaoDeBloqueio();
+}
+
+// A tabela pode ter sido recarregada: busca o botão pela matrícula; se a linha saiu da
+// listagem (ex.: filtro de liberados), o foco vai para a própria tabela.
+function devolverFocoAoBotaoDeBloqueio() {
+    const matricula = matriculaOrigemBloqueio;
+    nextTick(() => {
+        const botao = matricula ? document.querySelector(`[data-bloqueio-matricula="${CSS.escape(String(matricula))}"]`) : null;
+        const destino = botao && !botao.disabled ? botao : document.querySelector('.admin-candidates-table');
+        if (destino) {
+            if (destino !== botao && !destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1');
+            destino.focus();
+        }
+    });
+}
+
+function mensagemErroBloqueio(error) {
+    const status = error?.response?.status;
+
+    if (status === 422) {
+        return error.response.data?.message || 'Revise o motivo informado e tente novamente.';
+    }
+    if (status === 403) {
+        return 'Você não tem permissão para bloquear este candidato.';
+    }
+    if (status === 404) {
+        return 'Candidato não encontrado. Atualize a lista e tente novamente.';
+    }
+    if (!error?.response) {
+        return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+    }
+
+    return 'Não foi possível bloquear o candidato agora. Tente novamente em instantes.';
+}
+
+async function confirmarBloqueio() {
+    if (bloqueando.value || !candidatoBloqueio.value) return;
+
+    const aluno = candidatoBloqueio.value;
+    bloqueando.value = true;
+    alterando.value = aluno.matricula;
+    erroBloqueio.value = '';
+    erroMotivoBloqueio.value = '';
+
+    try {
+        await admin.atualizarStatusAluno(aluno.matricula, false, motivoBloqueio.value.trim() || null);
+    } catch (error) {
+        // Modal continua aberto com o motivo digitado, para tentar de novo.
+        erroMotivoBloqueio.value = error?.response?.data?.errors?.motivo_bloqueio_publico?.[0] || '';
+        erroBloqueio.value = erroMotivoBloqueio.value ? '' : mensagemErroBloqueio(error);
+        return;
+    } finally {
+        bloqueando.value = false;
+        alterando.value = null;
+    }
+
+    fecharModalBloqueio();
+    toast.success(`Acesso de ${aluno.pessoa?.nome || 'candidato'} bloqueado com sucesso.`);
+    await carregarAlunosFiltrados();
+    devolverFocoAoBotaoDeBloqueio();
 }
 
 async function baixarCurriculo(aluno) {

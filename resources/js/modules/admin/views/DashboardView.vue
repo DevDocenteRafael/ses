@@ -51,7 +51,7 @@
                         <button
                             ref="botaoRelatorioRef"
                             type="button"
-                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-relatorio"
+                            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 ses-btn-relatorio-geral"
                             @click="abrirModalRelatorio"
                         >
                             <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
@@ -882,8 +882,27 @@ const pontosLinha = computed(() => pontosCirculo.value.map((p) => `${p.x},${p.y}
     fill: var(--ses-primary);
 }
 
-.ses-btn-relatorio {
+/*
+ * Botão primário "Relatório Geral". Não usa .ses-btn-relatorio: a regra global dessa classe
+ * (app.css) é para botões de contorno e pintava o texto de cinza-escuro sobre o fundo azul.
+ * Texto e ícone brancos sobre #004587 (9,5:1) em todos os estados e nos dois temas.
+ */
+.ses-btn-relatorio-geral {
     min-height: 42px;
+    --bs-btn-color: #ffffff;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-disabled-color: #ffffff;
+}
+
+.ses-btn-relatorio-geral:focus-visible {
+    box-shadow: none;
+    outline: 3px solid var(--ses-primary);
+    outline-offset: 2px;
+}
+
+html.dark .ses-btn-relatorio-geral:focus-visible {
+    outline-color: #7db7ff;
 }
 
 .ses-btn-atualizar {
