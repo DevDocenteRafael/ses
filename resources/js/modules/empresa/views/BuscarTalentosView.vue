@@ -2,7 +2,7 @@
     <div class="buscar-talentos-page">
         <header class="buscar-talentos-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 min-w-0">
-                <img :src="logoSenacSrc" alt="Logo Senac" class="senac-header-logo flex-shrink-0">
+                <EmpresaLogoInicio />
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
                 <h1 class="h5 fw-bold mb-0">Portal da Empresa</h1>
             </div>
@@ -389,6 +389,7 @@ import empresaService from '../../../services/empresaServices';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import DownloadCurriculosModal from '../../../components/common/DownloadCurriculosModal.vue';
 import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
+import EmpresaLogoInicio from '../components/EmpresaLogoInicio.vue';
 import { regioesAdministrativasDf } from '../../../utils/regioesAdministrativasDf';
 import { formatarRegioesPreferidasCard } from '../../../utils/regioesPreferidasTrabalho';
 import { areasAtuacao, deduplicarHabilidades, habilidadesPadrao } from '../../../utils/habilidadesCatalogo';
@@ -402,7 +403,6 @@ import {
     validarIntervaloCurriculos,
 } from '../../../utils/downloadCurriculosZip';
 
-const logoSenacSrc = '/img/senac-logo.png';
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToast();
@@ -942,14 +942,6 @@ onBeforeUnmount(() => {
 
 .buscar-talentos-header {
     flex-shrink: 0;
-}
-
-.senac-header-logo {
-    display: block;
-    width: auto;
-    height: clamp(28px, 4vw, 36px);
-    max-width: 120px;
-    object-fit: contain;
 }
 
 .buscar-talentos-content {

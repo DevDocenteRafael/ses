@@ -20,6 +20,7 @@
                     ref="panelRef"
                     id="ses-accessibility-panel"
                     class="ses-accessibility__panel"
+                    :class="{ 'ses-accessibility__panel--centralizado': painelCentralizado }"
                     :style="panelStyle"
                     aria-labelledby="ses-accessibility-title"
                 >
@@ -107,6 +108,8 @@ const props = defineProps({
 });
 
 const STORAGE_KEY = 'ses_font_scale';
+// Mesmo breakpoint do CSS em que o botão flutuante fica centralizado no topo da tela.
+const MEDIA_MOBILE = '(max-width: 575.98px)';
 const FONTE_PADRAO = 100;
 const NIVEIS_FONTE = [100, 125, 150, 175, 200];
 
@@ -118,6 +121,7 @@ const menuRef = ref(null);
 const triggerRef = ref(null);
 const panelRef = ref(null);
 const panelStyle = ref({});
+const painelCentralizado = ref(false);
 
 const indiceFonteAtual = computed(() => NIVEIS_FONTE.indexOf(fonteAtual.value));
 const estaNoMinimo = computed(() => indiceFonteAtual.value <= 0);
@@ -175,7 +179,7 @@ async function atualizarEspacoMenuFlutuante() {
         return;
     }
 
-    if (!window.matchMedia('(max-width: 575.98px)').matches) {
+    if (!window.matchMedia(MEDIA_MOBILE).matches) {
         limparEspacoMenuFlutuante();
         return;
     }
@@ -236,10 +240,18 @@ function calcularPosicaoPainel() {
         }
     }
 
-    panelStyle.value = {
-        left: `${Math.max(padding, Math.min(left, viewportWidth - painelLargura - padding))}px`,
-        top: `${Math.max(padding, Math.min(top, viewportHeight - painelAltura - padding))}px`,
-    };
+    const topFinal = `${Math.max(padding, Math.min(top, viewportHeight - painelAltura - padding))}px`;
+
+    // Celular com botão flutuante (centralizado no topo): o CSS centraliza o painel na tela,
+    // então o left não é calculado a partir do botão.
+    painelCentralizado.value = props.variant === 'floating' && window.matchMedia(MEDIA_MOBILE).matches;
+
+    panelStyle.value = painelCentralizado.value
+        ? { top: topFinal }
+        : {
+            left: `${Math.max(padding, Math.min(left, viewportWidth - painelLargura - padding))}px`,
+            top: topFinal,
+        };
 }
 
 async function atualizarPosicaoPainel() {
@@ -557,6 +569,13 @@ watch(() => fonteAtual.value, async () => {
 
     .ses-accessibility__panel::after {
         display: none;
+    }
+
+    /* Login no celular: painel centralizado na tela, com a largura já limitada a 100vw - 24px. */
+    .ses-accessibility__panel--centralizado {
+        right: 0;
+        left: 0;
+        margin-inline: auto;
     }
 
     .ses-accessibility__row {
