@@ -2,7 +2,7 @@
     <div>
         <header class="perfil-candidato-header bg-primary text-white px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2 min-w-0">
-                <img :src="logoSenacSrc" alt="Logo Senac" class="senac-header-logo flex-shrink-0">
+                <EmpresaLogoInicio />
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
                 <h1 class="h5 fw-bold mb-0">Portal da Empresa</h1>
             </div>
@@ -272,13 +272,13 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../../store/auth';
 import empresaService from '../../../services/empresaServices';
 import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
+import EmpresaLogoInicio from '../components/EmpresaLogoInicio.vue';
 import { formatarTelefone } from '../../../utils/telefone';
 import { formatarFaixaPretensaoSalarial } from '../../../utils/faixasPretensaoSalarial';
 import { normalizarRegioesPreferidas } from '../../../utils/regioesPreferidasTrabalho';
 import { formatarDisponibilidadeHorario } from '../../../utils/listasPtBr';
 import { useToast } from '../../../composables/useToast';
 
-const logoSenacSrc = '/img/senac-logo.png';
 
 const props = defineProps({
     matricula: { type: [String, Number], required: true },
@@ -552,14 +552,6 @@ onMounted(carregar);
     position: sticky;
     top: 0;
     z-index: 1020;
-}
-
-.senac-header-logo {
-    display: block;
-    width: auto;
-    height: clamp(28px, 4vw, 36px);
-    max-width: 120px;
-    object-fit: contain;
 }
 
 .ultima-secao-item:last-child {

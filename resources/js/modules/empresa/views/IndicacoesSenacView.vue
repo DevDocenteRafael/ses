@@ -3,7 +3,7 @@
         <!-- Cabeçalho fixo: sticky no fluxo normal (sem espaço reservado nem rolagem dupla). -->
         <header ref="cabecalho" class="indicacoes-header bg-primary text-white px-3 px-sm-4 py-2 py-sm-3 d-flex align-items-center justify-content-between flex-wrap gap-2" data-testid="cabecalho-empresa">
             <div class="d-flex align-items-center gap-2 min-w-0">
-                <img :src="logoSenacSrc" alt="Logo Senac" class="senac-header-logo flex-shrink-0">
+                <EmpresaLogoInicio />
                 <span class="vr d-none d-sm-block opacity-50 mx-1"></span>
                 <h1 class="h5 fw-bold mb-0 text-nowrap">Portal da Empresa</h1>
             </div>
@@ -23,6 +23,17 @@
         </header>
 
         <main class="container-fluid p-3 p-sm-4">
+            <!-- Link para a rota nomeada (não router.back()): funciona também quando a página foi aberta direto por URL. -->
+            <router-link
+                :to="{ name: 'empresa.buscar-talentos' }"
+                class="btn btn-sm btn-outline-primary indicacoes-btn-contorno indicacoes-voltar mb-2"
+                aria-label="Voltar para Buscar Talentos"
+                data-testid="voltar-buscar-talentos"
+            >
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span>Voltar</span>
+            </router-link>
+
             <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
                 <div>
                     <h2 class="h4 fw-bold mb-1 indicacoes-titulo">
@@ -116,6 +127,7 @@ import empresaService from '../../../services/empresaServices';
 import loading from '../../../components/common/loading.vue';
 import BasePagination from '../../../components/common/BasePagination.vue';
 import AccessibilityMenu from '../../../components/common/AccessibilityMenu.vue';
+import EmpresaLogoInicio from '../components/EmpresaLogoInicio.vue';
 import IndicacaoSenacItem from '../components/IndicacaoSenacItem.vue';
 import { useToast } from '../../../composables/useToast';
 
@@ -143,7 +155,6 @@ function lerModoSalvo() {
     }
 }
 
-const logoSenacSrc = '/img/senac-logo.png';
 const router = useRouter();
 const auth = useAuthStore();
 const toast = useToast();
@@ -372,11 +383,13 @@ onBeforeUnmount(() => {
     background: var(--ses-bg);
 }
 
-.senac-header-logo {
-    display: block;
-    width: auto;
-    height: clamp(28px, 4vw, 36px);
-    max-width: 120px;
+.indicacoes-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding-inline: 0.875rem;
+    border-radius: 999px;
 }
 
 .indicacoes-titulo {
