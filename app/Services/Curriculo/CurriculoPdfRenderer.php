@@ -57,7 +57,7 @@ class CurriculoPdfRenderer
 
         $this->secaoTexto('OBJETIVO PROFISSIONAL', $curriculo['objetivo_profissional'] ?? null);
         $this->secaoTexto('RESUMO PROFISSIONAL', $curriculo['resumo_profissional'] ?? null);
-        $this->secaoItens('FORMAÇÃO ACADÊMICA', $curriculo['formacao_academica'] ?? [], ['curso'], ['escolaridade', 'instituicao', 'situacao', 'inicio', 'previsao_conclusao', 'conclusao', 'descricao_situacao']);
+        $this->secaoItens('FORMAÇÃO ACADÊMICA', $curriculo['formacao_academica'] ?? [], ['curso'], ['escolaridade', 'instituicao', 'situacao', 'conclusao']);
         $this->secaoItens('FORMAÇÃO PROFISSIONAL – SENAC', $curriculo['formacao_senac'] ?? [], ['curso'], ['unidade', 'conclusao', 'competencias']);
         $this->secaoExperiencias($curriculo['experiencias'] ?? []);
         $this->secaoItens('CURSOS COMPLEMENTARES E CERTIFICAÇÕES', $curriculo['cursos_complementares'] ?? [], ['curso'], ['instituicao', 'conclusao', 'carga_horaria']);

@@ -47,10 +47,6 @@ export default {
         return api.post(`/candidatos/${matricula}/perfil/preferencias`, dados);
     },
 
-    salvarSituacaoAcademica(matricula, dados) {
-        return api.put(`/candidatos/${matricula}/perfil/situacao-academica`, dados);
-    },
-
     adicionarFormacaoAcademica(matricula, dados) {
         return api.post(`/candidatos/${matricula}/perfil/academico`, dados);
     },

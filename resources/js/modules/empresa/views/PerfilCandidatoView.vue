@@ -116,58 +116,6 @@
                                 </div>
                             </div>
 
-                            <h2 class="h6 mb-3 border-bottom pb-2">Formação acadêmica</h2>
-                            <div class="mb-4">
-                                <div v-if="situacaoAcademicaAtual" class="mb-3 pb-3 border-bottom ultima-secao-item">
-                                    <h3 class="h6 fw-semibold mb-2">Situação acadêmica atual</h3>
-                                    <p v-if="situacaoAcademicaAtual.nivel_escolaridade" class="mb-1">
-                                        <span class="text-secondary">Nível de escolaridade:</span>
-                                        {{ rotuloNivelEscolaridade(situacaoAcademicaAtual.nivel_escolaridade) }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.situacao_academica" class="mb-1">
-                                        <span class="text-secondary">Situação:</span>
-                                        {{ rotuloSituacaoAcademica(situacaoAcademicaAtual.situacao_academica) }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.curso" class="mb-1">
-                                        <span class="text-secondary">Curso:</span> {{ situacaoAcademicaAtual.curso }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.instituicao" class="mb-1">
-                                        <span class="text-secondary">Instituição:</span> {{ situacaoAcademicaAtual.instituicao }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.data_inicio" class="small mb-1 text-secondary">
-                                        Início: {{ anoSituacaoAcademica(situacaoAcademicaAtual.data_inicio) }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.previsao_conclusao" class="small mb-1 text-secondary">
-                                        Previsão de conclusão: {{ anoSituacaoAcademica(situacaoAcademicaAtual.previsao_conclusao) }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.data_conclusao" class="small mb-1 text-secondary">
-                                        Conclusão: {{ anoSituacaoAcademica(situacaoAcademicaAtual.data_conclusao) }}
-                                    </p>
-                                    <p v-if="situacaoAcademicaAtual.descricao_situacao" class="small mb-0 text-secondary">
-                                        {{ situacaoAcademicaAtual.descricao_situacao }}
-                                    </p>
-                                </div>
-                                <p v-if="!formacoesAcademicas.length && !situacaoAcademicaAtual" class="text-secondary small mb-0">Nenhuma formação acadêmica cadastrada.</p>
-                                <div v-else>
-                                    <div v-for="formacao in formacoesAcademicas" :key="formacao.id" class="mb-3 pb-3 border-bottom ultima-secao-item">
-                                        <strong v-if="formacao.curso" class="d-block">{{ formacao.curso }}</strong>
-                                        <p v-if="formacao.instituicao" class="mb-1 text-secondary">{{ formacao.instituicao }}</p>
-                                        <p v-if="formacao.tipo_curso" class="small mb-1 text-secondary">
-                                            Modalidade: {{ rotuloTipoCurso(formacao.tipo_curso) }}
-                                        </p>
-                                        <p v-if="formacao.ano_de_conclusao" class="small mb-0 text-secondary">
-                                            <span class="badge text-bg-primary-subtle text-primary fw-semibold me-1">
-                                                {{ cursoAcademicoEstaEmAndamento(formacao.ano_de_conclusao) ? 'Em andamento' : 'Concluído' }}
-                                            </span>
-                                            <span>
-                                                {{ cursoAcademicoEstaEmAndamento(formacao.ano_de_conclusao) ? 'Previsão de conclusão:' : 'Conclusão:' }}
-                                                {{ anoDeConclusao(formacao.ano_de_conclusao) }}
-                                            </span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
                             <h2 class="h6 mb-3 border-bottom pb-2">Cursos Externos</h2>
                             <div class="mb-4">
                                 <p v-if="!cursosExternos.length" class="text-secondary small mb-0">Nenhum curso externo cadastrado.</p>
@@ -387,10 +335,6 @@ const habilidadesPorArea = computed(() => {
 
 const experienciasProfissionais = computed(() => candidato.value.experiencias_profissionais || []);
 
-const formacoesAcademicas = computed(() => candidato.value.dados_academicos || []);
-
-const situacaoAcademicaAtual = computed(() => candidato.value.situacao_academica_atual || null);
-
 const cursosExternos = computed(() => candidato.value.cursos_externos || []);
 
 const temLinksExternos = computed(() => {
@@ -538,53 +482,6 @@ function cursoExternoEstaEmAndamento(data) {
     const hojeLocal = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
 
     return conclusao > hojeLocal;
-}
-
-function cursoAcademicoEstaEmAndamento(data) {
-    return cursoExternoEstaEmAndamento(data);
-}
-
-function anoDeConclusao(data) {
-    return String(data ?? '').slice(0, 4);
-}
-
-function anoSituacaoAcademica(data) {
-    return String(data ?? '').slice(0, 4);
-}
-
-function rotuloSituacaoAcademica(situacao) {
-    return {
-        em_andamento: 'Em andamento',
-        concluido: 'Concluído',
-        interrompido: 'Interrompido',
-        nao_estudando: 'Não está estudando atualmente',
-        outra: 'Outra situação',
-    }[situacao] || '';
-}
-
-function rotuloNivelEscolaridade(nivel) {
-    return {
-        ensino_fundamental: 'Ensino fundamental',
-        ensino_medio: 'Ensino médio',
-        ensino_tecnico: 'Ensino técnico',
-        ensino_superior: 'Ensino superior',
-        pos_graduacao: 'Pós-graduação',
-        outra: 'Outra',
-    }[nivel] || '';
-}
-
-function rotuloTipoCurso(tipoCurso) {
-    const tipo = normalizarTexto(tipoCurso).replace(/[\s_]+/g, '-');
-    const rotulos = {
-        livres: 'Cursos Livres / Formação Continuada',
-        livre: 'Cursos Livres / Formação Continuada',
-        extensao: 'Extensão / Certificação',
-        tecnico: 'Cursos Técnicos',
-        graduacao: 'Graduação',
-        'pos-graduacao': 'Pós-graduação',
-    };
-
-    return rotulos[tipo] || tipoCurso;
 }
 
 function periodoExperiencia(experiencia) {

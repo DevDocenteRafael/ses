@@ -34,8 +34,7 @@ class CandidatoQueryService
         if ($solicitante->tipo() === 'empresa') {
             $this->statusService->aplicarEscopoDisponiveis($query);
         } elseif ($solicitante->tipo() === 'administrativo') {
-            $query->with('situacaoAcademicaAtual')
-                ->whereDoesntHave('contratacao');
+            $query->whereDoesntHave('contratacao');
         }
 
         $this->aplicarFiltros($query, $request);

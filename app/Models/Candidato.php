@@ -72,13 +72,6 @@ class Candidato extends Model
         return $this->hasMany(DadosAcademicos::class, 'candidato_matricula', 'matricula');
     }
 
-    public function situacaoAcademicaAtual()
-    {
-        return $this->hasOne(SituacaoAcademica::class, 'candidato_matricula', 'matricula')
-            ->where('atual', true)
-            ->orderByDesc('id');
-    }
-
     public function cursosSenac()
     {
         return $this->hasMany(CursoSenac::class, 'candidato_matricula', 'matricula');
