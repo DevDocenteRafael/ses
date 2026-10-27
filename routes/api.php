@@ -64,6 +64,7 @@ Route::middleware('auth.token')->group(function () {
         Route::post('profissional', [PerfilCandidatoController::class, 'storeInfoProfissional']);
         Route::post('preferencias', [PerfilCandidatoController::class, 'storePreferencias']);
         Route::post('academico',    [PerfilCandidatoController::class, 'storeDadosAcademicos']);
+        Route::put('situacao-academica', [PerfilCandidatoController::class, 'storeSituacaoAcademica']);
 
         Route::post('cursos-senac',    [PerfilCandidatoController::class, 'storeCursoSenac']);
 

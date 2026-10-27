@@ -14,6 +14,7 @@ use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
 use App\Models\RegiaoPreferidaTrabalho;
 use App\Models\ResponsavelContratual;
+use App\Models\SituacaoAcademica;
 use App\Services\Curriculo\CurriculoCandidatoBuilder;
 use App\Services\Curriculo\CurriculoPdfRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -245,6 +246,83 @@ class AdminCurriculoCandidatoTest extends TestCase
         $this->assertSame('Lógica de Programação Senac', $curriculo['formacao_senac'][0]['curso']);
         $this->assertSame('Analista de Sistemas', $curriculo['experiencias'][0]['cargo']);
         $this->assertSame('Experiência Antiga', $curriculo['experiencias'][1]['cargo']);
+    }
+
+    public function test_builder_reflete_situacao_academica_conforme_data_de_conclusao(): void
+    {
+        $candidato = $this->criarCandidatoBasico('Aluno com Formação Atualizada');
+        DadosAcademicos::query()->create([
+            'instituicao' => 'Senac DF',
+            'curso' => 'Técnico em andamento',
+            'tipo_curso' => 'tecnico',
+            'unidade' => 'Taguatinga',
+            'ano_de_conclusao' => now()->addYear()->toDateString(),
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+        DadosAcademicos::query()->create([
+            'instituicao' => 'Universidade de Brasília',
+            'curso' => 'Administração',
+            'tipo_curso' => 'graduacao',
+            'unidade' => 'Brasília',
+            'ano_de_conclusao' => now()->subYear()->toDateString(),
+            'candidato_matricula' => $candidato->matricula,
+        ]);
+
+        $formacoes = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula)['formacao_academica'];
+
+        $this->assertSame('Em andamento', $formacoes[0]['situacao']);
+        $this->assertSame('Cursos Técnicos', $formacoes[0]['escolaridade']);
+        $this->assertSame('Concluído', $formacoes[1]['situacao']);
+        $this->assertSame('Graduação', $formacoes[1]['escolaridade']);
+    }
+
+    public function test_curriculo_pdf_usa_situacao_academica_atual_cadastrada(): void
+    {
+        $candidato = $this->criarCandidatoBasico('Aluna em Formação');
+        SituacaoAcademica::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'nivel_escolaridade' => 'ensino_superior',
+            'situacao_academica' => 'em_andamento',
+            'curso' => 'Administração',
+            'instituicao' => 'Universidade de Brasília',
+            'data_inicio' => '2024-02-01',
+            'previsao_conclusao' => '2027-12-01',
+            'atual' => true,
+        ]);
+
+        $curriculo = app(CurriculoCandidatoBuilder::class)->montar($candidato->matricula);
+        $this->assertSame('Administração', $curriculo['formacao_academica'][0]['curso']);
+        $this->assertSame('Em andamento', $curriculo['formacao_academica'][0]['situacao']);
+        $this->assertSame('Previsão de conclusão: 2027', $curriculo['formacao_academica'][0]['previsao_conclusao']);
+        $this->assertSame(1, count($curriculo['formacao_academica']));
+
+        $response = $this->withToken($this->token($candidato->pessoa))->get('/api/me/curriculo');
+        $response->assertOk();
+        $conteudo = $this->normalizarPdfParaTeste($response->getContent());
+        $this->assertStringContainsString('Administração', $conteudo);
+        $this->assertStringContainsString('Em andamento', $conteudo);
+        $this->assertStringContainsString('Previsão de conclusão: 2027', $conteudo);
+    }
+
+    public function test_lista_administrativa_retorna_situacao_academica_atual_do_candidato(): void
+    {
+        [, $token] = $this->criarAdminAutenticado();
+        $candidato = $this->criarCandidatoBasico('Aluna com Situação Acadêmica');
+        SituacaoAcademica::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'nivel_escolaridade' => 'ensino_tecnico',
+            'situacao_academica' => 'interrompido',
+            'curso' => 'Técnico em Informática',
+            'instituicao' => 'Senac DF',
+            'data_inicio' => '2023-02-01',
+            'atual' => true,
+        ]);
+
+        $this->withToken($token)
+            ->getJson('/api/candidatos?per_page=10')
+            ->assertOk()
+            ->assertJsonPath('data.0.situacao_academica_atual.situacao_academica', 'interrompido')
+            ->assertJsonPath('data.0.situacao_academica_atual.curso', 'Técnico em Informática');
     }
 
     public function test_curriculo_omite_experiencia_e_links_ausentes_sem_campos_vazios(): void

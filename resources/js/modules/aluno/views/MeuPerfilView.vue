@@ -271,6 +271,61 @@
                             <h2 class="text-uppercase text-secondary small fw-bold mb-3">Informações Profissionais</h2>
                             <p class="small text-secondary mb-3"><span class="text-danger fw-semibold">*</span> Campos obrigatórios</p>
 
+                            <div class="border rounded p-3 mb-3">
+                                <h3 class="h6 fw-bold mb-1">Situação acadêmica</h3>
+                                <p class="small text-secondary mb-3">Informe seu nível de escolaridade e a situação dos estudos atuais ou mais recentes.</p>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="form-label">Nível de escolaridade</label>
+                                        <select v-model="situacaoAcademica.nivel_escolaridade" class="form-select" :class="campoInvalido('nivel_escolaridade')">
+                                            <option value="">Selecione</option>
+                                            <option v-for="nivel in niveisEscolaridade" :key="nivel.value" :value="nivel.value">{{ nivel.label }}</option>
+                                        </select>
+                                        <div v-if="erroDeCampo('nivel_escolaridade')" class="invalid-feedback d-block">{{ erroDeCampo('nivel_escolaridade') }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Situação dos estudos</label>
+                                        <select v-model="situacaoAcademica.situacao_academica" class="form-select" :class="campoInvalido('situacao_academica')">
+                                            <option value="">Selecione</option>
+                                            <option v-for="opcao in situacoesAcademicas" :key="opcao.value" :value="opcao.value">{{ opcao.label }}</option>
+                                        </select>
+                                        <div v-if="erroDeCampo('situacao_academica')" class="invalid-feedback d-block">{{ erroDeCampo('situacao_academica') }}</div>
+                                    </div>
+                                    <template v-if="situacaoAcademicaPossuiCurso">
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Curso</label>
+                                            <input v-model.trim="situacaoAcademica.curso" type="text" class="form-control" maxlength="100" :class="campoInvalido('curso')">
+                                            <div v-if="erroDeCampo('curso')" class="invalid-feedback d-block">{{ erroDeCampo('curso') }}</div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label">Instituição</label>
+                                            <input v-model.trim="situacaoAcademica.instituicao" type="text" class="form-control" maxlength="100" :class="campoInvalido('instituicao')">
+                                            <div v-if="erroDeCampo('instituicao')" class="invalid-feedback d-block">{{ erroDeCampo('instituicao') }}</div>
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <label class="form-label">Data de início</label>
+                                            <input v-model="situacaoAcademica.data_inicio" type="date" class="form-control" :class="campoInvalido('data_inicio')">
+                                            <div v-if="erroDeCampo('data_inicio')" class="invalid-feedback d-block">{{ erroDeCampo('data_inicio') }}</div>
+                                        </div>
+                                        <div v-if="situacaoAcademica.situacao_academica === 'em_andamento'" class="col-sm-4">
+                                            <label class="form-label">Previsão de conclusão</label>
+                                            <input v-model="situacaoAcademica.previsao_conclusao" type="date" class="form-control" :class="campoInvalido('previsao_conclusao')">
+                                            <div v-if="erroDeCampo('previsao_conclusao')" class="invalid-feedback d-block">{{ erroDeCampo('previsao_conclusao') }}</div>
+                                        </div>
+                                        <div v-if="situacaoAcademica.situacao_academica === 'concluido'" class="col-sm-4">
+                                            <label class="form-label">Data de conclusão</label>
+                                            <input v-model="situacaoAcademica.data_conclusao" type="date" class="form-control" :class="campoInvalido('data_conclusao')">
+                                            <div v-if="erroDeCampo('data_conclusao')" class="invalid-feedback d-block">{{ erroDeCampo('data_conclusao') }}</div>
+                                        </div>
+                                    </template>
+                                    <div v-if="situacaoAcademica.situacao_academica === 'outra'" class="col-12">
+                                        <label class="form-label">Descreva a situação</label>
+                                        <textarea v-model.trim="situacaoAcademica.descricao_situacao" class="form-control" rows="2" maxlength="300" :class="campoInvalido('descricao_situacao')"></textarea>
+                                        <div v-if="erroDeCampo('descricao_situacao')" class="invalid-feedback d-block">{{ erroDeCampo('descricao_situacao') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label">Sobre Mim</label>
                                 <textarea
@@ -706,6 +761,33 @@ const links = reactive({
     portfolio: '',
     github: '',
 });
+
+const situacoesAcademicas = [
+    { value: 'em_andamento', label: 'Em andamento' },
+    { value: 'concluido', label: 'Concluído' },
+    { value: 'interrompido', label: 'Interrompido' },
+    { value: 'nao_estudando', label: 'Não estou estudando atualmente' },
+    { value: 'outra', label: 'Outra situação' },
+];
+const niveisEscolaridade = [
+    { value: 'ensino_fundamental', label: 'Ensino fundamental' },
+    { value: 'ensino_medio', label: 'Ensino médio' },
+    { value: 'ensino_tecnico', label: 'Ensino técnico' },
+    { value: 'ensino_superior', label: 'Ensino superior' },
+    { value: 'pos_graduacao', label: 'Pós-graduação' },
+    { value: 'outra', label: 'Outra' },
+];
+const situacaoAcademica = reactive({
+    nivel_escolaridade: '',
+    situacao_academica: '',
+    curso: '',
+    instituicao: '',
+    data_inicio: '',
+    previsao_conclusao: '',
+    data_conclusao: '',
+    descricao_situacao: '',
+});
+const situacaoAcademicaPossuiCurso = computed(() => ['em_andamento', 'concluido', 'interrompido'].includes(situacaoAcademica.situacao_academica));
 
 const informacoesPessoais = reactive({
     email: '',
@@ -1338,6 +1420,16 @@ async function carregar() {
         const { data } = await alunosService.verPerfil(matricula.value);
 
         dadosAcademicos.value = data.dados_academicos?.[0] || null;
+        Object.assign(situacaoAcademica, {
+            nivel_escolaridade: data.situacao_academica_atual?.nivel_escolaridade || '',
+            situacao_academica: data.situacao_academica_atual?.situacao_academica || '',
+            curso: data.situacao_academica_atual?.curso || '',
+            instituicao: data.situacao_academica_atual?.instituicao || '',
+            data_inicio: data.situacao_academica_atual?.data_inicio?.slice(0, 10) || '',
+            previsao_conclusao: data.situacao_academica_atual?.previsao_conclusao?.slice(0, 10) || '',
+            data_conclusao: data.situacao_academica_atual?.data_conclusao?.slice(0, 10) || '',
+            descricao_situacao: data.situacao_academica_atual?.descricao_situacao || '',
+        });
         cursosSenac.value = data.cursos_senac || [];
         cursosExternos.value = data.cursos_externos || [];
         experiencias.value = (data.experiencias_profissionais || []).slice().sort((a, b) => new Date(b.data_inicio) - new Date(a.data_inicio));
@@ -1578,7 +1670,7 @@ async function salvar() {
 
         preferencias.regiao_administrativa = obterRegiaoAdministrativaLegadaParaApi();
 
-        await Promise.all([
+        const operacoes = [
             alunosService.salvarLinks(matricula.value, { ...links }),
             alunosService.salvarInfoProfissional(matricula.value, {
                 ...perfil,
@@ -1592,7 +1684,13 @@ async function salvar() {
                 regioes_preferidas: preferencias.aceita_todas_regioes ? [] : preferencias.regioes_preferidas,
                 pretensao_salarial: converterFaixaPretensaoSalarialParaPayload(preferencias.pretensao_salarial),
             }),
-        ]);
+        ];
+
+        if (situacaoAcademica.situacao_academica) {
+            operacoes.push(alunosService.salvarSituacaoAcademica(matricula.value, { ...situacaoAcademica }));
+        }
+
+        await Promise.all(operacoes);
         mostrarMensagem('sucesso', 'Perfil atualizado com sucesso.');
     } catch (e) {
         definirErrosFormulario(e?.response?.data?.errors || {});

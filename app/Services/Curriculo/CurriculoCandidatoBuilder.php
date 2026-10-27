@@ -3,7 +3,9 @@
 namespace App\Services\Curriculo;
 
 use App\Models\Candidato;
+use App\Support\CatalogoAcademicoSenacDf;
 use App\Support\FormatadorListaPtBr;
+use App\Support\SituacaoAcademicaOpcoes;
 use Illuminate\Support\Collection;
 
 class CurriculoCandidatoBuilder
@@ -16,6 +18,7 @@ class CurriculoCandidatoBuilder
                 'informacoesProfissionais',
                 'preferenciasDeTrabalho',
                 'dadosAcademicos',
+                'situacaoAcademicaAtual',
                 'cursosSenac',
                 'cursosExternos',
                 'experienciasProfissionais',
@@ -39,7 +42,10 @@ class CurriculoCandidatoBuilder
             ]),
             'objetivo_profissional' => $this->objetivoProfissional($info, $preferencias),
             'resumo_profissional' => $this->texto($info?->sobre_mim),
-            'formacao_academica' => $this->formatarFormacaoAcademica($candidato->dadosAcademicos),
+            'formacao_academica' => $this->formatarFormacaoAcademica(
+                $candidato->dadosAcademicos,
+                $candidato->situacaoAcademicaAtual
+            ),
             'formacao_senac' => $this->formatarFormacaoSenac($candidato->cursosSenac),
             'habilidades' => $this->habilidadesDaAreaAtual($info),
             'experiencias' => $this->formatarExperiencias($candidato->experienciasProfissionais),
@@ -92,17 +98,66 @@ class CurriculoCandidatoBuilder
         return $partes ? implode(', ', $partes) . '.' : null;
     }
 
-    private function formatarFormacaoAcademica(Collection $dados): array
+    private function formatarFormacaoAcademica(Collection $dados, $situacaoAtual): array
     {
-        return $dados->map(function ($item) {
+        $formacoes = $dados->map(function ($item) {
+            $dataConclusao = $item->ano_de_conclusao;
+            $emAndamento = $dataConclusao && $dataConclusao->copy()->startOfDay()->isFuture();
+
             return array_filter([
                 'curso' => $this->texto($item->curso),
                 'instituicao' => $this->texto($item->instituicao),
-                'escolaridade' => $this->texto($item->tipo_curso),
-                'situacao' => $item->ano_de_conclusao ? 'Concluído' : null,
-                'conclusao' => $item->ano_de_conclusao ? $item->ano_de_conclusao->format('d/m/Y') : null,
+                'escolaridade' => $this->rotuloTipoCurso($item->tipo_curso),
+                'situacao' => $dataConclusao ? ($emAndamento ? 'Em andamento' : 'Concluído') : null,
+                'conclusao' => $dataConclusao ? $dataConclusao->format('d/m/Y') : null,
             ]);
-        })->filter()->values()->all();
+        })->filter()->values();
+
+        if (! $situacaoAtual) {
+            return $formacoes->all();
+        }
+
+        $formacaoAtual = array_filter([
+            'curso' => $this->texto($situacaoAtual->curso),
+            'instituicao' => $this->texto($situacaoAtual->instituicao),
+            'escolaridade' => SituacaoAcademicaOpcoes::rotuloNivel($situacaoAtual->nivel_escolaridade),
+            'situacao' => SituacaoAcademicaOpcoes::rotuloSituacao($situacaoAtual->situacao_academica),
+            'inicio' => $situacaoAtual->data_inicio
+                ? 'Início: ' . $situacaoAtual->data_inicio->format('Y')
+                : null,
+            'previsao_conclusao' => $situacaoAtual->previsao_conclusao
+                ? 'Previsão de conclusão: ' . $situacaoAtual->previsao_conclusao->format('Y')
+                : null,
+            'conclusao' => $situacaoAtual->data_conclusao
+                ? 'Conclusão: ' . $situacaoAtual->data_conclusao->format('Y')
+                : null,
+            'descricao_situacao' => $this->texto($situacaoAtual->descricao_situacao),
+        ]);
+
+        $chaveCursoAtual = $this->normalizar($situacaoAtual->curso) . '|' . $this->normalizar($situacaoAtual->instituicao);
+        $formacoes = $formacoes->reject(function (array $formacao) use ($chaveCursoAtual) {
+            return $chaveCursoAtual !== '|'
+                && $this->normalizar($formacao['curso'] ?? null) . '|' . $this->normalizar($formacao['instituicao'] ?? null) === $chaveCursoAtual;
+        });
+
+        return $formacoes->prepend($formacaoAtual)->values()->all();
+    }
+
+    private function rotuloTipoCurso($tipoCurso): ?string
+    {
+        $tipo = $this->texto($tipoCurso);
+
+        if ($tipo === null) {
+            return null;
+        }
+
+        foreach (CatalogoAcademicoSenacDf::tipos() as $opcao) {
+            if (mb_strtolower($opcao['id']) === mb_strtolower($tipo)) {
+                return $opcao['nome'];
+            }
+        }
+
+        return $tipo;
     }
 
     private function formatarFormacaoSenac(Collection $senac): array

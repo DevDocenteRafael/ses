@@ -434,6 +434,22 @@
                                                             <small class="text-secondary d-block">Sobre mim</small>
                                                             <span>{{ aluno.informacoes_profissionais?.sobre_mim || 'Não informado' }}</span>
                                                         </div>
+                                                        <div class="col-12">
+                                                            <small class="text-secondary d-block">Situação acadêmica</small>
+                                                            <div v-if="aluno.situacao_academica_atual">
+                                                                <span class="d-block">
+                                                                    {{ rotuloNivelEscolaridade(aluno.situacao_academica_atual.nivel_escolaridade) }}
+                                                                </span>
+                                                                <span class="d-block">{{ rotuloSituacaoAcademica(aluno.situacao_academica_atual.situacao_academica) }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.curso" class="d-block">Curso: {{ aluno.situacao_academica_atual.curso }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.instituicao" class="d-block">Instituição: {{ aluno.situacao_academica_atual.instituicao }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.data_inicio" class="d-block">Início: {{ anoSituacaoAcademica(aluno.situacao_academica_atual.data_inicio) }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.previsao_conclusao" class="d-block">Previsão de conclusão: {{ anoSituacaoAcademica(aluno.situacao_academica_atual.previsao_conclusao) }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.data_conclusao" class="d-block">Conclusão: {{ anoSituacaoAcademica(aluno.situacao_academica_atual.data_conclusao) }}</span>
+                                                                <span v-if="aluno.situacao_academica_atual.descricao_situacao" class="d-block">{{ aluno.situacao_academica_atual.descricao_situacao }}</span>
+                                                            </div>
+                                                            <span v-else>Não informado</span>
+                                                        </div>
                                                         <div class="col-md-6 col-lg-4">
                                                             <small class="text-secondary d-block">CPF</small>
                                                             <span>{{ formatarCpf(aluno.cpf) }}</span>
@@ -1330,6 +1346,31 @@ function formatarPretensao(valor) {
 
 function formatarDisponibilidade(valor) {
     return formatarDisponibilidadeHorario(valor, 'Não informado');
+}
+
+function rotuloSituacaoAcademica(situacao) {
+    return {
+        em_andamento: 'Em andamento',
+        concluido: 'Concluído',
+        interrompido: 'Interrompido',
+        nao_estudando: 'Não está estudando atualmente',
+        outra: 'Outra situação',
+    }[situacao] || 'Não informado';
+}
+
+function rotuloNivelEscolaridade(nivel) {
+    return {
+        ensino_fundamental: 'Ensino fundamental',
+        ensino_medio: 'Ensino médio',
+        ensino_tecnico: 'Ensino técnico',
+        ensino_superior: 'Ensino superior',
+        pos_graduacao: 'Pós-graduação',
+        outra: 'Outra',
+    }[nivel] || 'Não informado';
+}
+
+function anoSituacaoAcademica(data) {
+    return String(data ?? '').slice(0, 4);
 }
 
 </script>

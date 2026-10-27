@@ -9,6 +9,7 @@ use App\Models\InformacoesProfissionais;
 use App\Models\Pessoa;
 use App\Models\PreferenciasDeTrabalho;
 use App\Models\ResponsavelContratual;
+use App\Models\SituacaoAcademica;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -49,6 +50,7 @@ class EmpresaPerfilCandidatoTest extends TestCase
         DadosAcademicos::query()->create([
             'instituicao' => 'Senac DF',
             'curso' => 'Técnico em Desenvolvimento de Sistemas',
+            'tipo_curso' => 'tecnico',
             'unidade' => 'Taguatinga',
             'ano_de_conclusao' => now()->toDateString(),
             'candidato_matricula' => $candidato->matricula,
@@ -60,6 +62,10 @@ class EmpresaPerfilCandidatoTest extends TestCase
             ->assertJsonPath('matricula', (string) $candidato->matricula)
             ->assertJsonPath('pessoa.nome', $pessoaCandidato->nome)
             ->assertJsonPath('pessoa.email', $pessoaCandidato->email)
+            ->assertJsonPath('dados_academicos.0.curso', 'Técnico em Desenvolvimento de Sistemas')
+            ->assertJsonPath('dados_academicos.0.instituicao', 'Senac DF')
+            ->assertJsonPath('dados_academicos.0.tipo_curso', 'tecnico')
+            ->assertJsonPath('dados_academicos.0.ano_de_conclusao', now()->startOfDay()->toISOString())
             ->assertJsonPath('informacoes_profissionais.area_de_atuacao', 'Tecnologia e Games')
             ->assertJsonPath('informacoes_profissionais.habilidades_por_area.Tecnologia e Games.0', 'PHP')
             ->assertJsonPath('pessoa.endereco.cep', '72620207')
@@ -77,6 +83,144 @@ class EmpresaPerfilCandidatoTest extends TestCase
             ->assertJsonPath('cpf', null)
             ->assertJsonPath('convites', [])
             ->assertJsonPath('empresas', []);
+    }
+
+    public function test_empresa_visualiza_situacao_academica_atual_sem_expor_dados_pessoais(): void
+    {
+        [, $token] = $this->criarEmpresaAutenticada();
+        [, $candidato] = $this->criarCandidatoAtivo();
+
+        SituacaoAcademica::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'nivel_escolaridade' => 'ensino_superior',
+            'situacao_academica' => 'em_andamento',
+            'curso' => 'Administração',
+            'instituicao' => 'Universidade de Brasília',
+            'data_inicio' => '2024-02-01',
+            'previsao_conclusao' => '2027-12-01',
+            'atual' => true,
+        ]);
+
+        $this->withToken($token)
+            ->getJson("/api/candidatos/{$candidato->matricula}")
+            ->assertOk()
+            ->assertJsonPath('situacao_academica_atual.nivel_escolaridade', 'ensino_superior')
+            ->assertJsonPath('situacao_academica_atual.situacao_academica', 'em_andamento')
+            ->assertJsonPath('situacao_academica_atual.curso', 'Administração')
+            ->assertJsonPath('situacao_academica_atual.instituicao', 'Universidade de Brasília')
+            ->assertJsonPath('situacao_academica_atual.previsao_conclusao', '2027-12-01T00:00:00.000000Z')
+            ->assertJsonPath('cpf', null)
+            ->assertJsonMissingPath('situacao_academica_atual.cpf');
+
+        $this->withToken($token)
+            ->getJson('/api/candidatos?per_page=10')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.situacao_academica_atual');
+    }
+
+    public function test_candidato_salva_edita_e_preserva_historico_da_situacao_academica(): void
+    {
+        [$pessoa, $candidato] = $this->criarCandidatoAtivo();
+        $token = 'candidato-token-' . Str::random(10);
+        Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
+        $endpoint = "/api/candidatos/{$candidato->matricula}/perfil/situacao-academica";
+        $situacaoAnterior = SituacaoAcademica::query()->create([
+            'candidato_matricula' => $candidato->matricula,
+            'nivel_escolaridade' => 'ensino_superior',
+            'nivel_escolaridade_concluido' => 'ensino_medio',
+            'situacao_academica' => 'em_andamento',
+            'curso' => 'Administração',
+            'instituicao' => 'Universidade de Brasília',
+            'data_inicio' => now()->subYear()->toDateString(),
+            'previsao_conclusao' => now()->addYear()->toDateString(),
+            'atual' => true,
+        ]);
+
+        $payload = [
+            'nivel_escolaridade' => 'ensino_superior',
+            'situacao_academica' => 'em_andamento',
+            'curso' => 'Administração',
+            'instituicao' => 'Universidade de Brasília',
+            'data_inicio' => now()->subYear()->toDateString(),
+            'previsao_conclusao' => now()->addYear()->toDateString(),
+        ];
+
+        $this->withToken($token)->putJson($endpoint, $payload)
+            ->assertOk()
+            ->assertJsonPath('situacao_academica', 'em_andamento')
+            ->assertJsonPath('curso', 'Administração');
+
+        $this->withToken($token)->putJson($endpoint, $payload)->assertOk();
+        $this->assertDatabaseCount('situacoes_academicas', 1);
+        $this->assertDatabaseHas('situacoes_academicas', [
+            'id' => $situacaoAnterior->id,
+            'nivel_escolaridade_concluido' => 'ensino_medio',
+            'atual' => true,
+        ]);
+
+        $payload['situacao_academica'] = 'nao_estudando';
+        $payload['curso'] = 'Administração';
+        $payload['instituicao'] = 'Universidade de Brasília';
+        $this->withToken($token)->putJson($endpoint, $payload)
+            ->assertOk()
+            ->assertJsonPath('situacao_academica', 'nao_estudando')
+            ->assertJsonPath('curso', null)
+            ->assertJsonPath('previsao_conclusao', null);
+
+        $this->assertDatabaseCount('situacoes_academicas', 2);
+        $this->assertDatabaseHas('situacoes_academicas', [
+            'candidato_matricula' => $candidato->matricula,
+            'situacao_academica' => 'em_andamento',
+            'atual' => false,
+        ]);
+        $this->assertDatabaseHas('situacoes_academicas', [
+            'candidato_matricula' => $candidato->matricula,
+            'situacao_academica' => 'nao_estudando',
+            'curso' => null,
+            'atual' => true,
+        ]);
+
+        $this->withToken($token)
+            ->getJson("/api/candidatos/{$candidato->matricula}")
+            ->assertOk()
+            ->assertJsonPath('situacao_academica_atual.situacao_academica', 'nao_estudando')
+            ->assertJsonPath('situacao_academica_atual.curso', null);
+    }
+
+    public function test_candidato_pode_registrar_formacao_concluida_com_dados_parciais(): void
+    {
+        [$pessoa, $candidato] = $this->criarCandidatoAtivo();
+        $token = 'candidato-token-' . Str::random(10);
+        Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
+
+        $this->withToken($token)
+            ->putJson("/api/candidatos/{$candidato->matricula}/perfil/situacao-academica", [
+                'nivel_escolaridade' => 'ensino_tecnico',
+                'situacao_academica' => 'concluido',
+                'curso' => 'Técnico em Informática',
+                'instituicao' => 'Senac DF',
+                'data_conclusao' => now()->subYear()->toDateString(),
+            ])
+            ->assertOk()
+            ->assertJsonPath('situacao_academica', 'concluido')
+            ->assertJsonPath('curso', 'Técnico em Informática')
+            ->assertJsonPath('data_inicio', null)
+            ->assertJsonPath('previsao_conclusao', null);
+    }
+
+    public function test_candidato_nao_pode_editar_situacao_academica_de_outra_pessoa(): void
+    {
+        [$pessoa] = $this->criarCandidatoAtivo();
+        [, $alvo] = $this->criarCandidatoAtivo();
+        $token = 'candidato-token-' . Str::random(10);
+        Cache::put('auth_token:' . $token, $pessoa->id_pessoa, now()->addHour());
+
+        $this->withToken($token)
+            ->putJson("/api/candidatos/{$alvo->matricula}/perfil/situacao-academica", [
+                'nivel_escolaridade' => 'ensino_medio',
+                'situacao_academica' => 'nao_estudando',
+            ])
+            ->assertForbidden();
     }
 
     public function test_empresa_autenticada_pode_visualizar_candidato_sem_endereco(): void

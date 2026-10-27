@@ -12,9 +12,11 @@ use App\Models\CursoExterno;
 use App\Models\ExperienciaProfissional;
 use App\Models\RegiaoPreferidaTrabalho;
 use App\Models\Candidato;
+use App\Models\SituacaoAcademica;
 use App\Services\Candidatos\CandidatoStatusService;
 use App\Support\AreasAtuacaoCatalogo;
 use App\Support\RegioesAdministrativasDf;
+use App\Support\SituacaoAcademicaOpcoes;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -269,6 +271,105 @@ class PerfilCandidatoController extends Controller
         $this->registrarAtividade($matricula);
 
         return response()->json($academico, 201);
+    }
+
+    public function storeSituacaoAcademica(Request $request, string $matricula): JsonResponse
+    {
+        $this->garantirCandidatoDono($request, $matricula);
+
+        $situacao = $request->input('situacao_academica');
+        $emAndamento = $situacao === 'em_andamento';
+        $concluido = $situacao === 'concluido';
+        $outra = $situacao === 'outra';
+        $possuiCurso = in_array($situacao, ['em_andamento', 'concluido', 'interrompido'], true);
+
+        $validated = $request->validate([
+            'nivel_escolaridade' => ['required', 'string', Rule::in(array_keys(SituacaoAcademicaOpcoes::NIVEIS))],
+            'situacao_academica' => ['required', 'string', Rule::in(array_keys(SituacaoAcademicaOpcoes::SITUACOES))],
+            'curso' => [Rule::requiredIf($possuiCurso), 'nullable', 'string', 'max:100'],
+            'instituicao' => [Rule::requiredIf($possuiCurso), 'nullable', 'string', 'max:100'],
+            'data_inicio' => ['nullable', 'date', 'before_or_equal:today'],
+            'previsao_conclusao' => ['nullable', 'date', 'after_or_equal:data_inicio', 'after_or_equal:today'],
+            'data_conclusao' => ['nullable', 'date', 'before_or_equal:today', Rule::requiredIf($concluido)],
+            'descricao_situacao' => [Rule::requiredIf($outra), 'nullable', 'string', 'max:300'],
+        ]);
+
+        if (! $possuiCurso) {
+            $validated['curso'] = null;
+            $validated['instituicao'] = null;
+            $validated['data_inicio'] = null;
+            $validated['previsao_conclusao'] = null;
+            $validated['data_conclusao'] = null;
+        } elseif ($emAndamento) {
+            $validated['data_conclusao'] = null;
+        } elseif ($concluido) {
+            $validated['previsao_conclusao'] = null;
+        } else {
+            $validated['previsao_conclusao'] = null;
+            $validated['data_conclusao'] = null;
+        }
+
+        if (! $outra) {
+            $validated['descricao_situacao'] = null;
+        }
+
+        $campos = [
+            'nivel_escolaridade',
+            'situacao_academica',
+            'curso',
+            'instituicao',
+            'data_inicio',
+            'previsao_conclusao',
+            'data_conclusao',
+            'descricao_situacao',
+        ];
+        $dados = array_replace(array_fill_keys($campos, null), $validated);
+
+        $registro = DB::transaction(function () use ($matricula, $dados, $campos) {
+            Candidato::query()->whereKey($matricula)->lockForUpdate()->firstOrFail();
+            $atual = SituacaoAcademica::query()
+                ->where('candidato_matricula', $matricula)
+                ->where('atual', true)
+                ->lockForUpdate()
+                ->first();
+
+            if ($atual && $this->situacaoAcademicaIgual($atual, $dados, $campos)) {
+                return $atual;
+            }
+
+            $atual?->update(['atual' => false]);
+
+            return SituacaoAcademica::query()->create([
+                ...$dados,
+                'candidato_matricula' => $matricula,
+                'atual' => true,
+            ]);
+        });
+
+        $this->registrarAtividade($matricula);
+
+        return response()->json($registro, 200);
+    }
+
+    private function situacaoAcademicaIgual(SituacaoAcademica $atual, array $dados, array $campos): bool
+    {
+        foreach ($campos as $campo) {
+            $valorAtual = $atual->{$campo};
+            if ($valorAtual instanceof \DateTimeInterface) {
+                $valorAtual = $valorAtual->format('Y-m-d');
+            }
+
+            $valorNovo = $dados[$campo] ?? null;
+            if ($valorNovo instanceof \DateTimeInterface) {
+                $valorNovo = $valorNovo->format('Y-m-d');
+            }
+
+            if ($valorAtual !== $valorNovo) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function destroyDadosAcademicos(Request $request, int $id): JsonResponse
