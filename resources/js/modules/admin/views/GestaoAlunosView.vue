@@ -87,7 +87,7 @@
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <div>
                                 <h3 class="h6 fw-bold mb-1 admin-filter-tray__titulo">Bandeja de filtros</h3>
-                                <p class="small text-white-50 mb-0">Filtros compartilhados com a Pesquisa de Talentos, preservando o escopo administrativo.</p>
+                                <p class="small admin-filter-tray__descricao mb-0">Filtros compartilhados com a Pesquisa de Talentos, preservando o escopo administrativo.</p>
                             </div>
                         </div>
                         <div class="row g-3 admin-filter-grid">
@@ -1392,6 +1392,10 @@ html.dark .admin-filter-tray {
 /* Título "Bandeja de filtros": azul-marinho no tema claro; no escuro mantém o branco original. */
 .admin-filter-tray__titulo {
     color: var(--ses-admin-filter-heading);
+}
+
+.admin-filter-tray__descricao {
+    color: #000000;
 }
 
 html.dark .admin-filter-tray__titulo {
