@@ -9,6 +9,12 @@
 	overflow-x: hidden;
 }
 
+@media (max-height: 700px) {
+	.auth-layout {
+		align-items: flex-start;
+	}
+}
+
 .auth-login-page {
 	width: 100%;
 	display: flex;
