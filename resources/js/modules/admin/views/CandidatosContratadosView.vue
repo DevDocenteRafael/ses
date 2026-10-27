@@ -40,7 +40,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center hired-candidates-toolbar-actions">
                                 <button class="btn btn-outline-secondary ses-btn-relatorio" type="button" :disabled="carregando || baixandoPdf || !paginacao.total" @click="baixarContratacoesPdf">
                                     <span v-if="baixandoPdf" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                                     <i v-else class="bi bi-file-earmark-pdf me-1"></i>
@@ -801,6 +801,15 @@ function nomeArquivoCurriculo(response, candidato) {
 
     .action-buttons {
         flex-wrap: nowrap;
+    }
+
+    .hired-candidates-toolbar-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .hired-candidates-toolbar-actions .ms-2 {
+        margin-left: 0 !important;
     }
 }
 </style>

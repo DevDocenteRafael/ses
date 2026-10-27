@@ -1871,6 +1871,7 @@ onBeforeUnmount(() => {
 
     .form-actions--final {
         align-items: stretch !important;
+        gap: 0.5rem;
     }
 
     .card-section-header {

@@ -59,7 +59,7 @@
                                 <span v-if="totalFiltrosAtivos" class="badge rounded-pill bg-warning text-dark ms-1">{{ totalFiltrosAtivos }}</span>
                                 <i class="bi ms-1" :class="bandejaFiltrosAberta ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                             </button>
-                            <div class="d-flex flex-nowrap align-items-stretch gap-2">
+                            <div class="d-flex flex-nowrap align-items-stretch gap-2 admin-filter-actions">
                                 <button
                                     class="btn btn-outline-secondary ses-btn-relatorio text-nowrap flex-shrink-0"
                                     type="button"
@@ -1697,6 +1697,12 @@ html.dark .admin-filter-tray__titulo {
     .admin-candidates-actions-header,
     .admin-candidates-actions-cell {
         min-width: 30rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .admin-filter-actions {
+        flex-wrap: wrap;
     }
 }
 </style>
